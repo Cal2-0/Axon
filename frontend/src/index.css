@@ -1,0 +1,72 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-axon-bg text-axon-text font-sans antialiased overflow-x-hidden;
+    background-image: theme('backgroundImage.grid-pattern');
+    background-size: 40px 40px;
+    background-attachment: fixed;
+  }
+
+  /* Custom scrollbar for dark theme */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-axon-bg;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-axon-border-light rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-axon-text-dim;
+  }
+}
+
+@layer components {
+  /* Glassmorphism panel */
+  .glass-panel {
+    @apply bg-axon-surface/80 backdrop-blur-md border border-axon-border rounded-xl shadow-card transition-all duration-300;
+  }
+  
+  .glass-panel:hover {
+    @apply border-axon-border-light shadow-card-hover;
+  }
+
+  /* Inputs */
+  .axon-input {
+    @apply w-full bg-axon-card border border-axon-border rounded-lg px-4 py-3 text-axon-text font-mono text-sm focus:outline-none focus:border-axon-cyan focus:ring-1 focus:ring-axon-cyan transition-all;
+  }
+
+  /* Buttons */
+  .axon-button {
+    @apply relative overflow-hidden bg-axon-card border border-axon-border-light text-axon-text font-medium px-6 py-3 rounded-lg hover:bg-axon-border hover:text-white transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .axon-button-primary {
+    @apply bg-axon-cyan/10 border-axon-cyan/50 text-axon-cyan hover:bg-axon-cyan hover:text-axon-bg shadow-glow-cyan hover:shadow-glow-cyan;
+  }
+
+  /* Sidebar link */
+  .sidebar-link {
+    @apply flex items-center gap-3 px-4 py-3 rounded-lg text-axon-text-muted hover:text-white hover:bg-axon-card transition-colors;
+  }
+  
+  .sidebar-link.active {
+    @apply bg-axon-cyan/10 text-axon-cyan border-r-2 border-axon-cyan;
+  }
+}
+
+/* D3 Graph Tooltip */
+.d3-tooltip {
+  @apply absolute bg-axon-card border border-axon-border rounded px-3 py-2 text-xs font-mono text-axon-text-muted shadow-lg pointer-events-none z-50 opacity-0 transition-opacity duration-200;
+}
+
+/* Loading bar animation for pipeline progress */
+@keyframes slide-loading {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(0%); }
+}
