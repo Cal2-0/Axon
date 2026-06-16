@@ -40,7 +40,7 @@ The D3 Force Layout graph is perfect for network topology (L2), but poor for tra
 *   **Sankey Flow Chart:** Add a toggle on the graph to switch to a Sankey diagram. This visually represents the *volume* of ETH flowing from the source, splitting into peel chains, and aggregating in exchanges. This is the gold standard for tracing stolen funds.
 
 ### 7. UI / UX Improvements for Data Density
-Forensic screens become incredibly crowded very quickly.
+Forensic screens become incredibly crowded very quickly. 
 *   **Collapsible Threat Databases:** Use nested, accordion-style dropdowns for the OSINT and Threat Intelligence panels so that 15 different DB flags (OFAC, aliases) don't cause endless vertical scrolling.
 *   **Time-Series Activity Timeline:** Replace standard tables with a Gantt-style or heat-map timeline scrubber. Experts want to visually see "dormancy gaps" and "transaction bursts" natively on a timeline, showing exactly when a wallet "woke up".
 

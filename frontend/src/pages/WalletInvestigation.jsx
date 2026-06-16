@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import GraphView from '../components/GraphView';
 import SmartAddressInput from '../components/SmartAddressInput';
 import ForensicReport from '../components/ForensicReport';
+import { downloadWalletPDF } from '../utils/pdfExport';
 
 // ─── DEMO PROFILES ─────────────────────────────────────────────────────────
 const DEMO_PROFILES = {
@@ -324,6 +325,18 @@ export default function WalletInvestigation() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [showReport, setShowReport] = useState(false);
+  const [ethPrice, setEthPrice] = useState({ usd: 3500, inr: 290500 });
+
+  useEffect(() => {
+    fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd,inr')
+      .then(res => res.json())
+      .then(data => {
+        if (data.ethereum) {
+          setEthPrice({ usd: data.ethereum.usd, inr: data.ethereum.inr });
+        }
+      })
+      .catch(err => console.error('Failed to fetch live ETH price:', err));
+  }, []);
 
   const handleAnalyze = async (e) => {
     e.preventDefault();
@@ -439,6 +452,12 @@ export default function WalletInvestigation() {
               Investigation complete · <span className="text-white">6 modules</span> · {new Date().toLocaleString()}
             </div>
             <div className="flex items-center gap-2">
+              <button onClick={() => downloadWalletPDF(result)} className="axon-button text-xs px-4 py-2 gap-1.5 bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500 hover:text-white" id="wallet-download-pdf-btn">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                📄 Download PDF
+              </button>
               <button onClick={() => setShowReport(true)} className="axon-button text-xs px-4 py-2 gap-1.5 bg-axon-purple/10 border-axon-purple/30 text-axon-purple hover:bg-axon-purple hover:text-white">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -483,10 +502,25 @@ export default function WalletInvestigation() {
               </div>
             )}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="bg-axon-bg rounded-lg border border-axon-border p-3 text-center col-span-2">
+                <div className="text-lg font-bold font-mono text-axon-cyan">
+                  {result.identity.ethBalance + (String(result.identity.ethBalance).includes('ETH') ? '' : ' ETH')}
+                </div>
+                <div className="text-[11px] text-axon-text-dim mt-0.5 font-mono">
+                  ≈ ${(parseFloat(String(result.identity.ethBalance).replace(/,/g, '').replace(' ETH','')) * ethPrice.usd).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} USD
+                  <span className="mx-2">|</span>
+                  ≈ ₹{(parseFloat(String(result.identity.ethBalance).replace(/,/g, '').replace(' ETH','')) * ethPrice.inr).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} INR
+                </div>
+                <div className="text-[10px] text-axon-text-dim uppercase tracking-wider mt-1.5">ETH Balance (Live Value)</div>
+              </div>
+              <div className="bg-axon-bg rounded-lg border border-axon-border p-3 text-center col-span-2">
+                <div className="text-xl font-bold font-mono text-axon-orange mt-1">
+                  {result.identity.totalVolumeUSD}
+                </div>
+                <div className="text-[10px] text-axon-text-dim uppercase tracking-wider mt-2.5">Total Volume</div>
+              </div>
               {[
-                { label: 'ETH Balance', value: result.identity.ethBalance + (String(result.identity.ethBalance).includes('ETH') ? '' : ' ETH'), color: 'text-axon-cyan' },
-                { label: 'Total Volume', value: result.identity.totalVolumeUSD, color: 'text-axon-orange' },
-                { label: 'Transactions', value: result.identity.txCount.toLocaleString(), color: 'text-white' },
+                { label: 'Transactions', value: result.identity.txCount?.toLocaleString(), color: 'text-white' },
                 { label: 'Counterparties', value: result.identity.uniqueCounterparties, color: 'text-white' },
                 { label: 'First Seen', value: result.identity.firstSeen, color: 'text-axon-text-muted' },
                 { label: 'Last Active', value: result.identity.lastSeen, color: 'text-axon-text-muted' },
@@ -502,7 +536,7 @@ export default function WalletInvestigation() {
           </CollapsibleSection>
 
           {/* ── 2. Risk Score ─────────────────────────────────────────── */}
-          <CollapsibleSection color="red" icon="⚠️" title="Risk Assessment" badge="5-LAYER BEHAVIORAL ENGINE" defaultOpen={false}>
+          <CollapsibleSection color="red" icon="⚠️" title="Risk Assessment" badge="5-LAYER BEHAVIORAL ENGINE" defaultOpen={true}>
             <div className="flex flex-col md:flex-row gap-8 items-start">
               <div className="flex flex-col items-center gap-3 shrink-0">
                 <RiskMeter score={result.risk.score} label={result.risk.label} />
@@ -571,26 +605,7 @@ export default function WalletInvestigation() {
             </div>
           </CollapsibleSection>
 
-          {/* ── 3. Transaction Graph ──────────────────────────────────── */}
-          <CollapsibleSection color="orange" icon="🕸️" title="Transaction Graph" badge="D3 FORCE LAYOUT" defaultOpen={false}>
-            <div className="h-[420px] rounded-lg overflow-hidden bg-axon-bg border border-axon-border">
-              <GraphView data={result.graph} />
-            </div>
-            <div className="flex flex-wrap gap-4 mt-4 text-xs font-mono">
-              {[
-                { color: 'bg-red-500', label: 'Hacker/Suspect' },
-                { color: 'bg-purple-500', label: 'Mixer' },
-                { color: 'bg-blue-500', label: 'Exchange' },
-                { color: 'bg-axon-cyan', label: 'Victim' },
-                { color: 'bg-slate-600', label: 'Normal' },
-              ].map(item => (
-                <div key={item.label} className="flex items-center gap-1.5 text-axon-text-dim">
-                  <span className={`w-3 h-3 rounded-full ${item.color}`} />
-                  {item.label}
-                </div>
-              ))}
-            </div>
-          </CollapsibleSection>
+
 
           {/* ── 4. OSINT & Threat Alerts ──────────────────────────────────────── */}
           <CollapsibleSection color="purple" icon="🛰️" title="OSINT & Threat Alerts" badge="LIVE" defaultOpen={false}>
@@ -859,6 +874,27 @@ export default function WalletInvestigation() {
                 No transaction history found on Ethereum Mainnet.
               </div>
             )}
+          </CollapsibleSection>
+
+          {/* ── Transaction Graph (Moved to Bottom) ──────────────────── */}
+          <CollapsibleSection color="orange" icon="🕸️" title="Money Flow & Topology" badge="VISUALIZATION" defaultOpen={true}>
+            <div className="h-[500px] rounded-lg overflow-hidden bg-axon-bg border border-axon-border">
+              <GraphView data={result.graph} />
+            </div>
+            <div className="flex flex-wrap gap-4 mt-4 text-xs font-mono">
+              {[
+                { color: 'bg-red-500', label: 'Hacker/Suspect' },
+                { color: 'bg-purple-500', label: 'Mixer' },
+                { color: 'bg-blue-500', label: 'Exchange' },
+                { color: 'bg-axon-cyan', label: 'Victim' },
+                { color: 'bg-slate-600', label: 'Normal' },
+              ].map(item => (
+                <div key={item.label} className="flex items-center gap-1.5 text-axon-text-dim">
+                  <span className={`w-3 h-3 rounded-full ${item.color}`} />
+                  {item.label}
+                </div>
+              ))}
+            </div>
           </CollapsibleSection>
 
         </div>

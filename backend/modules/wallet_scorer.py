@@ -1,6 +1,6 @@
 """
 Axon Backend — Wallet Scorer Module
-Proprietary 5-Layer Behavioral Forensic Engine.
+Proprietary 5-Layer Behavioral Forensic Engine (v2.0 — Perfected).
 
 Architecture:
   Pre-step: Entity Class Classifier (applies risk modifier)
@@ -8,10 +8,16 @@ Architecture:
   L2: Graph Topology           (weight 25%) - fan-out, hop contamination, star topology
   L3: Economic Signals         (weight 20%) - velocity, peel chain, burst-then-dormant
   L4: Attribution Intelligence (weight 15%) - DB match, Forta, mixer interactions
-  L5: Adversarial AI           (weight 10%) - defense attorney, confirms/mitigates
+  L5: Cross-Axis Correlator    (weight 10%) - deterministic multi-signal confirmation/mitigation
 
-Every risk verdict must be defensible without referencing any database.
-L1-L3 behavioral analysis runs first. L4 is confirmation, not proof.
+Forensic principles:
+  1. Every risk verdict must be defensible without referencing any database.
+     L1-L3 behavioral analysis runs first. L4 is confirmation, not proof.
+  2. Once suspicious, always somewhat suspicious. Dormancy decays risk slowly,
+     never resets it. Historical burst activity creates a persistence floor.
+  3. Exchange legitimacy is a strong suppressor — a wallet that mostly transacts
+     with known exchanges (Binance, Coinbase, etc.) gets credit for legitimacy.
+  4. Volume matters — $50M through suspicious patterns is worse than $50.
 """
 import os
 import asyncio
@@ -21,7 +27,7 @@ import time
 import math
 from collections import Counter
 from sqlalchemy.orm import Session
-from database.models import MaliciousWallet
+from database.models import MaliciousWallet, ExchangeWallet, KnownMixer
 from modules.ai_analyst import generate_summary
 
 
@@ -139,17 +145,66 @@ async def fetch_eth_price(client: httpx.AsyncClient) -> float:
         return 3500.0
 
 
+# ─── KNOWN MIXER CONTRACT ADDRESSES (HARDCODED BASELINE) ─────────────────────
+KNOWN_MIXER_CONTRACTS = {
+    "0xd90e2f925da726b50c4ed8d0fb90ad053324f31b",  # Tornado Cash 0.1 ETH
+    "0x12d66f87a04a9e220743712ce6d9bb1b5616b8fc",  # Tornado Cash 1 ETH
+    "0x47ce0c6ed5b0ce3d3a51fdb1c52dc66a7c3c2936",  # Tornado Cash 10 ETH
+    "0x910cbd523d972eb0a6f4cae4418a184084d8a59b",  # Tornado Cash 100 ETH
+    "0xa160cdab225685da1d56aa342ad8841c3b53f291",  # Tornado Cash 1000 ETH
+    "0x722122df12d4e14e13ac3b6895a86e84145b6967",  # Tornado Cash Proxy
+    "0x23773e65ed146a459667d71a8b5c5dfc4faacd79",  # Tornado Cash Nova
+}
+
+
+# ─── DB-POWERED ADDRESS LOADING ──────────────────────────────────────────────
+def _load_known_addresses(db: Session) -> tuple:
+    """
+    Load ALL known exchange and mixer addresses from the intelligence database.
+    Returns (exchange_address_set, mixer_address_set).
+    This replaces the old approach of only checking 7 hardcoded Tornado addresses.
+    """
+    exchange_addrs = set()
+    try:
+        for ex in db.query(ExchangeWallet).all():
+            for addr in (ex.addresses or []):
+                if addr and len(addr) == 42 and addr.startswith("0x"):
+                    exchange_addrs.add(addr.lower())
+    except Exception as e:
+        print(f"[SCORER] Error loading exchange addresses: {e}")
+
+    # Start with hardcoded baseline, then add everything from DB
+    mixer_addrs = set(KNOWN_MIXER_CONTRACTS)
+    try:
+        for m in db.query(KnownMixer).all():
+            addr = m.address or ""
+            # Only add valid Ethereum addresses (skip BTC, P2P, etc.)
+            if addr and len(addr) == 42 and addr.startswith("0x"):
+                mixer_addrs.add(addr.lower())
+    except Exception as e:
+        print(f"[SCORER] Error loading mixer addresses: {e}")
+
+    print(f"[SCORER] Loaded {len(exchange_addrs)} exchange addresses, {len(mixer_addrs)} mixer addresses from DB")
+    return exchange_addrs, mixer_addrs
+
+
 # ─── ENTITY CLASS CLASSIFIER ──────────────────────────────────────────────────
 def classify_entity(tx_history: list, address: str, eth_balance: float,
-                    tx_count: int, wallet_db) -> tuple[str, float]:
+                    tx_count: int, wallet_db, exchange_addrs: set) -> tuple:
     """
     Classify wallet into entity type and return (class_name, risk_modifier).
     Modifier range: 0.5x (exchange) to 1.5x (exploit wallet).
+    Now also checks against the exchange address database for accurate classification.
     """
     if not tx_history:
         return ("Unknown EOA", 1.0)
 
     addr_lower = address.lower()
+
+    # FAST PATH: If this wallet IS a known exchange address, classify immediately
+    if addr_lower in exchange_addrs:
+        return ("Exchange Hot Wallet", 0.5)
+
     unique_senders = set()
     unique_receivers = set()
     in_values = []
@@ -186,17 +241,15 @@ def classify_entity(tx_history: list, address: str, eth_balance: float,
     else:
         top_denom_pct = 0
 
-    # Fresh recipient detection (mixer output)
-    fresh_recipients = 0
-    for tx in tx_history[:50]:
-        if tx.get("from", "").lower() == addr_lower:
-            # Etherscan doesn't give wallet age easily, proxy by checking if it's in our tx_history
-            fresh_recipients += 1  # simplified
+    # Check how many counterparties are known exchanges
+    all_cps = unique_senders | unique_receivers
+    exchange_cp_count = sum(1 for cp in all_cps if cp in exchange_addrs)
+    exchange_cp_pct = exchange_cp_count / max(len(all_cps), 1)
 
     # === Classification logic ===
 
-    # Exchange: massive counterparty count + high round-trip
-    if total_counterparties > 500 and round_trip > 0.7:
+    # Exchange: massive counterparty count + high round-trip, OR high exchange overlap
+    if (total_counterparties > 500 and round_trip > 0.7) or exchange_cp_pct > 0.6:
         return ("Exchange Hot Wallet", 0.5)
 
     # DAO/multisig: tx_count low but high ETH balance (treasury)
@@ -223,19 +276,151 @@ def classify_entity(tx_history: list, address: str, eth_balance: float,
     if wallet_db and wallet_db.threat_level == "CRITICAL":
         return ("Confirmed Threat Actor", 1.5)
 
+    # Regular DeFi user: moderate exchange interaction
+    if exchange_cp_pct > 0.3:
+        return ("Regular DeFi User", 0.8)
+
     return ("Normal EOA", 1.0)
 
 
-# ─── KNOWN MIXER CONTRACT ADDRESSES ──────────────────────────────────────────
-KNOWN_MIXER_CONTRACTS = {
-    "0xd90e2f925da726b50c4ed8d0fb90ad053324f31b",  # Tornado Cash 0.1 ETH
-    "0x12d66f87a04a9e220743712ce6d9bb1b5616b8fc",  # Tornado Cash 1 ETH
-    "0x47ce0c6ed5b0ce3d3a51fdb1c52dc66a7c3c2936",  # Tornado Cash 10 ETH
-    "0x910cbd523d972eb0a6f4cae4418a184084d8a59b",  # Tornado Cash 100 ETH
-    "0xa160cdab225685da1d56aa342ad8841c3b53f291",  # Tornado Cash 1000 ETH
-    "0x722122df12d4e14e13ac3b6895a86e84145b6967",  # Tornado Cash Proxy
-    "0x23773e65ed146a459667d71a8b5c5dfc4faacd79",  # Tornado Cash Nova
-}
+# ─── DORMANCY-ADJUSTED RISK PERSISTENCE ──────────────────────────────────────
+def _compute_dormancy_persistence(timestamps: list, l1: int, l2: int, l3: int,
+                                   l4: int, date_counts: dict, mixer_interactions: int) -> tuple:
+    """
+    Core forensic principle: Once suspicious, always somewhat suspicious.
+    A dormant wallet that WAS suspicious doesn't become clean — risk decays slowly.
+
+    Returns (persistence_floor, dormancy_modifier):
+      - persistence_floor: minimum score this wallet should never drop below
+      - dormancy_modifier: multiplier applied to active risk (1.0=active, <1.0=dormant)
+    """
+    if not timestamps:
+        return 0, 1.0  # No history = no persistence
+
+    last_activity = max(timestamps)
+    dormancy_days = (time.time() - last_activity) / 86400
+
+    # Peak behavioral score (what was the worst this wallet ever looked?)
+    peak_behavioral = max(l1, l2, l3)
+
+    # Burst intensity (historical)
+    peak_daily_txs = max(date_counts.values()) if date_counts else 0
+
+    # Mixer interaction history creates permanent taint
+    mixer_taint = min(mixer_interactions * 10, 30)
+
+    # ── Compute persistence floor based on historical suspicion ──
+    persistence_floor = 0
+
+    if l4 >= 80:
+        # DB-confirmed threat: NEVER drops below 80
+        persistence_floor = 80
+    elif l4 >= 50 or mixer_interactions >= 3:
+        # Significant DB match or heavy mixer usage
+        persistence_floor = 55 + mixer_taint
+    elif peak_behavioral >= 70 or peak_daily_txs >= 100:
+        # Very suspicious historically → floor at 45-55
+        persistence_floor = 45 + min(peak_behavioral // 10, 10) + mixer_taint
+    elif peak_behavioral >= 50 or peak_daily_txs >= 50:
+        # Moderately suspicious → floor at 30-40
+        persistence_floor = 30 + min(peak_behavioral // 10, 10) + mixer_taint
+    elif mixer_interactions > 0:
+        # Any mixer interaction = permanent mild taint
+        persistence_floor = 25 + mixer_taint
+    else:
+        persistence_floor = 0
+
+    # ── Time-based decay of the persistence floor ──
+    # Even historical suspicion decays, but very slowly
+    if dormancy_days > 730:  # 2+ years dormant
+        persistence_floor = int(persistence_floor * 0.6)
+    elif dormancy_days > 365:  # 1+ year dormant
+        persistence_floor = int(persistence_floor * 0.75)
+    elif dormancy_days > 180:  # 6+ months dormant
+        persistence_floor = int(persistence_floor * 0.85)
+
+    # Clamp
+    persistence_floor = min(persistence_floor, 90)
+
+    # ── Dormancy modifier: how much to reduce ACTIVE risk assessment ──
+    # Active wallets get full risk; dormant ones get slight reduction BUT
+    # can never go below the persistence floor
+    if dormancy_days > 365:
+        dormancy_modifier = 0.7
+    elif dormancy_days > 180:
+        dormancy_modifier = 0.75
+    elif dormancy_days > 90:
+        dormancy_modifier = 0.85
+    elif dormancy_days > 30:
+        dormancy_modifier = 0.92
+    else:
+        dormancy_modifier = 1.0  # Active wallet: full risk
+
+    return persistence_floor, dormancy_modifier
+
+
+# ─── L5: DETERMINISTIC CROSS-AXIS CORRELATOR ─────────────────────────────────
+def _compute_l5_deterministic(l1: int, l2: int, l3: int, l4: int,
+                               entity_class: str, exchange_overlap_pct: float,
+                               mixer_overlap_pct: float) -> int:
+    """
+    L5 is a deterministic cross-axis correlator (NOT AI). It examines whether
+    multiple layers agree or disagree, and produces a 0-100 score:
+
+    - Multiple layers HIGH + DB confirmation = amplify (L5 → 80-100)
+    - Multiple layers HIGH but no DB = still concerning (L5 → 50-70)
+    - Only DB is HIGH but behavior is clean = possible label noise (L5 → 20-40)
+    - Everything clean = confirm clean (L5 → 0-10)
+    - High exchange overlap suppresses L5 (legitimacy signal)
+    """
+    l5 = 0
+    behavioral_avg = (l1 + l2 + l3) / 3.0
+
+    # ── Multi-layer agreement amplification ──
+    high_layers = sum(1 for s in [l1, l2, l3, l4] if s >= 60)
+    if high_layers >= 3:
+        # 3+ layers agree on HIGH risk: strong confirmation
+        l5 = max(l5, 85)
+    elif high_layers >= 2:
+        l5 = max(l5, 60)
+    elif high_layers == 1:
+        l5 = max(l5, 30)
+
+    # ── Behavioral-Attribution agreement ──
+    if behavioral_avg >= 50 and l4 >= 60:
+        # Behavior confirms attribution: amplify
+        l5 = max(l5, 90)
+    elif behavioral_avg >= 50 and l4 < 20:
+        # Behavior suspicious but no DB match: cautious concern
+        l5 = max(l5, 50)
+    elif behavioral_avg < 20 and l4 >= 60:
+        # DB says bad but behavior looks clean: possible stale label
+        # Don't go too low — DB match is still meaningful
+        l5 = max(l5, 35)
+
+    # ── Mixer contamination amplifier ──
+    if mixer_overlap_pct > 0.1:
+        l5 = max(l5, 75)
+    elif mixer_overlap_pct > 0.02:
+        l5 = max(l5, 50)
+
+    # ── Exchange legitimacy suppressor ──
+    # If a large fraction of counterparties are known exchanges,
+    # this wallet is likely a regular user, not a criminal
+    if exchange_overlap_pct > 0.5:
+        l5 = int(l5 * 0.3)  # Heavy exchange user → strongly suppress L5
+    elif exchange_overlap_pct > 0.3:
+        l5 = int(l5 * 0.5)
+    elif exchange_overlap_pct > 0.15:
+        l5 = int(l5 * 0.7)
+
+    # ── Entity class context ──
+    if entity_class in ("Exchange Hot Wallet", "DAO / Treasury Wallet"):
+        l5 = int(l5 * 0.4)  # Known safe entity types
+    elif entity_class in ("Privacy Mixer", "Confirmed Threat Actor"):
+        l5 = max(l5, 80)  # Known dangerous entity types
+
+    return min(l5, 100)
 
 
 # ─── MAIN SCAN FUNCTION ───────────────────────────────────────────────────────
@@ -248,7 +433,10 @@ async def scan_wallet(address: str, db: Session) -> dict:
     print(f"[SCAN] Starting wallet scan: {address}")
     print(f"{'='*60}")
 
-    # ── Step 1: Parallel Data Fetch ──────────────────────────────
+    # ── Step 1: Load Intelligence DB (Exchange + Mixer addresses) ─
+    all_exchange_addrs, all_mixer_addrs = _load_known_addresses(db)
+
+    # ── Step 2: Parallel Data Fetch ──────────────────────────────
     async with httpx.AsyncClient(timeout=30.0) as client:
         etherscan_result, alchemy_tokens, forta_count, eth_price = await asyncio.gather(
             fetch_all_etherscan_data(client, address),
@@ -279,11 +467,11 @@ async def scan_wallet(address: str, db: Session) -> dict:
 
     print(f"[SCAN] ETH Balance: {eth_balance_str} | TXs: {tx_count} | Forta: {forta_count}")
 
-    # ── Step 2: DB Lookup ─────────────────────────────────────────
+    # ── Step 3: DB Lookup ─────────────────────────────────────────
     wallet_db = db.query(MaliciousWallet).filter(MaliciousWallet.address.ilike(address)).first()
     print(f"[SCAN] DB match: {wallet_db.label if wallet_db else 'None'}")
 
-    # ── Step 3: Parse Transaction History ────────────────────────
+    # ── Step 4: Parse Transaction History ────────────────────────
     addr_lower = address.lower()
     unique_senders = set()
     unique_receivers = set()
@@ -337,9 +525,40 @@ async def scan_wallet(address: str, db: Session) -> dict:
     total_volume_eth = total_received_eth + total_sent_eth
     counterparties = len(unique_senders | unique_receivers)
 
-    # ── Step 4: Entity Class Classifier ──────────────────────────
+    # ── Step 5: Compute Counterparty Overlap with Exchange + Mixer DBs ──
+    all_counterparties = unique_senders | unique_receivers
+    all_counterparties.discard(addr_lower)
+    all_counterparties.discard("")
+
+    exchange_overlap_count = sum(1 for cp in all_counterparties if cp in all_exchange_addrs)
+    mixer_overlap_count = sum(1 for cp in all_counterparties if cp in all_mixer_addrs)
+    exchange_overlap_pct = exchange_overlap_count / max(len(all_counterparties), 1)
+    mixer_overlap_pct = mixer_overlap_count / max(len(all_counterparties), 1)
+
+    print(f"[SCAN] Counterparty overlap: {exchange_overlap_count} exchanges ({exchange_overlap_pct:.1%}), {mixer_overlap_count} mixers ({mixer_overlap_pct:.1%})")
+
+    # ── Step 6: Batch DB Lookup for ALL counterparties ────────────
+    # Single query instead of per-transaction lookups (was 400 queries, now 1)
+    known_bad_map = {}
+    if all_counterparties:
+        try:
+            cp_list = list(all_counterparties)
+            # Query in batches of 500 to avoid SQL limits
+            for i in range(0, len(cp_list), 500):
+                batch = cp_list[i:i+500]
+                bad_wallets = db.query(MaliciousWallet).filter(
+                    MaliciousWallet.address.in_(batch)
+                ).all()
+                for w in bad_wallets:
+                    known_bad_map[w.address.lower()] = w
+        except Exception as e:
+            print(f"[SCAN] Batch DB lookup error: {e}")
+
+    print(f"[SCAN] Found {len(known_bad_map)} known-bad counterparties in DB")
+
+    # ── Step 7: Entity Class Classifier ──────────────────────────
     entity_class, class_modifier = classify_entity(
-        tx_history, address, eth_balance, tx_count, wallet_db
+        tx_history, address, eth_balance, tx_count, wallet_db, all_exchange_addrs
     )
     print(f"[SCAN] Entity Class: {entity_class} (modifier: {class_modifier}x)")
 
@@ -430,45 +649,57 @@ async def scan_wallet(address: str, db: Session) -> dict:
             l2 = max(l2, 60)
             signals.append(("Aggregation hub: {} unique senders, only {} receivers".format(len(unique_senders), len(unique_receivers)), "⬇️", "L2"))
 
-        # Counterparty overlap with known bad wallets in DB
-        all_counterparties = unique_senders | unique_receivers
-        bad_overlap = 0
-        for cp in all_counterparties:
-            if cp.lower() in KNOWN_MIXER_CONTRACTS:
-                bad_overlap += 1
+        # Mixer contract interaction (NOW using full DB, not just 7 hardcoded)
+        mixer_counterparties = all_counterparties & all_mixer_addrs
+        if mixer_counterparties:
+            mixer_cp_score = min(90, len(mixer_counterparties) * 25)
+            l2 = max(l2, mixer_cp_score)
+            signals.append(("Direct interaction with {} known mixer/sanctioned contract(s)".format(len(mixer_counterparties)), "🌪️", "L2"))
 
-        if bad_overlap > 0:
-            overlap_pct = bad_overlap / max(len(all_counterparties), 1)
-            l2_overlap = min(80, bad_overlap * 25)
-            l2 = max(l2, l2_overlap)
-            signals.append(("Direct interaction with {} known mixer/sanctioned contract(s)".format(bad_overlap), "🌪️", "L2"))
-
-        # Hop contamination from DB wallets in tx set
+        # Hop contamination from DB wallets (NOW using batch lookup, not per-tx query)
         contamination = 0
-        for tx in tx_history:
-            frm = tx.get("from", "").lower()
-            to_addr = tx.get("to", "").lower()
-            for check_addr in [frm, to_addr]:
-                db_match = db.query(MaliciousWallet).filter(MaliciousWallet.address.ilike(check_addr)).first()
-                if db_match and check_addr != addr_lower:
-                    hop_risk = min(db_match.risk_score, 100) / 100
-                    contamination = max(contamination, hop_risk * 70)  # 1-hop = 70% contamination
+        contamination_sources = []
+        for cp_addr, cp_wallet in known_bad_map.items():
+            if cp_addr != addr_lower:
+                hop_risk = min(cp_wallet.risk_score, 100) / 100
+                cp_contamination = hop_risk * 70  # 1-hop = 70% contamination cap
+                if cp_contamination > contamination:
+                    contamination = cp_contamination
+                    contamination_sources.append(cp_wallet.label)
 
         if contamination > 40:
             l2 = max(l2, int(contamination))
-            signals.append(("1-hop contamination from known threat actor ({:.0f}% risk transfer)".format(contamination), "☣️", "L2"))
+            source_label = contamination_sources[0] if contamination_sources else "unknown"
+            signals.append(("1-hop contamination from '{}' ({:.0f}% risk transfer)".format(source_label, contamination), "☣️", "L2"))
         elif contamination > 20:
             l2 = max(l2, int(contamination))
 
     # ── L3: Economic Signals (max 100) ───────────────────────────
     l3 = 0
 
-    # Velocity spike: same-day massive in + out (money mule)
-    for day, day_tx_count in date_counts.items():
-        if day_tx_count > 50:
-            l3 = max(l3, 60)
-            signals.append(("Transaction burst: {} transactions in a single day ({})".format(day_tx_count, day), "⚡", "L3"))
-            break
+    # Adaptive transaction burst detection (replaces flat >50 threshold)
+    if date_counts:
+        avg_daily = sum(date_counts.values()) / len(date_counts)
+        peak_daily = max(date_counts.values())
+        peak_day = max(date_counts, key=date_counts.get)
+
+        if peak_daily >= 150:
+            # 150+ txs in one day is extreme — near-certain automation/attack
+            l3 = max(l3, 85)
+            signals.append(("EXTREME burst: {} transactions on {} (avg {:.1f}/day)".format(peak_daily, peak_day, avg_daily), "⚡", "L3"))
+        elif peak_daily >= 50:
+            # 50+ still very suspicious
+            l3 = max(l3, 65)
+            signals.append(("Transaction burst: {} transactions on {} (avg {:.1f}/day)".format(peak_daily, peak_day, avg_daily), "⚡", "L3"))
+        elif avg_daily > 0:
+            burst_ratio = peak_daily / avg_daily
+            if burst_ratio >= 10 and peak_daily >= 20:
+                # 10x normal activity in a single day
+                l3 = max(l3, 55)
+                signals.append(("Relative burst: {} txs on {} ({:.0f}x daily average)".format(peak_daily, peak_day, burst_ratio), "⚡", "L3"))
+            elif burst_ratio >= 5 and peak_daily >= 10:
+                l3 = max(l3, 40)
+                signals.append(("Mild burst: {} txs on {} ({:.0f}x daily average)".format(peak_daily, peak_day, burst_ratio), "📊", "L3"))
 
     # Peel chain / structuring: same outflow amount repeated
     if out_values:
@@ -510,76 +741,93 @@ async def scan_wallet(address: str, db: Session) -> dict:
         l4 = max(l4, min(forta_count * 25, 90))
         signals.append(("Forta Network: {} real-time malicious alert(s) triggered".format(forta_count), "🚨", "L4"))
 
-    # Mixer interactions (counted in L2 but attributed here for confirmation)
+    # Mixer interactions (full DB, not just hardcoded 7)
     mixer_interactions = sum(1 for tx in tx_history
-                             if tx.get("to", "").lower() in KNOWN_MIXER_CONTRACTS
-                             or tx.get("from", "").lower() in KNOWN_MIXER_CONTRACTS)
+                             if tx.get("to", "").lower() in all_mixer_addrs
+                             or tx.get("from", "").lower() in all_mixer_addrs)
     if mixer_interactions > 0:
         l4 = max(l4, min(mixer_interactions * 15, 85))
         signals.append(("Known mixer contract interaction: {} transactions".format(mixer_interactions), "🌀", "L4"))
 
-    # ── L5: AI Score Contribution (0-100 internal) ───────────────
-    # Build a prompt that acts as a defense attorney to find mitigations
-    l5_raw = 0  # Will be set after AI call
+    # Known-bad counterparty count from batch lookup
+    bad_cp_count = len(known_bad_map)
+    if bad_cp_count >= 5:
+        l4 = max(l4, 75)
+        signals.append(("{} counterparties found in threat intelligence DB".format(bad_cp_count), "🔍", "L4"))
+    elif bad_cp_count >= 2:
+        l4 = max(l4, 50)
+        signals.append(("{} counterparties found in threat intelligence DB".format(bad_cp_count), "🔍", "L4"))
+    elif bad_cp_count == 1:
+        l4 = max(l4, 30)
 
-    # ── Final Score Computation ───────────────────────────────────
-    # Raw weighted sum before modifier
-    raw_score = (l1 * 0.30) + (l2 * 0.25) + (l3 * 0.20) + (l4 * 0.15)
-    # Reserve 10% for L5 after AI call
+    # Exchange legitimacy signal (positive — reduces suspicion)
+    if exchange_overlap_pct > 0.5:
+        signals.append(("{:.0%} of counterparties are known exchanges — strong legitimacy signal".format(exchange_overlap_pct), "🏦", "L4"))
+    elif exchange_overlap_pct > 0.2:
+        signals.append(("{:.0%} of counterparties are known exchanges".format(exchange_overlap_pct), "🏦", "L4"))
+
+    # ── L5: Deterministic Cross-Axis Correlator (max 100) ────────
+    l5 = _compute_l5_deterministic(l1, l2, l3, l4, entity_class,
+                                    exchange_overlap_pct, mixer_overlap_pct)
+
+    print(f"[SCAN] Layer scores: L1={l1} L2={l2} L3={l3} L4={l4} L5={l5}")
+
+    # ═══════════════════════════════════════════════════════════════
+    # FINAL SCORE COMPUTATION
+    # All 5 layers sum to 100% weight
+    # ═══════════════════════════════════════════════════════════════
+
+    raw_score = (l1 * 0.30) + (l2 * 0.25) + (l3 * 0.20) + (l4 * 0.15) + (l5 * 0.10)
 
     # Apply entity class modifier
-    pre_ai_score = min(100.0, raw_score * class_modifier)
+    modified_score = raw_score * class_modifier
 
-    # CRITICAL OVERRIDE: DB-confirmed threats cannot score LOW
-    if l4 >= 90:
-        pre_ai_score = max(pre_ai_score, l4 * class_modifier)
-        pre_ai_score = min(100.0, pre_ai_score)
+    # ── Dormancy persistence ──
+    persistence_floor, dormancy_modifier = _compute_dormancy_persistence(
+        timestamps, l1, l2, l3, l4, date_counts, mixer_interactions
+    )
+    modified_score = modified_score * dormancy_modifier
 
-    # Label for AI context
-    if pre_ai_score >= 80:
-        tentative_label = "CRITICAL"
-    elif pre_ai_score >= 60:
-        tentative_label = "HIGH"
-    elif pre_ai_score >= 40:
-        tentative_label = "MEDIUM"
+    # ── Exchange legitimacy suppression ──
+    # Only suppress if NOT a DB-confirmed threat
+    if l4 < 70:
+        if exchange_overlap_pct > 0.5:
+            legitimacy_suppressor = 0.6
+        elif exchange_overlap_pct > 0.3:
+            legitimacy_suppressor = 0.75
+        elif exchange_overlap_pct > 0.15:
+            legitimacy_suppressor = 0.9
+        else:
+            legitimacy_suppressor = 1.0
+        modified_score *= legitimacy_suppressor
     else:
-        tentative_label = "LOW"
+        legitimacy_suppressor = 1.0
 
-    print(f"[SCAN] Pre-AI Score: {pre_ai_score:.0f} ({tentative_label}) | Layers: L1={l1} L2={l2} L3={l3} L4={l4}")
+    # ── Volume-weighted amplification ──
+    # Suspicious patterns with big money are worse
+    volume_usd = total_volume_eth * eth_price
+    if volume_usd > 10_000_000 and modified_score >= 40:
+        volume_amp = min(1.3, 1.0 + (volume_usd / 100_000_000) * 0.3)
+        modified_score = modified_score * volume_amp
+    elif volume_usd > 1_000_000 and modified_score >= 60:
+        volume_amp = min(1.15, 1.0 + (volume_usd / 50_000_000) * 0.15)
+        modified_score = modified_score * volume_amp
 
-    # ═══════════════════════════════════════════════════════════════
-    # L5: ADVERSARIAL AI INTERPRETER
-    # ═══════════════════════════════════════════════════════════════
+    # ── DB override floors (confirmed threats cannot score LOW) ──
+    if wallet_db and wallet_db.sanctioned:
+        modified_score = max(modified_score, 95)  # OFAC sanctioned = absolute
+    elif l4 >= 90:
+        modified_score = max(modified_score, 85)  # Confirmed critical threat
+    elif l4 >= 70:
+        modified_score = max(modified_score, 65)  # Known suspicious
 
-    ai_prompt = f"""You are a forensic AI analyzing an Ethereum wallet as a defense attorney — your job is to find any legitimate reason to LOWER the risk score IF justified.
+    # ── Apply persistence floor ──
+    # Once suspicious, the score never drops below the persistence floor
+    modified_score = max(modified_score, persistence_floor)
 
-Wallet: {address}
-Entity Class: {entity_class} (risk modifier: {class_modifier}x)
-Algorithmic Score: {pre_ai_score:.0f}/100 ({tentative_label})
-TX Count: {tx_count} | ETH Balance: {eth_balance_str} ETH
+    # ── Final clamp ──
+    final_score = round(min(100.0, max(0.0, modified_score)))
 
-Layer Scores:
-- L1 Behavioral Telemetry: {l1}/100
-- L2 Graph Topology: {l2}/100
-- L3 Economic Signals: {l3}/100
-- L4 Attribution Intelligence: {l4}/100
-
-Triggered Signals: {[s[0] for s in signals[:8]]}
-
-Analyze this wallet from a forensic perspective. If the entity class explains any flags (e.g., exchange with high fan-out, DAO with large balance), note it. If signals are genuinely suspicious, confirm them.
-
-Respond with ONLY valid JSON with exactly these three keys:
-{{"hypothesis": "1-2 sentence forensic hypothesis about this wallet's purpose and risk", "mitre_tag": "Most relevant MITRE ATT&CK technique tag", "verdict": "One sentence executive forensic verdict"}}"""
-
-    ai_data = await generate_summary(ai_prompt)
-
-    if not isinstance(ai_data, dict) or "hypothesis" not in ai_data:
-        ai_data = _build_wallet_fallback(l1, l2, l3, l4, tentative_label, entity_class, signals)
-    elif ai_data.get("hypothesis", "").startswith("AI parsing unavailable"):
-        ai_data = _build_wallet_fallback(l1, l2, l3, l4, tentative_label, entity_class, signals)
-
-    # Final score with L5 contribution (AI can nudge ±5 conceptually, but we keep deterministic)
-    final_score = round(pre_ai_score)
     if final_score >= 80:
         label = "CRITICAL"
     elif final_score >= 60:
@@ -591,9 +839,47 @@ Respond with ONLY valid JSON with exactly these three keys:
 
     ml_class = "MALICIOUS" if l4 >= 80 else ("SUSPICIOUS" if final_score >= 50 else "BENIGN")
 
+    print(f"[SCAN] Score breakdown: raw={raw_score:.1f} → class_mod={class_modifier}x → dormancy={dormancy_modifier}x → legit={legitimacy_suppressor}x → floor={persistence_floor} → FINAL={final_score} ({label})")
+
+    # ═══════════════════════════════════════════════════════════════
+    # AI FORENSIC INTERPRETER (narrative only, does NOT change score)
+    # ═══════════════════════════════════════════════════════════════
+
+    ai_prompt = f"""You are a forensic AI analyzing an Ethereum wallet as a defense attorney — your job is to find any legitimate reason to LOWER the risk score IF justified.
+
+Wallet: {address}
+Entity Class: {entity_class} (risk modifier: {class_modifier}x)
+Algorithmic Score: {final_score}/100 ({label})
+TX Count: {tx_count} | ETH Balance: {eth_balance_str} ETH
+Exchange Counterparty Overlap: {exchange_overlap_pct:.1%}
+Mixer Counterparty Overlap: {mixer_overlap_pct:.1%}
+
+Layer Scores:
+- L1 Behavioral Telemetry: {l1}/100
+- L2 Graph Topology: {l2}/100
+- L3 Economic Signals: {l3}/100
+- L4 Attribution Intelligence: {l4}/100
+- L5 Cross-Axis Correlator: {l5}/100
+
+Triggered Signals: {[s[0] for s in signals[:8]]}
+
+Analyze this wallet from a forensic perspective. If the entity class explains any flags (e.g., exchange with high fan-out, DAO with large balance), note it. If signals are genuinely suspicious, confirm them.
+
+Respond with ONLY valid JSON with exactly these three keys:
+{{"hypothesis": "1-2 sentence forensic hypothesis about this wallet's purpose and risk", "mitre_tag": "Most relevant MITRE ATT&CK technique tag", "verdict": "One sentence executive forensic verdict"}}"""
+
+    ai_data = await generate_summary(ai_prompt)
+
+    if not isinstance(ai_data, dict) or "hypothesis" not in ai_data:
+        ai_data = _build_wallet_fallback(l1, l2, l3, l4, l5, label, entity_class, signals,
+                                          exchange_overlap_pct, mixer_overlap_pct)
+    elif ai_data.get("hypothesis", "").startswith("AI parsing unavailable"):
+        ai_data = _build_wallet_fallback(l1, l2, l3, l4, l5, label, entity_class, signals,
+                                          exchange_overlap_pct, mixer_overlap_pct)
+
     print(f"[SCAN] Final: {final_score}/100 ({label}) | Entity: {entity_class}")
 
-    # ─── Build Graph ──────────────────────────────────────────────
+    # ─── Build Graph (with accurate risk scores from DB) ──────────
     graph_nodes = [{
         "id": addr_lower,
         "label": (wallet_db.label[:12] if wallet_db else address[:8] + "..."),
@@ -609,13 +895,53 @@ Respond with ONLY valid JSON with exactly these three keys:
         if not frm or not to_addr:
             continue
 
+        # Add source node if not already present
         if frm not in node_ids:
-            is_mixer = frm in KNOWN_MIXER_CONTRACTS
-            graph_nodes.append({"id": frm, "label": frm[:6] + "...", "type": "mixer" if is_mixer else "default", "risk": 90 if is_mixer else 10})
+            is_mixer = frm in all_mixer_addrs
+            is_exchange = frm in all_exchange_addrs
+            db_entry = known_bad_map.get(frm)
+            # Accurate risk: DB risk if known-bad, 90 if mixer, 5 if exchange, 10 default
+            if db_entry:
+                node_risk = min(db_entry.risk_score, 100)
+                node_type = "malicious"
+                node_label = db_entry.label[:10] + "..."
+            elif is_mixer:
+                node_risk = 90
+                node_type = "mixer"
+                node_label = frm[:6] + "..."
+            elif is_exchange:
+                node_risk = 5
+                node_type = "exchange"
+                node_label = frm[:6] + "..."
+            else:
+                node_risk = 10
+                node_type = "default"
+                node_label = frm[:6] + "..."
+            graph_nodes.append({"id": frm, "label": node_label, "type": node_type, "risk": node_risk})
             node_ids.add(frm)
+
+        # Add target node if not already present
         if to_addr not in node_ids:
-            is_mixer = to_addr in KNOWN_MIXER_CONTRACTS
-            graph_nodes.append({"id": to_addr, "label": to_addr[:6] + "...", "type": "mixer" if is_mixer else "default", "risk": 90 if is_mixer else 10})
+            is_mixer = to_addr in all_mixer_addrs
+            is_exchange = to_addr in all_exchange_addrs
+            db_entry = known_bad_map.get(to_addr)
+            if db_entry:
+                node_risk = min(db_entry.risk_score, 100)
+                node_type = "malicious"
+                node_label = db_entry.label[:10] + "..."
+            elif is_mixer:
+                node_risk = 90
+                node_type = "mixer"
+                node_label = to_addr[:6] + "..."
+            elif is_exchange:
+                node_risk = 5
+                node_type = "exchange"
+                node_label = to_addr[:6] + "..."
+            else:
+                node_risk = 10
+                node_type = "default"
+                node_label = to_addr[:6] + "..."
+            graph_nodes.append({"id": to_addr, "label": node_label, "type": node_type, "risk": node_risk})
             node_ids.add(to_addr)
 
         try:
@@ -664,9 +990,13 @@ Respond with ONLY valid JSON with exactly these three keys:
             "label": label,
             "mlClassification": ml_class,
             "anomalyScore": min(final_score + 5, 99) if final_score > 40 else max(5, final_score - 10),
-            "layers": {"L1": l1, "L2": l2, "L3": l3, "L4": l4},
+            "layers": {"L1": l1, "L2": l2, "L3": l3, "L4": l4, "L5": l5},
             "entityClass": entity_class,
             "classModifier": class_modifier,
+            "persistenceFloor": persistence_floor,
+            "dormancyModifier": dormancy_modifier,
+            "exchangeOverlap": round(exchange_overlap_pct, 3),
+            "mixerOverlap": round(mixer_overlap_pct, 3),
             "factors": ui_factors,
             "aiAnalysis": {
                 "rating": label,
@@ -688,8 +1018,9 @@ Respond with ONLY valid JSON with exactly these three keys:
             "walletMentions": forta_count * 2
         },
         "exchange": {
-            "detected": False,
+            "detected": exchange_overlap_count > 0,
             "findings": [],
+            "exchangeCounterparties": exchange_overlap_count,
             "cashOutEvents": 0,
             "totalCashOutUSD": "$0",
             "summary": "Exchange interaction analysis based on known counterparty attribution."
@@ -697,6 +1028,7 @@ Respond with ONLY valid JSON with exactly these three keys:
         "mixer": {
             "detected": mixer_interactions > 0,
             "findings": [],
+            "mixerCounterparties": mixer_overlap_count,
             "bridgeActivity": [],
             "launderingIndicators": [s[0] for s in signals if s[2] in ("L1", "L3")],
             "totalMixedETH": "Unknown"
@@ -713,10 +1045,10 @@ Respond with ONLY valid JSON with exactly these three keys:
     }
 
 
-def _build_wallet_fallback(l1: int, l2: int, l3: int, l4: int,
-                            label: str, entity_class: str, signals: list) -> dict:
+def _build_wallet_fallback(l1: int, l2: int, l3: int, l4: int, l5: int,
+                            label: str, entity_class: str, signals: list,
+                            exchange_pct: float, mixer_pct: float) -> dict:
     """Deterministic fallback AI verdict based on which layer scored highest."""
-    top_layer = max([(l1, "L1"), (l2, "L2"), (l3, "L3"), (l4, "L4")], key=lambda x: x[0])
     top_signal = signals[0][0] if signals else "No specific signals triggered"
 
     if l4 >= 90:
@@ -742,6 +1074,12 @@ def _build_wallet_fallback(l1: int, l2: int, l3: int, l4: int,
             "hypothesis": f"Economic analysis reveals structuring or pass-through behavior. Entity class: {entity_class}.",
             "mitre_tag": "T1565 Data Manipulation",
             "verdict": f"{label} RISK — Economic flow patterns deviate from legitimate wallet behavior."
+        }
+    elif exchange_pct > 0.3:
+        return {
+            "hypothesis": f"This wallet primarily transacts with known exchanges ({exchange_pct:.0%} counterparty overlap). Entity class: {entity_class}. Behavioral profile is consistent with a regular user.",
+            "mitre_tag": "N/A",
+            "verdict": f"{label} RISK — Exchange-centric transaction profile suggests legitimate usage. Standard monitoring recommended."
         }
     else:
         return {
