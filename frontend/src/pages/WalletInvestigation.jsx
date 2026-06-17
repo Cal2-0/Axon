@@ -566,12 +566,19 @@ export default function WalletInvestigation() {
                     <div key={data.chain} className="bg-[#0a0f1a] rounded-lg border border-axon-border p-4 text-center hover:border-axon-cyan transition-colors">
                       <div className="text-sm font-bold text-white mb-2">{data.chain}</div>
                       <div className="text-xl font-bold font-mono text-axon-cyan">{data.balance} {data.symbol}</div>
-                      <div className="text-[10px] text-axon-text-dim mt-1 font-mono">${data.usd_value}</div>
+                      <div className="text-[10px] text-axon-text-dim mt-1 font-mono">
+                        ${data.usd_value} | ₹{data.inr_value !== undefined ? data.inr_value : 0}
+                      </div>
                     </div>
                   ))}
                   <div className="bg-axon-cyan/5 rounded-lg border border-axon-cyan/40 p-4 text-center col-span-2 md:col-span-4 flex items-center justify-between px-8">
                     <span className="text-sm font-bold text-white uppercase tracking-widest">Total Estimated Exposure</span>
-                    <span className="text-2xl font-bold font-mono text-axon-cyan">${crossChain.total_net_worth_usd}</span>
+                    <div className="text-right">
+                      <div className="text-2xl font-bold font-mono text-axon-cyan">${crossChain.total_net_worth_usd}</div>
+                      {crossChain.total_net_worth_inr !== undefined && (
+                        <div className="text-sm font-bold font-mono text-axon-text-dim mt-1">₹{crossChain.total_net_worth_inr}</div>
+                      )}
+                    </div>
                   </div>
                 </div>
               ) : (
