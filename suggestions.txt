@@ -1,54 +1,71 @@
-# AXON v3.0: Forensic Lab Feature Roadmap
+# AXON v4.0: Enterprise Digital Forensics & Incident Response (DFIR) Roadmap
+**Target Deployment: Law Enforcement, Intelligence Agencies, and National Crypto Forensic Labs**
 
-The following features are recommended for the next iteration of the Axon platform. This roadmap elevates AXON from a standalone scanner into a comprehensive, state-of-the-art **Forensic Intelligence Platform**. 
+To transition AXON from a high-tier analysis tool into a "Cellebrite-grade" institutional forensic platform, it must satisfy the rigorous demands of Lab Directors, Legal Counsel, and Agency Commanders. The platform must move beyond mere "scanning" and provide end-to-end Case Lifecycle Management, Cryptographic Evidence Security, and Deep Attribution.
 
-The roadmap is divided into Core Platform Infrastructure (high priority, architectural moats) and UX/Analysis Upgrades (workflow enhancements).
-
-## Phase 1: Core Platform Infrastructure (Strategic Moats)
-
-### 1. Case Management Engine (Highest Priority)
-Currently, AXON operates immemorially—every session is isolated. A real investigation (e.g., Lazarus Group) spans weeks, involves dozens of wallets, multiple analysts, and produces massive evidence packages.
-*   **Persistent Workspaces:** Create saved "Cases" where analysts can group 40+ investigated wallets, contracts, and threat alerts into a single project.
-*   **State Persistence:** Ensure that graph layouts, flagged transactions, and manual investigator notes are saved across sessions.
-*   **Evidence Packaging:** Compile the entire case workspace into a 200-page chronological evidence package for handoff to law enforcement or compliance teams.
-
-### 2. Behavioral Clustering (The Competitive Moat)
-Commercial tools (Chainalysis, TRM) rely on label lookup and hop tracing. AXON's 5-Layer model allows for true behavioral grouping.
-*   **Automated Campaign Detection:** When investigating a massive exploit, AXON should automatically cluster wallets based on their behavioral fingerprint (e.g., matching L1/L3 telemetry). 
-*   **Operator Grouping:** If 5 distinct wallets all show the exact same structuring peel-chain behavior and round-trip flow metrics, AXON clusters them as a "Likely Single Operator Campaign" before any DB attribution is made.
-
-### 3. Corpus Feedback Loop (Intelligence Engine)
-Static databases become stale. An intelligence engine gets smarter the more it is used.
-*   **Dynamic Learning:** If an investigator confirms a highly suspicious wallet is malicious (e.g., AI tags it as CRITICAL and user flags it), that wallet and its behavioral fingerprint are fed back into the `axon_intel.db` fuzzy matcher.
-*   **Self-Healing Corpus:** This ensures the 13,000+ threat corpus compounds in quality and accuracy with every real-world investigation, shifting AXON from a static dataset to a living intelligence engine.
+The following 15 pillars represent the roadmap to secure a true Enterprise/Government deployment.
 
 ---
 
-## Phase 2: Workflow & Analytical Upgrades
+## PILLAR I: Chain of Custody & Institutional Case Management
+*To be admissible in a court of law, evidence must be immutable, logged, and structured.*
 
-### 4. Bulk / Batch Investigation Mode
-Threat intel teams ingest lists of addresses from exploits or exchange hacks, rather than manually searching one by one.
-*   **CSV / TXT Upload:** A drag-and-drop zone to drop lists of 50-100 wallets or contracts.
-*   **Auto-Run Pipeline:** The backend processes these sequentially, generating a massive combined graph to uncover hidden links between the uploaded wallets, sorting the riskiest entities to the top.
+### 1. Persistent Case Workspaces
+AXON must shift to a project-based architecture. Analysts create "Case #2026-ETH-041", where dozens of scanned wallets, contracts, and OSINT reports are grouped into a single, unified workspace that persists across sessions.
 
-### 5. Deep-Dive Transaction Analysis (Re-analysis Engine)
-*   **One-Click Deep Scan:** A button next to the 200-transaction limit that triggers a deep-dive scan. This paginates through the *entire* transaction history (e.g., 5,000+ txs) via a background job, updating the behavioral footprint with complete historical context.
-*   **Transaction Flagging:** Within the "Transaction History" table, allow investigators to manually check/flag specific suspicious transactions to export as a sub-report.
+### 2. Cryptographic Hashing & Chain of Custody
+Every time AXON completes a scan or trace, the system generates a SHA-256 hash of the JSON/PDF evidence snapshot alongside an exact timestamp. This proves the data was pulled at that specific moment and has not been tampered with.
 
-### 6. Advanced Money Flow Visualizations (Sankey Diagrams)
-The D3 Force Layout graph is perfect for network topology (L2), but poor for tracking sheer financial volume (L3).
-*   **Sankey Flow Chart:** Add a toggle on the graph to switch to a Sankey diagram. This visually represents the *volume* of ETH flowing from the source, splitting into peel chains, and aggregating in exchanges. This is the gold standard for tracing stolen funds.
+### 3. Role-Based Access Control (RBAC) & Audit Trails
+A Lab Commander must be able to audit their own team. AXON requires strict RBAC (Admin, Lead Investigator, Analyst). Every search query, button click, and export must be logged in a tamper-proof internal audit trail to prevent insider tipping or evidence mishandling.
 
-### 7. UI / UX Improvements for Data Density
-Forensic screens become incredibly crowded very quickly. 
-*   **Collapsible Threat Databases:** Use nested, accordion-style dropdowns for the OSINT and Threat Intelligence panels so that 15 different DB flags (OFAC, aliases) don't cause endless vertical scrolling.
-*   **Time-Series Activity Timeline:** Replace standard tables with a Gantt-style or heat-map timeline scrubber. Experts want to visually see "dormancy gaps" and "transaction bursts" natively on a timeline, showing exactly when a wallet "woke up".
+### 4. Dynamic Cloud Logs (Supabase Integration)
+Transition from ephemeral local JSON logs to a highly secure, globally accessible Supabase backend. This allows multiple forensic labs (e.g., FBI field offices) to share real-time threat data dynamically.
 
-### 8. Automated Alerting & Webhooks (Monitoring)
-Investigations are often ongoing and reactive.
-*   **"Watch this Wallet" Button:** Subscribes a highly suspicious, dormant wallet to a background cron job.
-*   **Behavioral Triggers:** If the wallet breaks dormancy or suddenly interacts with a privacy mixer, AXON automatically fires a webhook (Slack/Discord/Email) to the intel team with the updated 5-Layer score.
+---
 
-### 9. Court-Ready Export Formatting
-The current "Export JSON" is meant for developers.
-*   **Generate PDF Dossier:** A one-click export that generates a beautifully formatted, branded PDF. It includes the Adversarial AI's Executive Verdict, specific timestamps of the L1 signals, and high-res captures of the transaction graph for immediate delivery to legal counsel.
+## PILLAR II: Advanced Tracing & Graph Analytics
+*Finding the needles in the haystack automatically.*
+
+### 5. Automated "Follow-The-Money" Tracing Engine
+Manual hopping is dead. The engine must accept parameters: *"Trace all outbound funds > 1 ETH up to 10 hops, stopping only if funds hit an Exchange or Mixer."* AXON automatically crawls the blockchain and generates the exact flow path.
+
+### 6. The "Entity Evidence Board" (Multiplayer Graphing)
+A Maltego-style, drag-and-drop interactive canvas. Analysts can push 50 different wallets to the board, and AXON’s engine will automatically draw the hidden connecting lines between them to expose the "Mastermind" wallet. Needs real-time collaboration (Figma for forensics).
+
+### 7. Cross-Chain & Bridge Analytics
+Hackers rarely stay on Ethereum. AXON must track assets as they jump across bridges (e.g., Thorchain, Wormhole) to Tron, Bitcoin, or privacy chains like Monero, linking the wrapped assets on the other side.
+
+### 8. Mempool & Time-Series Activity Scrubbing
+Investigators need to see *when* a wallet is active to deduce geographic timezones. Add a Gantt-style timeline scrubber to visualize "dormancy gaps" and "transaction bursts". Furthermore, add Mempool forensics to analyze pending transactions and MEV interactions.
+
+---
+
+## PILLAR III: De-Anonymization & Deep OSINT
+*Connecting on-chain hexadecimal strings to real-world identities.*
+
+### 9. Advanced Dark Web & Telegram Scraping
+Expand OSINT capabilities to actively scrape ransomware negotiation chats, Darknet Market vendor profiles, and Telegram Drainer groups. If a wallet was pasted in a Russian hacker forum in 2023, AXON must surface that link.
+
+### 10. Automated Subpoena & Freezing Order Generation
+If AXON's tracing engine detects that stolen funds landed in Binance or Coinbase, it should auto-generate a PDF Legal Subpoena or Tether Freeze Request. The template will be pre-filled with the exchange's legal contact, deposit addresses, and tx hashes—ready for a judge's signature.
+
+### 11. IP Telemetry & Off-Chain Correlation
+Integrate with proprietary RPC nodes to capture the IP addresses broadcasting the transactions. Correlating an IP address to a wallet address is the holy grail of physical attribution.
+
+### 12. AI Dynamic Learning & Self-Healing Intel
+Static DBs go stale. When an investigator flags a new bridging exploit pattern, AXON’s AI must dynamically extract that behavioral fingerprint and auto-update the `axon_intel.db` corpus. The system learns and applies this new intelligence to all future scans.
+
+---
+
+## PILLAR IV: Reporting & Remediation
+*Delivering the final product to the commander and the courtroom.*
+
+### 13. Comprehensive Court-Ready Dossiers
+A Lab Director requires a polished product. One-click generation of a 50-page PDF containing: Executive Summaries, MITRE ATT&CK mappings, High-Res Flow Graphs, and raw transactional appendices.
+
+### 14. Fiat Off-Ramp Monitoring
+Tracking the exact moment crypto is converted to fiat currency. AXON should integrate with banking APIs (where legally permitted) or flag the exact exchange deposit that indicates a cash-out event, notifying field agents.
+
+### 15. Proactive "Watch & Alert" Cron Jobs
+Investigations are reactive. Allow analysts to place highly suspicious, dormant wallets on a "Watchlist". If the wallet breaks a 3-year dormancy and moves funds, AXON fires a webhook (Slack/Email) to the intel team immediately.

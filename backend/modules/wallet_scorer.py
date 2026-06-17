@@ -56,7 +56,7 @@ async def _etherscan_get(client: httpx.AsyncClient, url: str) -> dict:
     return {"status": "0", "message": "NOTOK", "result": "Max retries exceeded"}
 
 
-async def fetch_all_etherscan_data(client: httpx.AsyncClient, address: str) -> dict:
+async def fetch_all_etherscan_data(client: httpx.AsyncClient, address: str, depth: str = "quick") -> dict:
     """Fetch balance, tx count, and transaction list from Etherscan."""
     key = _get_etherscan_key()
     if not key:
@@ -91,10 +91,24 @@ async def fetch_all_etherscan_data(client: httpx.AsyncClient, address: str) -> d
         await asyncio.sleep(0.4)
 
         # Transaction list
-        tx_json = await _etherscan_get(client, f"{base}&module=account&action=txlist&address={address}&page=1&offset=200&sort=desc&apikey={key}")
-        print(f"[ETHERSCAN] TXList: status={tx_json.get('status')}, message={tx_json.get('message')}")
-        if isinstance(tx_json.get("result"), list):
-            result["transactions"] = tx_json["result"]
+        all_txs = []
+        page = 1
+        offset = 200 if depth == "quick" else 5000
+        while True:
+            tx_json = await _etherscan_get(client, f"{base}&module=account&action=txlist&address={address}&page={page}&offset={offset}&sort=desc&apikey={key}")
+            print(f"[ETHERSCAN] TXList: status={tx_json.get('status')}, message={tx_json.get('message')}")
+            
+            res_list = tx_json.get("result")
+            if isinstance(res_list, list) and len(res_list) > 0:
+                all_txs.extend(res_list)
+                if depth == "quick" or len(res_list) < offset or len(all_txs) >= 5000:
+                    break
+                page += 1
+                await asyncio.sleep(0.4)
+            else:
+                break
+        
+        result["transactions"] = all_txs
         print(f"[ETHERSCAN] Fetched {len(result['transactions'])} transactions")
 
     except Exception as e:
@@ -424,22 +438,38 @@ def _compute_l5_deterministic(l1: int, l2: int, l3: int, l4: int,
 
 
 # ─── MAIN SCAN FUNCTION ───────────────────────────────────────────────────────
-async def scan_wallet(address: str, db: Session) -> dict:
+async def scan_wallet(address: str, db: Session, depth: str = "quick") -> dict:
     """
     Full forensic wallet scan using the 5-Layer Behavioral Engine.
     Returns a structured dict consumed by the frontend.
     """
+    import time
+    from database.models import InvestigationLog
+    
     print(f"\n{'='*60}")
-    print(f"[SCAN] Starting wallet scan: {address}")
+    print(f"[SCAN] Starting wallet scan: {address} (depth: {depth})")
     print(f"{'='*60}")
+
+    # --- Cache Check ---
+    recent_log = db.query(InvestigationLog).filter(
+        InvestigationLog.entity_address.ilike(address),
+        InvestigationLog.entity_type == "wallet",
+        InvestigationLog.scan_depth == depth
+    ).order_by(InvestigationLog.scan_timestamp.desc()).first()
+
+    if recent_log and recent_log.raw_data:
+        cache_hours = 24 if depth == "quick" else 168 # 7 days
+        if (time.time() - recent_log.scan_timestamp) < cache_hours * 3600:
+            print(f"[SCAN] Returning cached {depth} scan for {address}")
+            return recent_log.raw_data
 
     # ── Step 1: Load Intelligence DB (Exchange + Mixer addresses) ─
     all_exchange_addrs, all_mixer_addrs = _load_known_addresses(db)
 
     # ── Step 2: Parallel Data Fetch ──────────────────────────────
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with httpx.AsyncClient(timeout=45.0) as client:
         etherscan_result, alchemy_tokens, forta_count, eth_price = await asyncio.gather(
-            fetch_all_etherscan_data(client, address),
+            fetch_all_etherscan_data(client, address, depth=depth),
             fetch_alchemy_tokens(client, address),
             fetch_forta_alerts(client, address),
             fetch_eth_price(client),
@@ -1043,6 +1073,27 @@ Respond with ONLY valid JSON with exactly these three keys:
         },
         "transactions": tx_history
     }
+    
+    # --- Save to InvestigationLog ---
+    try:
+        log_entry = InvestigationLog(
+            entity_address=address.lower(),
+            entity_type="wallet",
+            chain="ETH",
+            scan_timestamp=time.time(),
+            risk_score=final_score,
+            entity_class=entity_class,
+            triggered_signals=[{"reason": s[0], "icon": s[1], "layer": s[2]} for s in signals],
+            scan_depth=depth,
+            raw_data=response_data
+        )
+        db.add(log_entry)
+        db.commit()
+    except Exception as e:
+        print(f"[SCAN] Error saving to investigation_log: {e}")
+        db.rollback()
+
+    return response_data
 
 
 def _build_wallet_fallback(l1: int, l2: int, l3: int, l4: int, l5: int,

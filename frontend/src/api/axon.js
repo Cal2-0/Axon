@@ -69,3 +69,76 @@ export const getIntelStats = async () => {
   if (!response.ok) throw new Error("Failed to fetch intel stats");
   return response.json();
 };
+
+// ─── CROSS-CHAIN ─────────────────────────────────────────────────────────────
+
+export const getCrossChainHoldings = async (address) => {
+  const response = await fetch(`${API_BASE}/scan/wallet/${address}/cross-chain-holdings`);
+  if (!response.ok) throw new Error("Failed to fetch cross-chain holdings");
+  return response.json();
+};
+
+// ─── BULK INVESTIGATION ──────────────────────────────────────────────────────
+
+export const bulkScan = async (addresses, caseId = null) => {
+  const response = await fetch(`${API_BASE}/scan/bulk`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ addresses, case_id: caseId })
+  });
+  if (!response.ok) throw new Error("Failed to run bulk scan");
+  return response.json();
+};
+
+// ─── CASE MANAGEMENT ─────────────────────────────────────────────────────────
+
+export const createCase = async (title, description = "") => {
+  const response = await fetch(`${API_BASE}/cases/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, description })
+  });
+  if (!response.ok) throw new Error("Failed to create case");
+  return response.json();
+};
+
+export const listCases = async () => {
+  const response = await fetch(`${API_BASE}/cases/`);
+  if (!response.ok) throw new Error("Failed to list cases");
+  return response.json();
+};
+
+export const getCase = async (caseId) => {
+  const response = await fetch(`${API_BASE}/cases/${caseId}`);
+  if (!response.ok) throw new Error("Failed to fetch case");
+  return response.json();
+};
+
+export const addCaseNote = async (caseId, content) => {
+  const response = await fetch(`${API_BASE}/cases/${caseId}/notes`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ content })
+  });
+  if (!response.ok) throw new Error("Failed to add case note");
+  return response.json();
+};
+
+export const linkCaseEntity = async (caseId, investigationLogId, notes = "") => {
+  const response = await fetch(`${API_BASE}/cases/${caseId}/entities`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ investigation_log_id: investigationLogId, notes })
+  });
+  if (!response.ok) throw new Error("Failed to link case entity");
+  return response.json();
+};
+
+// ─── LOGS ────────────────────────────────────────────────────────────────────
+
+export const searchLogs = async (query = "", limit = 50) => {
+  const params = new URLSearchParams({ q: query, limit });
+  const response = await fetch(`${API_BASE}/logs/search?${params}`);
+  if (!response.ok) throw new Error("Failed to search logs");
+  return response.json();
+};

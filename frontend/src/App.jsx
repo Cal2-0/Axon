@@ -5,6 +5,9 @@ import WalletInvestigation from './pages/WalletInvestigation';
 import ContractInvestigation from './pages/ContractInvestigation';
 import IntelligenceDatabases from './pages/IntelligenceDatabases';
 import NotFound from './pages/NotFound';
+import BulkInvestigation from './pages/BulkInvestigation';
+import Cases from './pages/Cases';
+import Logs from './pages/Logs';
 
 // ─── AXON LOGO COMPONENT (Minimal Bond-Style X) ─────────────────────────────
 function AxonLogo({ size = 36 }) {
@@ -162,6 +165,20 @@ function AppLayout() {
             Contract Investigation
           </NavLink>
 
+          <NavLink to="/bulk" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+            </svg>
+            Bulk Scanner
+          </NavLink>
+
+          <NavLink to="/logs" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Investigation Logs
+          </NavLink>
+
           {/* Intelligence */}
           <div className="text-[10px] font-bold text-axon-text-dim uppercase tracking-widest mb-2 px-3 pt-5">Intelligence</div>
 
@@ -175,13 +192,12 @@ function AppLayout() {
           {/* Future */}
           <div className="text-[10px] font-bold text-axon-text-dim uppercase tracking-widest mb-2 px-3 pt-5">Future</div>
 
-          <div className="sidebar-link opacity-40 cursor-not-allowed select-none">
+          <NavLink to="/cases" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
             <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
             </svg>
             <span className="flex-1">Cases</span>
-            <span className="text-[9px] bg-axon-border text-axon-text-dim px-1.5 py-0.5 rounded font-mono">SOON</span>
-          </div>
+          </NavLink>
 
           <div className="sidebar-link opacity-40 cursor-not-allowed select-none">
             <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -233,7 +249,10 @@ function AppLayout() {
             <Route path="/overview" element={<Overview />} />
             <Route path="/wallet" element={<WalletInvestigation />} />
             <Route path="/contract" element={<ContractInvestigation />} />
+            <Route path="/bulk" element={<BulkInvestigation />} />
+            <Route path="/logs" element={<Logs />} />
             <Route path="/intel" element={<IntelligenceDatabases />} />
+            <Route path="/cases" element={<Cases />} />
             {/* Legacy redirects */}
             <Route path="/graph" element={<Navigate to="/wallet" replace />} />
             <Route path="*" element={<NotFound />} />

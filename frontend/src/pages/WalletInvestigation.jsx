@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import GraphView from '../components/GraphView';
 import SmartAddressInput from '../components/SmartAddressInput';
 import ForensicReport from '../components/ForensicReport';
@@ -324,8 +325,10 @@ export default function WalletInvestigation() {
   const [address, setAddress] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
+  const [crossChain, setCrossChain] = useState(null);
   const [showReport, setShowReport] = useState(false);
   const [ethPrice, setEthPrice] = useState({ usd: 3500, inr: 290500 });
+  const location = useLocation();
 
   useEffect(() => {
     fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd,inr')
@@ -338,22 +341,42 @@ export default function WalletInvestigation() {
       .catch(err => console.error('Failed to fetch live ETH price:', err));
   }, []);
 
-  const handleAnalyze = async (e) => {
-    e.preventDefault();
-    if (!address.trim()) return;
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const initialAddress = searchParams.get('address');
+    if (initialAddress) {
+      setAddress(initialAddress);
+      runAnalysis(initialAddress);
+    }
+  }, [location.search]);
+
+  const runAnalysis = async (targetAddress) => {
+    if (!targetAddress || !targetAddress.trim()) return;
     setLoading(true);
     setResult(null);
+    setCrossChain(null);
     
     try {
-      const { scanWallet } = await import('../api/axon');
-      const profile = await scanWallet(address.trim());
+      const { scanWallet, getCrossChainHoldings } = await import('../api/axon');
+      const profile = await scanWallet(targetAddress.trim());
       setResult(profile);
+
+      // Async fetch cross-chain
+      getCrossChainHoldings(targetAddress.trim())
+        .then(cc => setCrossChain(cc))
+        .catch(err => console.error("Cross-chain fetch failed:", err));
+
     } catch (err) {
       console.error(err);
       alert("Failed to fetch wallet analysis from backend.");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleAnalyze = (e) => {
+    if (e) e.preventDefault();
+    runAnalysis(address);
   };
 
   const handleExport = () => {
@@ -532,6 +555,34 @@ export default function WalletInvestigation() {
                   <div className="text-[10px] text-axon-text-dim uppercase tracking-wider mt-1">{item.label}</div>
                 </div>
               ))}
+            </div>
+
+            {/* Cross-Chain Exposure inside Identity */}
+            <div className="mt-6 pt-6 border-t border-axon-border/50">
+              <div className="text-sm font-bold text-axon-text-dim uppercase tracking-wider mb-4">Cross-Chain Exposure</div>
+              {crossChain ? (
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {crossChain.holdings && crossChain.holdings.map((data) => (
+                    <div key={data.chain} className="bg-[#0a0f1a] rounded-lg border border-axon-border p-4 text-center hover:border-axon-cyan transition-colors">
+                      <div className="text-sm font-bold text-white mb-2">{data.chain}</div>
+                      <div className="text-xl font-bold font-mono text-axon-cyan">{data.balance} {data.symbol}</div>
+                      <div className="text-[10px] text-axon-text-dim mt-1 font-mono">${data.usd_value}</div>
+                    </div>
+                  ))}
+                  <div className="bg-axon-cyan/5 rounded-lg border border-axon-cyan/40 p-4 text-center col-span-2 md:col-span-4 flex items-center justify-between px-8">
+                    <span className="text-sm font-bold text-white uppercase tracking-widest">Total Estimated Exposure</span>
+                    <span className="text-2xl font-bold font-mono text-axon-cyan">${crossChain.total_net_worth_usd}</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3 p-4 text-axon-text-muted text-sm font-mono">
+                  <svg className="animate-spin w-4 h-4 text-axon-cyan" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Scanning secondary networks...
+                </div>
+              )}
             </div>
           </CollapsibleSection>
 

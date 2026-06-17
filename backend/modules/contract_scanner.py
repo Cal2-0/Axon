@@ -338,21 +338,36 @@ async def fetch_goplus_security(client: httpx.AsyncClient, address: str) -> dict
 # MAIN SCAN FUNCTION
 # ═══════════════════════════════════════════════════════════
 
-async def scan_contract(address: str, db: Session) -> dict:
+async def scan_contract(address: str, db: Session, depth: str = "quick") -> dict:
     """
     Full forensic contract scan using the 5-Axis Behavioral Engine v3.0.
     Returns a structured dict consumed by the frontend.
     """
+    import time
+    from database.models import InvestigationLog
+    
+    # --- Cache Check ---
+    recent_log = db.query(InvestigationLog).filter(
+        InvestigationLog.entity_address.ilike(address),
+        InvestigationLog.entity_type == "contract",
+        InvestigationLog.scan_depth == depth
+    ).order_by(InvestigationLog.scan_timestamp.desc()).first()
+
+    if recent_log and recent_log.raw_data:
+        cache_hours = 24 if depth == "quick" else 168 # 7 days
+        if (time.time() - recent_log.scan_timestamp) < cache_hours * 3600:
+            print(f"[SCAN] Returning cached {depth} scan for contract {address}")
+            return recent_log.raw_data
     # ── Step 0: Load Intelligence DB ─────────────────────
     all_exchange_addrs, all_mixer_addrs = _load_known_addresses(db)
 
     # ── Step 1: Parallel Data Fetch ──────────────────────
-    async with httpx.AsyncClient(timeout=30.0) as client:
+    async with httpx.AsyncClient(timeout=45.0) as client:
         etherscan, goplus, forta_count, tx_data = await asyncio.gather(
             fetch_etherscan_source(client, address),
             fetch_goplus_security(client, address),
             fetch_forta_alerts(client, address),
-            fetch_all_etherscan_data(client, address),
+            fetch_all_etherscan_data(client, address, depth=depth),
             return_exceptions=True
         )
 
@@ -756,7 +771,7 @@ Respond with ONLY valid JSON containing exactly these three keys:
     # BUILD RESPONSE
     # ═══════════════════════════════════════════════════════
 
-    return {
+    response_data = {
         "identity": {
             "address": address,
             "name": protocol_class["name"] if protocol_class["matched"] else name,
@@ -805,8 +820,32 @@ Respond with ONLY valid JSON containing exactly these three keys:
         "goplus": {
             "overall": label,
             "checks": goplus_checks
-        }
+        },
+        "sourceCode": source_code,
+        "abi": etherscan.get("abi", "[]"),
+        "slither": _simulate_slither_analysis(source_code)
     }
+    
+    # --- Save to InvestigationLog ---
+    try:
+        log_entry = InvestigationLog(
+            entity_address=address.lower(),
+            entity_type="contract",
+            chain="ETH",
+            scan_timestamp=time.time(),
+            risk_score=final_score,
+            entity_class=protocol_class["category"],
+            triggered_signals=[{"reason": s, "icon": "🔹", "layer": "A"} for s in signals],
+            scan_depth=depth,
+            raw_data=response_data
+        )
+        db.add(log_entry)
+        db.commit()
+    except Exception as e:
+        print(f"[SCAN] Error saving to investigation_log: {e}")
+        db.rollback()
+
+    return response_data
 
 
 def _build_fallback(axis: dict, label: str, name: str, signals: list,
@@ -879,3 +918,60 @@ def _build_fallback(axis: dict, label: str, name: str, signals: list,
             "mitre_tag": "N/A",
             "verdict": f"{label} RISK — No critical forensic findings. Standard monitoring recommended."
         }
+
+
+def _simulate_slither_analysis(source_code: str) -> list:
+    """
+    Simulate a Slither static analysis run by checking for known dangerous patterns 
+    in the raw Solidity source code.
+    Returns a list of vulnerability objects.
+    """
+    vulnerabilities = []
+    if not source_code:
+        return vulnerabilities
+        
+    src_lower = source_code.lower()
+    
+    if "call.value" in src_lower or ".call{" in src_lower:
+        vulnerabilities.append({
+            "name": "Potential Reentrancy",
+            "severity": "High",
+            "description": "External calls detected. If state changes occur after this call, it may be vulnerable to reentrancy attacks."
+        })
+        
+    if "delegatecall(" in src_lower:
+        vulnerabilities.append({
+            "name": "Unrestricted Delegatecall",
+            "severity": "High",
+            "description": "Delegatecall allows external contracts to modify this contract's state. Ensure caller is authenticated."
+        })
+        
+    if "tx.origin" in src_lower:
+        vulnerabilities.append({
+            "name": "tx.origin Authentication Bypass",
+            "severity": "High",
+            "description": "Using tx.origin for authorization is vulnerable to phishing attacks. Use msg.sender instead."
+        })
+        
+    if "selfdestruct(" in src_lower or "suicide(" in src_lower:
+        vulnerabilities.append({
+            "name": "Self-Destruct Capability",
+            "severity": "High",
+            "description": "The contract can be destroyed, rendering all funds permanently locked or stolen."
+        })
+        
+    if "block.timestamp" in src_lower or "now" in src_lower:
+        vulnerabilities.append({
+            "name": "Block Timestamp Dependence",
+            "severity": "Low",
+            "description": "Miners can manipulate block.timestamp slightly. Do not use for critical entropy or randomness."
+        })
+        
+    if "block.blockhash" in src_lower or "blockhash(" in src_lower:
+        vulnerabilities.append({
+            "name": "Weak Randomness",
+            "severity": "Medium",
+            "description": "Using block variables for randomness can be exploited by malicious miners."
+        })
+        
+    return vulnerabilities

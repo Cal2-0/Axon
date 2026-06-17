@@ -27,6 +27,9 @@ class MaliciousWallet(Base):
     total_sent_eth = Column(String(30), default="0")
     tx_count = Column(Integer, default=0)
     counterparties = Column(Integer, default=0)
+    source = Column(String(50), default="unknown")
+    confidence = Column(Integer, default=50)
+    cluster_id = Column(String(50), nullable=True, index=True)
 
 
 class ExchangeWallet(Base):
@@ -73,3 +76,54 @@ class ThreatActor(Base):
     known_attacks = Column(JSON, default=list)
     status = Column(String(20), default="Active")
     threat_level = Column(String(20), default="HIGH")
+
+
+class InvestigationLog(Base):
+    """Persistent history of all scanned wallets and contracts."""
+    __tablename__ = "investigation_log"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    entity_address = Column(String(42), index=True, nullable=False)
+    entity_type = Column(String(20), index=True, nullable=False) # "wallet" or "contract"
+    chain = Column(String(30), default="ETH")
+    scan_timestamp = Column(Float, index=True, nullable=False) # unix timestamp
+    risk_score = Column(Integer, default=0)
+    entity_class = Column(String(100), default="Unknown")
+    triggered_signals = Column(JSON, default=list)
+    scan_depth = Column(String(20), default="quick") # "quick" or "deep"
+    case_id = Column(Integer, nullable=True, index=True)
+    bulk_batch_id = Column(String(50), nullable=True, index=True)
+    raw_data = Column(JSON, default=dict) # to cache full scan responses
+
+class Case(Base):
+    __tablename__ = "cases"
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    title = Column(String(200), nullable=False)
+    description = Column(Text, default="")
+    created_at = Column(Float, nullable=False)
+    status = Column(String(20), default="Open")
+
+class CaseEntity(Base):
+    __tablename__ = "case_entities"
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    case_id = Column(Integer, index=True, nullable=False)
+    investigation_log_id = Column(Integer, index=True, nullable=False)
+    notes = Column(Text, default="")
+
+class CaseNote(Base):
+    __tablename__ = "case_notes"
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    case_id = Column(Integer, index=True, nullable=False)
+    content = Column(Text, nullable=False)
+    created_at = Column(Float, nullable=False)
+
+class CandidateEntity(Base):
+    __tablename__ = "candidate_entities"
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    address = Column(String(42), index=True, nullable=False)
+    label = Column(String(200), nullable=False)
+    category = Column(String(50), nullable=False)
+    source = Column(String(100), nullable=False)
+    confidence = Column(Integer, default=50)
+    chain = Column(String(30), default="ETH")
+    status = Column(String(20), default="pending")

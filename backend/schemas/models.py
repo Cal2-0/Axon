@@ -8,6 +8,11 @@ from typing import List, Dict, Any, Optional
 
 class ScanRequest(BaseModel):
     address: str
+    depth: Optional[str] = "quick"  # "quick" or "deep"
+
+class BulkScanRequest(BaseModel):
+    addresses: List[str]
+    case_id: Optional[int] = None
 
 # --- Responses (Matching Frontend DEMO_PROFILES structure) ---
 
@@ -90,3 +95,65 @@ class IntelStats(BaseModel):
     exchange_wallets: int
     known_mixers: int
     threat_actors: int
+
+class InvestigationLogModel(BaseModel):
+    id: int
+    entity_address: str
+    entity_type: str
+    chain: str
+    scan_timestamp: float
+    risk_score: int
+    entity_class: str
+    triggered_signals: List[Any]
+    scan_depth: str
+    case_id: Optional[int]
+    bulk_batch_id: Optional[str] = None
+    raw_data: Optional[Dict[str, Any]]
+
+    class Config:
+        from_attributes = True
+
+class CaseNoteModel(BaseModel):
+    id: int
+    case_id: int
+    content: str
+    created_at: float
+
+    class Config:
+        from_attributes = True
+
+class CaseEntityModel(BaseModel):
+    id: int
+    case_id: int
+    investigation_log_id: int
+    notes: str
+
+    class Config:
+        from_attributes = True
+
+class CaseModel(BaseModel):
+    id: int
+    title: str
+    description: str
+    created_at: float
+    status: str
+    notes: Optional[List[CaseNoteModel]] = []
+    entities: Optional[List[InvestigationLogModel]] = []
+
+    class Config:
+        from_attributes = True
+
+class CandidateEntityModel(BaseModel):
+    id: int
+    address: str
+    label: str
+    category: str
+    source: str
+    confidence: int
+    chain: str
+    status: str
+
+    class Config:
+        from_attributes = True
+
+

@@ -354,6 +354,71 @@ export default function ContractInvestigation() {
             </div>
           </CollapsibleSection>
 
+          {/* 5. Static Vulnerability Analysis */}
+          <CollapsibleSection color="red" icon="🔬" title="Static Vulnerability Analysis" badge="SLITHER ENGINE" defaultOpen={false}>
+            {result.slither && result.slither.length > 0 ? (
+              <div className="grid md:grid-cols-2 gap-4">
+                {result.slither.map((vuln, i) => (
+                  <div key={i} className="bg-axon-bg rounded-lg border border-axon-border p-4 flex flex-col gap-2">
+                    <div className="flex justify-between items-start">
+                      <div className="font-bold text-white text-sm">{vuln.name}</div>
+                      <SeverityBadge severity={vuln.severity} />
+                    </div>
+                    <div className="text-xs text-axon-text-muted mt-1">{vuln.description}</div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-4 bg-axon-green/10 border border-axon-green/30 text-axon-green rounded-lg text-sm font-mono text-center">
+                ✓ No critical vulnerabilities found in source code via static analysis.
+              </div>
+            )}
+          </CollapsibleSection>
+
+          {/* 6. Source Code & ABI */}
+          <CollapsibleSection color="purple" icon="💻" title="Source Code & ABI Viewer" defaultOpen={false}>
+            {!result.identity.verified ? (
+              <div className="p-6 bg-red-500/10 border border-red-500/30 rounded-lg text-center">
+                <div className="text-4xl mb-3">⚠️</div>
+                <h3 className="text-red-400 font-bold mb-2 uppercase tracking-widest">Unverified Contract</h3>
+                <p className="text-axon-text-muted text-sm max-w-md mx-auto mb-4">
+                  The source code for this contract is not available on Etherscan. AXON is unable to perform static analysis. 
+                </p>
+                <button className="axon-button bg-red-500/20 text-red-400 border-red-500/40 hover:bg-red-500 hover:text-white px-4 py-2 text-xs">
+                  Request AI Bytecode Decompilation (BETA)
+                </button>
+              </div>
+            ) : (
+              <div>
+                <div className="flex gap-2 mb-4">
+                  <button 
+                    type="button"
+                    className={`px-4 py-2 text-xs font-bold uppercase tracking-widest rounded transition-colors ${activeCodeTab === 'source' ? 'bg-axon-cyan/20 text-axon-cyan border border-axon-cyan/40' : 'bg-axon-bg text-axon-text-dim border border-axon-border hover:bg-axon-card'}`}
+                    onClick={(e) => { e.preventDefault(); setActiveCodeTab('source'); }}
+                  >
+                    Solidity Source
+                  </button>
+                  <button 
+                    type="button"
+                    className={`px-4 py-2 text-xs font-bold uppercase tracking-widest rounded transition-colors ${activeCodeTab === 'abi' ? 'bg-axon-cyan/20 text-axon-cyan border border-axon-cyan/40' : 'bg-axon-bg text-axon-text-dim border border-axon-border hover:bg-axon-card'}`}
+                    onClick={(e) => { e.preventDefault(); setActiveCodeTab('abi'); }}
+                  >
+                    Contract ABI
+                  </button>
+                  <div className="ml-auto">
+                    <CopyButton text={activeCodeTab === 'source' ? result.sourceCode : result.abi} />
+                  </div>
+                </div>
+                
+                <div className="bg-[#05080f] rounded-lg border border-axon-border overflow-hidden">
+                  <pre className="p-4 text-[10px] sm:text-xs font-mono text-axon-cyan/80 max-h-[500px] overflow-y-auto overflow-x-auto whitespace-pre-wrap">
+                    {activeCodeTab === 'source' ? result.sourceCode : result.abi}
+                  </pre>
+                </div>
+              </div>
+            )}
+          </CollapsibleSection>
+
         </div>
       )}
 
