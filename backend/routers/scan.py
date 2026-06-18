@@ -32,7 +32,7 @@ async def post_scan_wallet(req: ScanRequest, background_tasks: BackgroundTasks, 
         background_tasks.add_task(run_deep_scan_background, req.address, "wallet")
         return {"status": "accepted", "message": "Deep scan initiated in background", "address": req.address}
     
-    return await scan_wallet(req.address, db, depth="quick")
+    return await scan_wallet(req.address, db, depth="quick", case_id=req.case_id)
 
 @router.post("/contract")
 async def post_scan_contract(req: ScanRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
@@ -40,7 +40,7 @@ async def post_scan_contract(req: ScanRequest, background_tasks: BackgroundTasks
         background_tasks.add_task(run_deep_scan_background, req.address, "contract")
         return {"status": "accepted", "message": "Deep scan initiated in background", "address": req.address}
 
-    return await scan_contract(req.address, db, depth="quick")
+    return await scan_contract(req.address, db, depth="quick", case_id=req.case_id)
 
 @router.get("/wallet/{address}/cross-chain-holdings")
 async def get_wallet_cross_chain_holdings(address: str):

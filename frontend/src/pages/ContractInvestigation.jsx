@@ -82,7 +82,7 @@ function RiskMeter({ score, label }) {
 }
 
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────
-export default function ContractInvestigation() {
+export default function ContractInvestigation({ caseId }) {
   const [address, setAddress] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
@@ -97,8 +97,8 @@ export default function ContractInvestigation() {
     setLoading(true); setResult(null);
     try {
       const { scanContract } = await import('../api/axon');
-      const profile = await scanContract(address.trim());
-      setResult(profile);
+      const data = await scanContract(address.trim(), caseId);
+      setResult(data);
     } catch (err) {
       console.error(err);
       alert("Failed to fetch contract analysis from backend.");

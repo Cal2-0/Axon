@@ -5,12 +5,18 @@ SQLite via SQLAlchemy for the intelligence database.
 import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
+from dotenv import load_dotenv
+
+load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./axon_intel.db")
 
+# If using SQLite, we need check_same_thread=False. If Postgres (Supabase), we don't.
+connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+
 engine = create_engine(
     DATABASE_URL,
-    connect_args={"check_same_thread": False},
+    connect_args=connect_args,
     echo=False,
 )
 

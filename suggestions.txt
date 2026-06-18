@@ -1,71 +1,437 @@
-# AXON v4.0: Enterprise Digital Forensics & Incident Response (DFIR) Roadmap
-**Target Deployment: Law Enforcement, Intelligence Agencies, and National Crypto Forensic Labs**
+# AXON v4.0: Enterprise Blockchain DFIR Platform — Full Feature Roadmap
+# ═══════════════════════════════════════════════════════════════════════
+# Target: Law Enforcement, Intelligence Agencies, National Crypto Forensic Labs
+# Benchmark: Cellebrite UFED / MSAB XRY / Chainalysis Reactor — but for crypto-native investigations
+# ═══════════════════════════════════════════════════════════════════════
+#
+# This document represents the complete feature set required to deploy AXON
+# as a production-grade forensic tool in an actual working lab. Every item
+# is framed from the perspective of a Forensic Lab Director presenting to
+# their Commander for budget approval and operational deployment.
+#
+# Features already implemented are marked [DONE].
+# Features in progress are marked [IN PROGRESS].
+# All others are proposed enhancements.
 
-To transition AXON from a high-tier analysis tool into a "Cellebrite-grade" institutional forensic platform, it must satisfy the rigorous demands of Lab Directors, Legal Counsel, and Agency Commanders. The platform must move beyond mere "scanning" and provide end-to-end Case Lifecycle Management, Cryptographic Evidence Security, and Deep Attribution.
 
-The following 15 pillars represent the roadmap to secure a true Enterprise/Government deployment.
-
----
-
-## PILLAR I: Chain of Custody & Institutional Case Management
-*To be admissible in a court of law, evidence must be immutable, logged, and structured.*
+# ═══════════════════════════════════════════════════════════════════════
+# PILLAR I: CHAIN OF CUSTODY & INSTITUTIONAL CASE MANAGEMENT
+# ═══════════════════════════════════════════════════════════════════════
+# "If it can't survive a defense attorney's cross-examination, it's not evidence."
 
 ### 1. Persistent Case Workspaces
-AXON must shift to a project-based architecture. Analysts create "Case #2026-ETH-041", where dozens of scanned wallets, contracts, and OSINT reports are grouped into a single, unified workspace that persists across sessions.
+# Status: [IN PROGRESS] — basic Cases page exists
+# Every investigation must live inside a named, numbered Case (e.g., Case #2026-ETH-041).
+# Analysts group dozens of wallets, contracts, bulk scans, and OSINT reports
+# into a single unified workspace that persists across sessions, browser refreshes,
+# and server restarts. Cases must support:
+#   - Case metadata (title, description, assigned analysts, priority level, status)
+#   - Tagging and categorization (ransomware, pig butchering, rug pull, etc.)
+#   - Case timeline showing every action taken chronologically
+#   - Linking related cases (e.g., same threat actor across multiple incidents)
 
-### 2. Cryptographic Hashing & Chain of Custody
-Every time AXON completes a scan or trace, the system generates a SHA-256 hash of the JSON/PDF evidence snapshot alongside an exact timestamp. This proves the data was pulled at that specific moment and has not been tampered with.
+### 2. Cryptographic Evidence Hashing & Chain of Custody
+# Status: [NOT STARTED]
+# Every scan result, PDF export, and graph snapshot must be cryptographically
+# hashed (SHA-256) at creation time with an exact UTC timestamp. This creates
+# an immutable evidence chain proving:
+#   - WHEN the blockchain data was pulled
+#   - WHAT the exact data was at that moment
+#   - WHO pulled it (analyst ID)
+#   - That it has NOT been tampered with since extraction
+# The hash manifest should be exportable as a standalone "Chain of Custody Certificate"
+# that accompanies every evidence package submitted to prosecutors.
 
 ### 3. Role-Based Access Control (RBAC) & Audit Trails
-A Lab Commander must be able to audit their own team. AXON requires strict RBAC (Admin, Lead Investigator, Analyst). Every search query, button click, and export must be logged in a tamper-proof internal audit trail to prevent insider tipping or evidence mishandling.
+# Status: [NOT STARTED]
+# A Lab Commander must audit their own team. Required roles:
+#   - Admin: Full system access, user management, DB configuration
+#   - Lead Investigator: Case creation, analyst assignment, report approval
+#   - Analyst: Scanning, analysis, note-taking within assigned cases only
+#   - Read-Only / Auditor: Can view cases and logs but cannot modify anything
+# Every action (search query, scan trigger, export, note edit) must be logged
+# in a tamper-proof internal audit trail. This prevents insider tipping,
+# evidence mishandling, and ensures ISO 27037 compliance for digital evidence.
 
-### 4. Dynamic Cloud Logs (Supabase Integration)
-Transition from ephemeral local JSON logs to a highly secure, globally accessible Supabase backend. This allows multiple forensic labs (e.g., FBI field offices) to share real-time threat data dynamically.
+### 4. Dynamic Cloud Logs & Persistence (Supabase Integration)
+# Status: [NOT STARTED]
+# Transition from ephemeral local JSON/SQLite logs to a persistent, globally
+# accessible Supabase backend. Benefits:
+#   - Investigation data survives server restarts and redeployments
+#   - Multiple forensic labs can share real-time threat data
+#   - Row-level security ensures analysts only see their assigned cases
+#   - Real-time subscriptions for live collaboration between analysts
+#   - Automatic backup and disaster recovery
 
----
+### 5. Evidence Intake & Seizure Documentation
+# Status: [NOT STARTED]
+# Before analysis begins, a forensic lab must document HOW the crypto evidence
+# was obtained. AXON needs an "Evidence Intake Form" that captures:
+#   - Source of the wallet/address (seized device, informant tip, subpoena response)
+#   - Legal authority (warrant number, court order reference)
+#   - Physical evidence chain (which device, which app, screenshot of seed phrase)
+#   - Hash of original intake data
+# This is the FIRST thing a defense attorney will challenge.
 
-## PILLAR II: Advanced Tracing & Graph Analytics
-*Finding the needles in the haystack automatically.*
 
-### 5. Automated "Follow-The-Money" Tracing Engine
-Manual hopping is dead. The engine must accept parameters: *"Trace all outbound funds > 1 ETH up to 10 hops, stopping only if funds hit an Exchange or Mixer."* AXON automatically crawls the blockchain and generates the exact flow path.
+# ═══════════════════════════════════════════════════════════════════════
+# PILLAR II: ADVANCED TRACING & GRAPH ANALYTICS
+# ═══════════════════════════════════════════════════════════════════════
+# "Show me where the money went. Every hop. Every split. Every dead end."
 
-### 6. The "Entity Evidence Board" (Multiplayer Graphing)
-A Maltego-style, drag-and-drop interactive canvas. Analysts can push 50 different wallets to the board, and AXON’s engine will automatically draw the hidden connecting lines between them to expose the "Mastermind" wallet. Needs real-time collaboration (Figma for forensics).
+### 6. Automated "Follow-The-Money" Tracing Engine
+# Status: [NOT STARTED]
+# The investigator sets parameters:
+#   "Trace all outbound funds > 1 ETH, up to 10 hops, stop at Exchange or Mixer."
+# AXON recursively crawls the blockchain in the background and generates
+# the exact flow path:
+#   Hacker → Intermediary 1 → Intermediary 2 → Tornado Cash → Intermediary 3 → Binance Deposit
+# Each hop is annotated with: amount, timestamp, gas fee, and entity label.
+# The trace must handle splitting (1 wallet → 5 peel chains) and merging
+# (5 wallets → 1 consolidation address).
 
-### 7. Cross-Chain & Bridge Analytics
-Hackers rarely stay on Ethereum. AXON must track assets as they jump across bridges (e.g., Thorchain, Wormhole) to Tron, Bitcoin, or privacy chains like Monero, linking the wrapped assets on the other side.
+### 7. Entity Evidence Board (Maltego-Style Interactive Canvas)
+# Status: [NOT STARTED]
+# A drag-and-drop canvas where analysts can:
+#   - Push any scanned wallet/contract onto the board
+#   - Manually add notes, labels, and color-coded groups
+#   - Let AXON auto-discover hidden links between entities
+#   - Draw the "Mastermind" wallet orchestrating a campaign
+#   - Real-time multiplayer collaboration (Figma for forensics)
+#   - Export the board as a high-resolution image for court presentations
 
-### 8. Mempool & Time-Series Activity Scrubbing
-Investigators need to see *when* a wallet is active to deduce geographic timezones. Add a Gantt-style timeline scrubber to visualize "dormancy gaps" and "transaction bursts". Furthermore, add Mempool forensics to analyze pending transactions and MEV interactions.
+### 8. Cross-Chain & Bridge Analytics
+# Status: [IN PROGRESS] — basic cross-chain module exists
+# Hackers rarely stay on one chain. AXON must track assets as they jump:
+#   Ethereum → (Thorchain) → Bitcoin → (Ren) → Tron → (Circle Bridge) → Solana
+# Required capabilities:
+#   - Detect bridge contract interactions automatically
+#   - Correlate the wrapped asset on the destination chain
+#   - Support: Ethereum, Bitcoin, Tron, Solana, BSC, Polygon, Arbitrum, Optimism, Base
+#   - Flag privacy chain off-ramps (Monero, Zcash) as "trail gone cold"
 
----
+### 9. Mempool & Time-Series Activity Analysis
+# Status: [NOT STARTED]
+# Investigators need temporal analysis:
+#   - Gantt-style timeline scrubber showing when a wallet is active
+#   - Heatmap of transaction frequency by hour-of-day and day-of-week
+#     (deduce geographic timezone of the operator)
+#   - Mempool forensics: analyze pending/failed transactions for intent
+#   - MEV interaction detection (sandwich attacks, frontrunning)
+#   - Dormancy gap visualization ("wallet slept for 2 years, then moved 500 ETH")
 
-## PILLAR III: De-Anonymization & Deep OSINT
-*Connecting on-chain hexadecimal strings to real-world identities.*
+### 10. Sankey Flow Diagrams
+# Status: [NOT STARTED]
+# The D3 force graph is great for topology but poor for showing volume.
+# Add a toggle to switch to a Sankey diagram that visually represents:
+#   - The VOLUME of funds flowing from source to destination
+#   - Splitting into peel chains
+#   - Aggregating into exchange deposits
+# This is the gold standard for "follow the money" presentations in court.
 
-### 9. Advanced Dark Web & Telegram Scraping
-Expand OSINT capabilities to actively scrape ransomware negotiation chats, Darknet Market vendor profiles, and Telegram Drainer groups. If a wallet was pasted in a Russian hacker forum in 2023, AXON must surface that link.
 
-### 10. Automated Subpoena & Freezing Order Generation
-If AXON's tracing engine detects that stolen funds landed in Binance or Coinbase, it should auto-generate a PDF Legal Subpoena or Tether Freeze Request. The template will be pre-filled with the exchange's legal contact, deposit addresses, and tx hashes—ready for a judge's signature.
+# ═══════════════════════════════════════════════════════════════════════
+# PILLAR III: DE-ANONYMIZATION & DEEP OSINT
+# ═══════════════════════════════════════════════════════════════════════
+# "A wallet address is just a hex string. Our job is to put a name behind it."
 
-### 11. IP Telemetry & Off-Chain Correlation
-Integrate with proprietary RPC nodes to capture the IP addresses broadcasting the transactions. Correlating an IP address to a wallet address is the holy grail of physical attribution.
+### 11. ENS / Unstoppable Domains Reverse Lookup
+# Status: [NOT STARTED]
+# Automatically resolve any wallet address to its registered ENS name
+# (e.g., 0xd8dA... → vitalik.eth). Also check Unstoppable Domains, Lens Protocol
+# handles, and Farcaster IDs. This is low-hanging fruit for attribution.
 
-### 12. AI Dynamic Learning & Self-Healing Intel
-Static DBs go stale. When an investigator flags a new bridging exploit pattern, AXON’s AI must dynamically extract that behavioral fingerprint and auto-update the `axon_intel.db` corpus. The system learns and applies this new intelligence to all future scans.
+### 12. Social Media & Forum Cross-Referencing
+# Status: [NOT STARTED]
+# Scrape and correlate:
+#   - Twitter/X bios containing wallet addresses
+#   - GitHub commits signed with associated addresses
+#   - Discord server messages mentioning specific addresses
+#   - Reddit posts in r/cryptocurrency, r/defi with address mentions
+#   - Etherscan name tags and public labels
 
----
+### 13. Dark Web & Telegram Intelligence Scraping
+# Status: [NOT STARTED]
+# Deep OSINT layer:
+#   - Ransomware negotiation chats (Conti leaks, LockBit panels)
+#   - Darknet Market vendor profiles and withdrawal addresses
+#   - Telegram Drainer-as-a-Service group monitoring
+#   - Paste sites (Pastebin, Ghostbin) for leaked address lists
+#   - Russian/Chinese hacker forum monitoring (XSS, Exploit.in, BreachForums)
 
-## PILLAR IV: Reporting & Remediation
-*Delivering the final product to the commander and the courtroom.*
+### 14. IP Telemetry & Off-Chain Correlation
+# Status: [NOT STARTED]
+# The holy grail of physical attribution:
+#   - Integrate with proprietary RPC nodes to capture IP addresses
+#     broadcasting transactions to the Ethereum mempool
+#   - Correlate IP → ISP → Geographic location → Physical person
+#   - Cross-reference with VPN/Tor exit node databases to identify
+#     whether the broadcaster is using anonymization
+#   - This is how the FBI caught the Colonial Pipeline attackers
 
-### 13. Comprehensive Court-Ready Dossiers
-A Lab Director requires a polished product. One-click generation of a 50-page PDF containing: Executive Summaries, MITRE ATT&CK mappings, High-Res Flow Graphs, and raw transactional appendices.
+### 15. Device Forensics Integration
+# Status: [NOT STARTED]
+# When a physical device is seized (phone, laptop, hardware wallet),
+# AXON should accept imports from:
+#   - Cellebrite UFED extraction reports (XML/UFDR format)
+#   - MetaMask local storage dumps (Chrome extension data)
+#   - Hardware wallet transaction logs (Ledger, Trezor)
+#   - Browser history showing DeFi/exchange interactions
+#   - Seed phrase / private key recovery artifacts
+# This bridges the gap between physical device forensics and blockchain analysis.
 
-### 14. Fiat Off-Ramp Monitoring
-Tracking the exact moment crypto is converted to fiat currency. AXON should integrate with banking APIs (where legally permitted) or flag the exact exchange deposit that indicates a cash-out event, notifying field agents.
 
-### 15. Proactive "Watch & Alert" Cron Jobs
-Investigations are reactive. Allow analysts to place highly suspicious, dormant wallets on a "Watchlist". If the wallet breaks a 3-year dormancy and moves funds, AXON fires a webhook (Slack/Email) to the intel team immediately.
+# ═══════════════════════════════════════════════════════════════════════
+# PILLAR IV: AI INTELLIGENCE & DYNAMIC LEARNING
+# ═══════════════════════════════════════════════════════════════════════
+# "The system must get smarter with every investigation, not stay static."
+
+### 16. AI Dynamic Learning System & Auto-Updater
+# Status: [NOT STARTED]
+# When AXON's behavioral engine or an analyst confirms a suspicious wallet:
+#   - The AI extracts the behavioral fingerprint (tx rhythm, fan-out pattern,
+#     denomination clustering, dormancy profile)
+#   - Auto-updates the axon_intel.db corpus with the new signature
+#   - All future scans benefit from this learned pattern
+#   - New exploit techniques (e.g., a novel bridging pattern) are detected
+#     and catalogued WITHOUT manual intervention
+# This transforms AXON from a static tool into a living intelligence engine.
+
+### 17. Behavioral Clustering & Campaign Detection
+# Status: [NOT STARTED]
+# When investigating a massive exploit (e.g., Lazarus Group):
+#   - AXON auto-clusters wallets by behavioral fingerprint similarity
+#   - If 5 wallets show identical peel-chain timing and round-trip patterns,
+#     cluster them as "Likely Single Operator Campaign"
+#   - This attribution happens BEFORE any database lookup
+#   - Competitive moat: Chainalysis relies on label lookup; AXON uses behavior
+
+### 18. Natural Language Case Querying (AI Copilot)
+# Status: [NOT STARTED]
+# An investigator should be able to type in plain English:
+#   "Show me all wallets in Case #041 that interacted with Tornado Cash
+#    after January 2024 and moved more than 10 ETH"
+# AXON's AI translates this into structured queries against the case database
+# and returns results instantly. This eliminates the SQL/filter learning curve
+# for non-technical law enforcement officers.
+
+### 19. Predictive Risk Modeling
+# Status: [NOT STARTED]
+# Based on historical patterns of known exploit wallets:
+#   - Predict the NEXT likely action of a suspicious wallet
+#   - "This wallet's pattern matches 87% of known rug-pull operators.
+#     Based on historical data, the operator is likely to drain liquidity
+#     within the next 48-72 hours."
+#   - Alert the investigator to act preemptively
+
+### 20. Multi-Language AI Narrative Generation
+# Status: [NOT STARTED]
+# Forensic reports must be understood by judges, prosecutors, and juries
+# who know nothing about crypto. The AI must:
+#   - Auto-translate "DEX Swap" → "Currency Exchange"
+#   - Auto-translate "Liquidity Pool" → "Asset Commingling Fund"
+#   - Generate narratives in plain English, Arabic, Hindi, Mandarin, etc.
+#   - Adjust technical depth based on audience (expert vs. jury)
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# PILLAR V: REPORTING, LEGAL & REMEDIATION
+# ═══════════════════════════════════════════════════════════════════════
+# "The investigation report IS the product. Everything else is infrastructure."
+
+### 21. Comprehensive Court-Ready Dossiers
+# Status: [IN PROGRESS] — PDF export exists
+# One-click generation of a 50+ page professional PDF containing:
+#   - Executive Summary (1 page, for the Commander)
+#   - MITRE ATT&CK mapping with evidence citations
+#   - Full transaction flow diagrams (high-res, printable)
+#   - Chronological timeline of all suspicious activity
+#   - Raw transactional appendices with hash verification
+#   - Chain of custody certificate
+#   - Analyst notes and methodology description
+#   - Glossary of blockchain terms for non-technical readers
+
+### 22. Automated Subpoena & Freezing Order Generation
+# Status: [NOT STARTED]
+# When stolen funds land in a centralized exchange:
+#   - Auto-generate a PDF Legal Subpoena pre-filled with:
+#     * Exchange legal department contact (Binance, Coinbase, Kraken, etc.)
+#     * Specific deposit address(es) and transaction hashes
+#     * Amount and timestamp of each deposit
+#     * Request for KYC records of the account holder
+#   - Auto-generate a Tether/Circle Freeze Request for stablecoin issuers
+#   - Auto-generate MLAT (Mutual Legal Assistance Treaty) templates
+#     for cross-border investigations
+#   - Templates compliant with US, EU, UK, and UAE legal frameworks
+
+### 23. Fiat Off-Ramp Monitoring
+# Status: [NOT STARTED]
+# Track the exact moment crypto converts to fiat:
+#   - Flag exchange deposit addresses that indicate cash-out
+#   - Integrate with P2P marketplace monitoring (LocalBitcoins, Paxful)
+#   - Detect OTC desk interactions (large single transfers to known OTC addresses)
+#   - Alert field agents when the suspect is actively cashing out
+#   - Correlate exchange deposit timestamps with bank withdrawal records
+#     (when subpoena data is available)
+
+### 24. Proactive "Watch & Alert" System
+# Status: [NOT STARTED]
+# Investigations are ongoing and reactive. Required features:
+#   - "Watch this Wallet" button subscribes to a background cron job
+#   - If a dormant wallet breaks 3-year silence and moves funds → instant alert
+#   - Behavioral triggers: mixer interaction, bridge usage, exchange deposit
+#   - Multi-channel notification: Slack, Discord, Email, SMS, Webhook
+#   - Configurable thresholds per wallet (amount, counterparty type, chain)
+
+### 25. Victim Notification & Asset Recovery Coordination
+# Status: [NOT STARTED]
+# When AXON traces stolen funds to a recoverable location:
+#   - Generate a "Recovery Opportunity Report" for the victim/client
+#   - Include the exact exchange, deposit address, and amount recoverable
+#   - Provide template letters for the victim's legal counsel
+#   - Track recovery status (frozen, returned, seized, lost)
+#   - Calculate recovery percentage for case closure metrics
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# PILLAR VI: MULTI-CHAIN & PROTOCOL-SPECIFIC INTELLIGENCE
+# ═══════════════════════════════════════════════════════════════════════
+# "Criminals don't care about chain boundaries. Neither should we."
+
+### 26. Full Multi-Chain Support
+# Status: [IN PROGRESS] — Ethereum-focused currently
+# Required chain support for production lab deployment:
+#   - Ethereum (Mainnet + Goerli/Sepolia testnets)
+#   - Bitcoin (UTXO model — completely different analysis logic)
+#   - Tron (TRC-20 USDT is the #1 chain for illicit stablecoin transfers)
+#   - Solana (fast-moving SPL token scams)
+#   - BSC / Polygon / Arbitrum / Optimism / Base (L2 ecosystem)
+#   - Monero / Zcash (privacy chains — flag as "trail gone cold")
+
+### 27. DeFi Protocol Interaction Decoder
+# Status: [NOT STARTED]
+# Raw transaction data is unreadable. AXON must decode:
+#   - Uniswap/Sushiswap swaps → "Swapped 10 ETH for 25,000 USDC"
+#   - Aave deposits/borrows → "Deposited 50 ETH as collateral, borrowed 80,000 USDC"
+#   - NFT mints/transfers → "Minted NFT #1234 on collection XYZ"
+#   - Tornado Cash deposits → "Deposited exactly 10 ETH into privacy mixer"
+#   - Bridge interactions → "Bridged 100 ETH from Ethereum to Arbitrum via Hop Protocol"
+# This turns hex calldata into human-readable forensic narratives.
+
+### 28. NFT Forensics Module
+# Status: [NOT STARTED]
+# NFTs are increasingly used for money laundering (wash trading, inflated sales):
+#   - Detect wash trading (same entity buying/selling to themselves)
+#   - Flag artificially inflated NFT sales used to move value
+#   - Track stolen NFT provenance across marketplaces
+#   - Identify fake collection impersonation scams
+#   - Decode royalty evasion patterns
+
+### 29. Stablecoin Flow Analysis
+# Status: [NOT STARTED]
+# USDT/USDC are the dominant currencies in crypto crime:
+#   - Dedicated stablecoin tracing (separate from ETH flow analysis)
+#   - Track USDT across chains (Ethereum, Tron, BSC, Solana)
+#   - Flag large stablecoin transfers to known OTC desks
+#   - Monitor Tether/Circle blacklist events in real-time
+#   - Calculate total stablecoin exposure per case
+
+### 30. Smart Contract Exploit Replay
+# Status: [NOT STARTED]
+# For exploit investigations:
+#   - Replay the exact exploit transaction step-by-step
+#   - Show the state changes at each internal call
+#   - Identify the vulnerability exploited (reentrancy, oracle manipulation, etc.)
+#   - Generate a technical exploit report suitable for developer remediation
+#   - Compare with known exploit signatures from rekt.news database
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# PILLAR VII: LAB OPERATIONS & INFRASTRUCTURE
+# ═══════════════════════════════════════════════════════════════════════
+# "A tool is only as good as the infrastructure supporting it."
+
+### 31. API Health Dashboard & Rate Limit Management
+# Status: [DONE] — basic health check exists
+# Production labs need visibility into:
+#   - Real-time API quota usage (Etherscan, Alchemy, GoPlus, Forta)
+#   - Rate limit warnings before hitting caps
+#   - Automatic failover to backup API providers
+#   - Historical API reliability metrics
+#   - Cost tracking per investigation (API calls consumed)
+
+### 32. Offline / Air-Gapped Mode
+# Status: [NOT STARTED]
+# Classified investigations may require air-gapped operation:
+#   - Pre-download blockchain data for specific address ranges
+#   - Run full analysis without internet connectivity
+#   - Import/export evidence packages via USB for secure transfer
+#   - Local-only AI model (no cloud LLM calls for classified cases)
+
+### 33. Multi-Tenant SaaS Architecture
+# Status: [NOT STARTED]
+# For commercial deployment across multiple agencies:
+#   - Tenant isolation (Agency A cannot see Agency B's cases)
+#   - Per-tenant billing and usage metering
+#   - Custom branding per tenant (agency logo, report headers)
+#   - Centralized admin panel for the platform operator
+#   - SSO integration (SAML, OAuth, Active Directory)
+
+### 34. Automated Regression Testing & CI/CD
+# Status: [NOT STARTED]
+# Before deploying to a production forensic lab:
+#   - Test suite covering all 5-layer scoring scenarios
+#   - Known-address regression tests (Tornado Cash MUST score >90)
+#   - API mock layer for deterministic testing without live calls
+#   - Automated deployment pipeline with rollback capability
+
+### 35. Performance & Scalability
+# Status: [NOT STARTED]
+# Production labs may process thousands of addresses per day:
+#   - Redis caching layer for repeated address lookups
+#   - PostgreSQL migration from SQLite for concurrent access
+#   - Background job queue (Celery/Bull) for deep scans
+#   - Horizontal scaling support (multiple backend instances)
+#   - Scan result pagination for wallets with 100,000+ transactions
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# ALREADY COMPLETED FEATURES (for reference)
+# ═══════════════════════════════════════════════════════════════════════
+
+### [DONE] 5-Layer Behavioral Forensic Engine (Wallet)
+# L1: Behavioral Telemetry, L2: Graph Topology, L3: Economic Signals,
+# L4: Attribution Intelligence, L5: Cross-Axis Correlator
+# Entity Class Classifier with 8 classes (Exchange 0.5x → Exploit 1.5x)
+# Dormancy-adjusted risk persistence
+
+### [DONE] 5-Axis Contract Forensic Engine
+# A1: Code Security, A2: Admin/Economic Risk, A3: Behavioral Fingerprinting,
+# A4: Network Topology, A5: Threat Intelligence (Protocol Reputation Engine)
+# Cross-axis amplification multipliers
+
+### [DONE] Slither-Style Static Vulnerability Analysis
+# Pattern matching for reentrancy, delegatecall, tx.origin, selfdestruct,
+# timestamp dependence, weak randomness
+
+### [DONE] Source Code & ABI Viewer
+# Tabbed viewer with copy-to-clipboard, unverified contract warning
+
+### [DONE] GoPlus Security Integration
+# Honeypot detection, tax analysis, mint/blacklist/hidden owner checks
+
+### [DONE] Bulk Investigation Mode
+# Paste/upload multiple addresses, forensic consensus report,
+# risk-sorted results with deep-dive routing
+
+### [DONE] AI Forensic Analyst (Grok/LLM Integration)
+# MITRE ATT&CK tagging, forensic hypothesis generation,
+# score-constrained verdict narratives
+
+### [DONE] PDF Dossier Export
+# Branded forensic report with executive summary, risk matrix,
+# signal breakdown, and graph snapshots
+
+### [DONE] Intelligence Database (13,000+ entities)
+# Malicious wallets, exchange addresses, known mixers,
+# OFAC sanctions list, protocol reputation engine

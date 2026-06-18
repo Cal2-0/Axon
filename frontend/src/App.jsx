@@ -7,6 +7,7 @@ import IntelligenceDatabases from './pages/IntelligenceDatabases';
 import NotFound from './pages/NotFound';
 import BulkInvestigation from './pages/BulkInvestigation';
 import Cases from './pages/Cases';
+import CaseDashboard from './pages/CaseDashboard';
 import Logs from './pages/Logs';
 
 // ─── AXON LOGO COMPONENT (Minimal Bond-Style X) ─────────────────────────────
@@ -253,6 +254,7 @@ function AppLayout() {
             <Route path="/logs" element={<Logs />} />
             <Route path="/intel" element={<IntelligenceDatabases />} />
             <Route path="/cases" element={<Cases />} />
+            <Route path="/cases/:caseId" element={<CaseDashboard />} />
             {/* Legacy redirects */}
             <Route path="/graph" element={<Navigate to="/wallet" replace />} />
             <Route path="*" element={<NotFound />} />

@@ -9,6 +9,7 @@ from typing import List, Dict, Any, Optional
 class ScanRequest(BaseModel):
     address: str
     depth: Optional[str] = "quick"  # "quick" or "deep"
+    case_id: Optional[int] = None
 
 class BulkScanRequest(BaseModel):
     addresses: List[str]

@@ -4,6 +4,7 @@ import GraphView from '../components/GraphView';
 import SmartAddressInput from '../components/SmartAddressInput';
 import ForensicReport from '../components/ForensicReport';
 import { downloadWalletPDF } from '../utils/pdfExport';
+import { formatINR, formatIndian } from '../utils/indianFormat';
 
 // ─── DEMO PROFILES ─────────────────────────────────────────────────────────
 const DEMO_PROFILES = {
@@ -321,7 +322,7 @@ function RiskMeter({ score, label }) {
 }
 
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────
-export default function WalletInvestigation() {
+export default function WalletInvestigation({ caseId }) {
   const [address, setAddress] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
@@ -358,7 +359,7 @@ export default function WalletInvestigation() {
     
     try {
       const { scanWallet, getCrossChainHoldings } = await import('../api/axon');
-      const profile = await scanWallet(targetAddress.trim());
+      const profile = await scanWallet(targetAddress.trim(), caseId);
       setResult(profile);
 
       // Async fetch cross-chain
@@ -530,9 +531,9 @@ export default function WalletInvestigation() {
                   {result.identity.ethBalance + (String(result.identity.ethBalance).includes('ETH') ? '' : ' ETH')}
                 </div>
                 <div className="text-[11px] text-axon-text-dim mt-0.5 font-mono">
-                  ≈ ${(parseFloat(String(result.identity.ethBalance).replace(/,/g, '').replace(' ETH','')) * ethPrice.usd).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} USD
+                  ≈ ${(parseFloat(String(result.identity.ethBalance).replace(/,/g, '').replace(' ETH','')) * ethPrice.usd).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})} USD
                   <span className="mx-2">|</span>
-                  ≈ ₹{(parseFloat(String(result.identity.ethBalance).replace(/,/g, '').replace(' ETH','')) * ethPrice.inr).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})} INR
+                  ≈ {formatINR(parseFloat(String(result.identity.ethBalance).replace(/,/g, '').replace(' ETH','')) * ethPrice.inr)} INR
                 </div>
                 <div className="text-[10px] text-axon-text-dim uppercase tracking-wider mt-1.5">ETH Balance (Live Value)</div>
               </div>
@@ -562,22 +563,37 @@ export default function WalletInvestigation() {
               <div className="text-sm font-bold text-axon-text-dim uppercase tracking-wider mb-4">Cross-Chain Exposure</div>
               {crossChain ? (
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {crossChain.holdings && crossChain.holdings.map((data) => (
-                    <div key={data.chain} className="bg-[#0a0f1a] rounded-lg border border-axon-border p-4 text-center hover:border-axon-cyan transition-colors">
-                      <div className="text-sm font-bold text-white mb-2">{data.chain}</div>
-                      <div className="text-xl font-bold font-mono text-axon-cyan">{data.balance} {data.symbol}</div>
-                      <div className="text-[10px] text-axon-text-dim mt-1 font-mono">
-                        ${data.usd_value} | ₹{data.inr_value !== undefined ? data.inr_value : 0}
+                  {crossChain.holdings && crossChain.holdings.map((data) => {
+                    const hasBalance = data.balance > 0;
+                    return (
+                      <div key={data.chain} className={`bg-[#0a0f1a] rounded-lg border p-4 text-center transition-colors ${
+                        hasBalance ? 'border-axon-border hover:border-axon-cyan' : 'border-axon-border/30 opacity-60'
+                      }`}>
+                        <div className="text-sm font-bold text-white mb-1">{data.chain}</div>
+                        <div className={`text-lg font-bold font-mono ${hasBalance ? 'text-axon-cyan' : 'text-gray-600'}`}>
+                          {data.balance.toFixed(4)} {data.symbol}
+                        </div>
+                        <div className="text-[10px] text-axon-text-dim mt-1 font-mono">
+                          ${(data.usd_value || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                          <span className="mx-1">|</span>
+                          {formatINR(data.inr_value || 0)}
+                        </div>
+                        {data.error && (
+                          <div className="text-[9px] text-yellow-500/60 mt-1">⚠ fetch error</div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                   <div className="bg-axon-cyan/5 rounded-lg border border-axon-cyan/40 p-4 text-center col-span-2 md:col-span-4 flex items-center justify-between px-8">
                     <span className="text-sm font-bold text-white uppercase tracking-widest">Total Estimated Exposure</span>
                     <div className="text-right">
-                      <div className="text-2xl font-bold font-mono text-axon-cyan">${crossChain.total_net_worth_usd}</div>
-                      {crossChain.total_net_worth_inr !== undefined && (
-                        <div className="text-sm font-bold font-mono text-axon-text-dim mt-1">₹{crossChain.total_net_worth_inr}</div>
-                      )}
+                      <div className="text-2xl font-bold font-mono text-axon-cyan">
+                        ${(crossChain.total_net_worth_usd || 0).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                      </div>
+                      <div className="text-sm font-bold font-mono text-axon-text-dim mt-1">
+                        {formatINR(crossChain.total_net_worth_inr || 0)}
+                      </div>
+                      <div className="text-[9px] text-gray-600 mt-0.5">via Etherscan v2 · CoinGecko</div>
                     </div>
                   </div>
                 </div>

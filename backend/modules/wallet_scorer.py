@@ -262,17 +262,17 @@ def classify_entity(tx_history: list, address: str, eth_balance: float,
 
     # === Classification logic ===
 
-    # Exchange: massive counterparty count + high round-trip, OR high exchange overlap
-    if (total_counterparties > 500 and round_trip > 0.7) or exchange_cp_pct > 0.6:
+    # Exchange: high counterparty count + high round-trip, OR high exchange overlap
+    if (total_counterparties > 90 and round_trip > 0.6) or exchange_cp_pct > 0.4:
         return ("Exchange Hot Wallet", 0.5)
 
     # DAO/multisig: tx_count low but high ETH balance (treasury)
     if tx_count < 200 and eth_balance > 100 and total_counterparties < 50:
         return ("DAO / Treasury Wallet", 0.6)
 
-    # Market maker: very high frequency, tight counterparty set
-    if tx_count > 5000 and total_counterparties < 20:
-        return ("Market Maker / Bot", 0.7)
+    # Market maker / Infrastructure: very high frequency, tighter counterparties but massive volume
+    if (tx_count > 1000 and total_counterparties < 50 and round_trip > 0.8) or (total_counterparties > 40 and round_trip > 0.7 and total_out > 100):
+        return ("Infrastructure / Node", 0.6)
 
     # Privacy mixer: equal denomination deposits + always-fresh recipients
     if top_denom_pct > 0.6 and len(in_values) > 20:
@@ -438,7 +438,7 @@ def _compute_l5_deterministic(l1: int, l2: int, l3: int, l4: int,
 
 
 # ─── MAIN SCAN FUNCTION ───────────────────────────────────────────────────────
-async def scan_wallet(address: str, db: Session, depth: str = "quick") -> dict:
+async def scan_wallet(address: str, db: Session, depth: str = "quick", case_id: int = None) -> dict:
     """
     Full forensic wallet scan using the 5-Layer Behavioral Engine.
     Returns a structured dict consumed by the frontend.
@@ -461,6 +461,25 @@ async def scan_wallet(address: str, db: Session, depth: str = "quick") -> dict:
         cache_hours = 24 if depth == "quick" else 168 # 7 days
         if (time.time() - recent_log.scan_timestamp) < cache_hours * 3600:
             print(f"[SCAN] Returning cached {depth} scan for {address}")
+            if case_id and recent_log.case_id != case_id:
+                try:
+                    new_log = InvestigationLog(
+                        entity_address=recent_log.entity_address,
+                        entity_type=recent_log.entity_type,
+                        chain=recent_log.chain,
+                        scan_timestamp=time.time(),
+                        risk_score=recent_log.risk_score,
+                        entity_class=recent_log.entity_class,
+                        triggered_signals=recent_log.triggered_signals,
+                        scan_depth=recent_log.scan_depth,
+                        case_id=case_id,
+                        bulk_batch_id=recent_log.bulk_batch_id,
+                        raw_data=recent_log.raw_data
+                    )
+                    db.add(new_log)
+                    db.commit()
+                except Exception as e:
+                    print(f"[SCAN] Cache case link error: {e}")
             return recent_log.raw_data
 
     # ── Step 1: Load Intelligence DB (Exchange + Mixer addresses) ─
@@ -821,7 +840,11 @@ async def scan_wallet(address: str, db: Session, depth: str = "quick") -> dict:
     # ── Exchange legitimacy suppression ──
     # Only suppress if NOT a DB-confirmed threat
     if l4 < 70:
-        if exchange_overlap_pct > 0.5:
+        if entity_class in ("Exchange Hot Wallet", "Exchange Deposit Aggregator"):
+            legitimacy_suppressor = 0.25  # Force known/obvious exchanges down to < 25
+        elif entity_class in ("Infrastructure / Node", "DAO / Treasury Wallet", "Regular DeFi User", "Market Maker / Bot"):
+            legitimacy_suppressor = 0.35  # Force infra/nodes down safely
+        elif exchange_overlap_pct > 0.5:
             legitimacy_suppressor = 0.6
         elif exchange_overlap_pct > 0.3:
             legitimacy_suppressor = 0.75
@@ -834,14 +857,16 @@ async def scan_wallet(address: str, db: Session, depth: str = "quick") -> dict:
         legitimacy_suppressor = 1.0
 
     # ── Volume-weighted amplification ──
-    # Suspicious patterns with big money are worse
+    # Suspicious patterns with big money are worse (skip for known safe entities)
     volume_usd = total_volume_eth * eth_price
-    if volume_usd > 10_000_000 and modified_score >= 40:
-        volume_amp = min(1.3, 1.0 + (volume_usd / 100_000_000) * 0.3)
-        modified_score = modified_score * volume_amp
-    elif volume_usd > 1_000_000 and modified_score >= 60:
-        volume_amp = min(1.15, 1.0 + (volume_usd / 50_000_000) * 0.15)
-        modified_score = modified_score * volume_amp
+    volume_amp = 1.0
+    if entity_class not in ("Exchange Hot Wallet", "Infrastructure / Node", "Exchange Deposit Aggregator", "Market Maker / Bot", "DAO / Treasury Wallet", "Regular DeFi User"):
+        if volume_usd > 10_000_000 and modified_score >= 40:
+            volume_amp = min(1.3, 1.0 + (volume_usd / 100_000_000) * 0.3)
+            modified_score = modified_score * volume_amp
+        elif volume_usd > 1_000_000 and modified_score >= 60:
+            volume_amp = min(1.15, 1.0 + (volume_usd / 50_000_000) * 0.15)
+            modified_score = modified_score * volume_amp
 
     # ── DB override floors (confirmed threats cannot score LOW) ──
     if wallet_db and wallet_db.sanctioned:
@@ -869,7 +894,7 @@ async def scan_wallet(address: str, db: Session, depth: str = "quick") -> dict:
 
     ml_class = "MALICIOUS" if l4 >= 80 else ("SUSPICIOUS" if final_score >= 50 else "BENIGN")
 
-    print(f"[SCAN] Score breakdown: raw={raw_score:.1f} → class_mod={class_modifier}x → dormancy={dormancy_modifier}x → legit={legitimacy_suppressor}x → floor={persistence_floor} → FINAL={final_score} ({label})")
+    print(f"[SCAN] Score breakdown: raw={raw_score:.1f} -> class_mod={class_modifier}x -> dormancy={dormancy_modifier}x -> legit={legitimacy_suppressor}x -> floor={persistence_floor} -> FINAL={final_score} ({label})")
 
     # ═══════════════════════════════════════════════════════════════
     # AI FORENSIC INTERPRETER (narrative only, does NOT change score)
@@ -992,7 +1017,7 @@ Respond with ONLY valid JSON with exactly these three keys:
         ui_factors.append({"reason": "No significant forensic signals detected", "icon": "✅", "layer": "L1", "penalty": 0})
 
     # ─── Return Response ──────────────────────────────────────────
-    return {
+    response_data = {
         "shortName": wallet_db.label if wallet_db else "Unknown Wallet",
         "tag": label,
         "identity": {
@@ -1085,6 +1110,7 @@ Respond with ONLY valid JSON with exactly these three keys:
             entity_class=entity_class,
             triggered_signals=[{"reason": s[0], "icon": s[1], "layer": s[2]} for s in signals],
             scan_depth=depth,
+            case_id=case_id,
             raw_data=response_data
         )
         db.add(log_entry)

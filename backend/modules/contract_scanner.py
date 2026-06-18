@@ -338,7 +338,7 @@ async def fetch_goplus_security(client: httpx.AsyncClient, address: str) -> dict
 # MAIN SCAN FUNCTION
 # ═══════════════════════════════════════════════════════════
 
-async def scan_contract(address: str, db: Session, depth: str = "quick") -> dict:
+async def scan_contract(address: str, db: Session, depth: str = "quick", case_id: int = None) -> dict:
     """
     Full forensic contract scan using the 5-Axis Behavioral Engine v3.0.
     Returns a structured dict consumed by the frontend.
@@ -357,6 +357,25 @@ async def scan_contract(address: str, db: Session, depth: str = "quick") -> dict
         cache_hours = 24 if depth == "quick" else 168 # 7 days
         if (time.time() - recent_log.scan_timestamp) < cache_hours * 3600:
             print(f"[SCAN] Returning cached {depth} scan for contract {address}")
+            if case_id and recent_log.case_id != case_id:
+                try:
+                    new_log = InvestigationLog(
+                        entity_address=recent_log.entity_address,
+                        entity_type=recent_log.entity_type,
+                        chain=recent_log.chain,
+                        scan_timestamp=time.time(),
+                        risk_score=recent_log.risk_score,
+                        entity_class=recent_log.entity_class,
+                        triggered_signals=recent_log.triggered_signals,
+                        scan_depth=recent_log.scan_depth,
+                        case_id=case_id,
+                        bulk_batch_id=recent_log.bulk_batch_id,
+                        raw_data=recent_log.raw_data
+                    )
+                    db.add(new_log)
+                    db.commit()
+                except Exception as e:
+                    print(f"[SCAN] Cache case link error: {e}")
             return recent_log.raw_data
     # ── Step 0: Load Intelligence DB ─────────────────────
     all_exchange_addrs, all_mixer_addrs = _load_known_addresses(db)
@@ -405,7 +424,7 @@ async def scan_contract(address: str, db: Session, depth: str = "quick") -> dict
 
     # ── Step 2b: Protocol Reputation Classification ──────
     protocol_class = _classify_protocol(address, name, source_code)
-    print(f"[CONTRACT] Protocol classification: {protocol_class['category']} ({protocol_class['source']}) → base_score={protocol_class['base_score']}")
+    print(f"[CONTRACT] Protocol classification: {protocol_class['category']} ({protocol_class['source']}) -> base_score={protocol_class['base_score']}")
 
     # ── Step 2c: Compute counterparty overlaps ───────────
     addr_lower = address.lower()
@@ -837,6 +856,7 @@ Respond with ONLY valid JSON containing exactly these three keys:
             entity_class=protocol_class["category"],
             triggered_signals=[{"reason": s, "icon": "🔹", "layer": "A"} for s in signals],
             scan_depth=depth,
+            case_id=case_id,
             raw_data=response_data
         )
         db.add(log_entry)

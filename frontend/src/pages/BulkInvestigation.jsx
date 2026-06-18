@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { bulkScan } from '../api/axon';
 import { useNavigate } from 'react-router-dom';
 
-export default function BulkInvestigation() {
+export default function BulkInvestigation({ caseId }) {
   const [inputData, setInputData] = useState('');
-  const [caseId, setCaseId] = useState('');
+  const [inputCaseId, setInputCaseId] = useState('');
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState(null);
   const [expandedRow, setExpandedRow] = useState(null);
@@ -30,7 +30,8 @@ export default function BulkInvestigation() {
     setExpandedRow(null);
 
     try {
-      const result = await bulkScan(addresses, caseId ? parseInt(caseId) : null);
+      const targetCaseId = caseId || (inputCaseId ? parseInt(inputCaseId) : null);
+      const result = await bulkScan(addresses, targetCaseId);
       setReport(result);
     } catch (err) {
       console.error(err);
@@ -230,123 +231,86 @@ export default function BulkInvestigation() {
             </div>
           </div>
 
-          <div className="glass-panel overflow-hidden border border-axon-border/50">
-            <table className="w-full text-sm font-mono text-left">
-              <thead>
-                <tr className="border-b border-axon-border bg-axon-bg/80">
-                  <th className="py-4 px-5 text-[10px] text-axon-text-dim uppercase tracking-widest">Subject Address</th>
-                  <th className="py-4 px-5 text-[10px] text-axon-text-dim uppercase tracking-widest">Risk Score</th>
-                  <th className="py-4 px-5 text-[10px] text-axon-text-dim uppercase tracking-widest">Classification</th>
-                  <th className="py-4 px-5 text-[10px] text-axon-text-dim uppercase tracking-widest">Known Entity</th>
-                  <th className="py-4 px-5 text-[10px] text-axon-text-dim uppercase tracking-widest text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sortedResults.map((r, i) => {
-                  const score = r.data?.risk?.score || 0;
-                  const isExpanded = expandedRow === i;
-                  
-                  return (
-                    <React.Fragment key={i}>
-                      <tr 
-                        className={`border-b border-axon-border/30 hover:bg-axon-card/40 transition-colors group cursor-pointer ${isExpanded ? 'bg-axon-card/60' : ''}`}
-                        onClick={() => setExpandedRow(isExpanded ? null : i)}
-                      >
-                        <td className="py-4 px-5 font-bold text-axon-cyan flex items-center gap-2">
-                          <svg className={`w-3 h-3 text-axon-text-dim transition-transform ${isExpanded ? 'rotate-90' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
-                          {r.address}
-                        </td>
-                        <td className="py-4 px-5">
-                          <span className={`px-3 py-1 text-[11px] font-bold rounded border ${
-                            score >= 80 ? 'bg-red-500/10 text-red-400 border-red-500/30 shadow-[0_0_8px_rgba(239,68,68,0.2)]' :
-                            score >= 60 ? 'bg-orange-500/10 text-orange-400 border-orange-500/30' :
-                            score >= 40 ? 'bg-yellow-500/10 text-yellow-400 border-yellow-500/30' :
-                            'bg-green-500/10 text-green-400 border-green-500/30'
-                          }`}>
-                            {score}/100
-                          </span>
-                        </td>
-                        <td className="py-4 px-5 text-white">
-                          <div className="flex items-center gap-2">
-                            {score >= 80 && <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>}
-                            {r.data?.risk?.label || "Unknown"}
-                          </div>
-                        </td>
-                        <td className="py-4 px-5 text-axon-text-muted truncate max-w-[200px]">
-                          {r.data?.identity?.label || "Unattributed"}
-                        </td>
-                        <td className="py-4 px-5 text-right">
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/wallet?address=${r.address}`);
-                            }}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity axon-button px-3 py-1.5 text-[10px] bg-axon-cyan/10 text-axon-cyan border-axon-cyan/30 hover:bg-axon-cyan hover:text-white"
-                          >
-                            <span className="flex items-center gap-1.5">
-                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 21h7a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v11m0 5l4.879-4.879m0 0a3 3 0 104.243-4.242 3 3 0 00-4.243 4.242z" /></svg>
-                              Deep Dive
-                            </span>
-                          </button>
-                        </td>
-                      </tr>
-                      {/* Expanded Details Row */}
-                      {isExpanded && (
-                        <tr className="bg-axon-card/20 border-b border-axon-border/50">
-                          <td colSpan="5" className="p-0">
-                            <div className="p-6 border-l-2 border-axon-orange bg-gradient-to-r from-axon-orange/5 to-transparent">
-                              <div className="grid grid-cols-2 gap-6">
-                                <div>
-                                  <h4 className="text-[10px] text-axon-text-dim uppercase tracking-widest font-bold mb-3 border-b border-axon-border/50 pb-1">Risk Factors & Flags</h4>
-                                  {r.data?.risk?.factors && r.data.risk.factors.length > 0 ? (
-                                    <ul className="space-y-2">
-                                      {r.data.risk.factors.map((factor, idx) => (
-                                        <li key={idx} className="flex items-start gap-2 text-xs text-axon-text-muted">
-                                          <span className="mt-0.5">{factor.icon || '⚠️'}</span>
-                                          <span>{factor.reason || factor.toString()}</span>
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  ) : (
-                                    <div className="text-xs text-axon-text-dim italic">No specific risk flags available.</div>
-                                  )}
-                                </div>
-                                <div>
-                                  <h4 className="text-[10px] text-axon-text-dim uppercase tracking-widest font-bold mb-3 border-b border-axon-border/50 pb-1">Entity Intel</h4>
-                                  <div className="space-y-2 text-xs text-axon-text-muted">
-                                    <div className="flex gap-2">
-                                      <span className="text-axon-text-dim">Class:</span>
-                                      <span className="text-white">{r.data?.identity?.entityClass || "Unknown"}</span>
-                                    </div>
-                                    <div className="flex gap-2">
-                                      <span className="text-axon-text-dim">Tag:</span>
-                                      <div className="flex flex-wrap gap-1">
-                                        {r.data?.identity?.tag 
-                                          ? <span className="px-1.5 py-0.5 bg-axon-card border border-axon-border rounded text-[10px]">{r.data.identity.tag}</span>
-                                          : <span className="italic">None</span>}
-                                      </div>
-                                    </div>
-                                    <div className="mt-4">
-                                      <button 
-                                        onClick={() => navigate(`/wallet?address=${r.address}`)}
-                                        className="axon-button w-full px-3 py-2 text-xs bg-axon-orange/10 text-axon-orange border-axon-orange/30 hover:bg-axon-orange hover:text-white flex items-center justify-center gap-2"
-                                      >
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                                        Run Full Wallet Forensics
-                                      </button>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                      )}
-                    </React.Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {sortedResults.map((r, i) => {
+              const score = r.data?.risk?.score || 0;
+              const isCritical = score >= 80;
+              const isHigh = score >= 60 && score < 80;
+              const isMedium = score >= 40 && score < 60;
+              
+              const colorClass = isCritical ? 'red' : isHigh ? 'orange' : isMedium ? 'yellow' : 'green';
+              const borderClass = isCritical ? 'border-red-500/50 hover:border-red-500' : isHigh ? 'border-orange-500/50 hover:border-orange-500' : isMedium ? 'border-yellow-500/50 hover:border-yellow-500' : 'border-axon-green/50 hover:border-axon-green';
+              const bgClass = isCritical ? 'bg-red-500/5' : isHigh ? 'bg-orange-500/5' : isMedium ? 'bg-yellow-500/5' : 'bg-axon-green/5';
+              const textClass = isCritical ? 'text-red-400' : isHigh ? 'text-orange-400' : isMedium ? 'text-yellow-400' : 'text-axon-green';
+
+              return (
+                <div key={i} className={`relative flex flex-col rounded-xl border ${borderClass} ${bgClass} p-5 transition-all duration-300 group overflow-hidden`}>
+                  {/* Card Header */}
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="font-mono text-sm font-bold text-white truncate pr-4" title={r.address}>
+                      {r.address.slice(0, 16)}...{r.address.slice(-4)}
+                    </div>
+                    <div className={`shrink-0 flex items-center justify-center w-12 h-12 rounded-full border ${borderClass} font-bold font-mono text-lg ${textClass} shadow-inner bg-[#05080f]`}>
+                      {score}
+                    </div>
+                  </div>
+
+                  {/* Classification & Entity */}
+                  <div className="mb-4 bg-[#05080f]/50 p-3 rounded-lg border border-axon-border/50">
+                    <div className="flex items-center gap-2 mb-1">
+                      {isCritical && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>}
+                      <span className={`text-xs font-bold uppercase tracking-widest ${textClass}`}>
+                        {r.data?.risk?.label || "Unknown"}
+                      </span>
+                    </div>
+                    <div className="text-sm text-axon-text-muted truncate" title={r.data?.identity?.label || "Unattributed Entity"}>
+                      {r.data?.identity?.label || "Unattributed Entity"}
+                    </div>
+                    {r.data?.identity?.entityClass && (
+                      <div className="text-[10px] text-axon-text-dim mt-1 font-mono">
+                        CLASS: {r.data.identity.entityClass}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Risk Factors */}
+                  <div className="flex-1 mb-6">
+                    <div className="text-[10px] text-axon-text-dim uppercase tracking-widest font-bold mb-2 border-b border-axon-border/50 pb-1">Primary Risk Factors</div>
+                    {r.data?.risk?.factors && r.data.risk.factors.length > 0 ? (
+                      <ul className="space-y-1.5">
+                        {r.data.risk.factors.slice(0, 3).map((factor, idx) => (
+                          <li key={idx} className="flex items-start gap-2 text-[11px] text-axon-text-muted leading-tight">
+                            <span className="shrink-0 mt-0.5">{factor.icon || '⚠️'}</span>
+                            <span className="line-clamp-2">{factor.reason || factor.toString()}</span>
+                          </li>
+                        ))}
+                        {r.data.risk.factors.length > 3 && (
+                          <li className="text-[10px] text-axon-text-dim italic mt-1">+ {r.data.risk.factors.length - 3} more flags</li>
+                        )}
+                      </ul>
+                    ) : (
+                       <div className="text-[11px] text-axon-text-dim italic">No specific risk flags available.</div>
+                    )}
+                  </div>
+
+                  {/* Action Button */}
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/wallet?address=${r.address}`);
+                    }}
+                    className={`w-full py-2.5 rounded text-xs font-bold uppercase tracking-widest transition-all ${
+                      isCritical ? 'bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white' :
+                      isHigh ? 'bg-orange-500/20 text-orange-400 hover:bg-orange-500 hover:text-white' :
+                      isMedium ? 'bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500 hover:text-white' :
+                      'bg-axon-green/20 text-axon-green hover:bg-axon-green hover:text-white'
+                    }`}
+                  >
+                    Deep Dive Analysis
+                  </button>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

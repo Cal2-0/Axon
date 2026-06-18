@@ -1,11 +1,11 @@
 // src/api/axon.js - API client for Axon Backend
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8001";
 
-export const scanContract = async (address) => {
+export const scanContract = async (address, caseId = null) => {
   const response = await fetch(`${API_BASE}/scan/contract`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ address })
+    body: JSON.stringify({ address, case_id: caseId })
   });
   if (!response.ok) throw new Error("Failed to scan contract");
   return response.json();
@@ -23,11 +23,11 @@ export const checkApiHealth = async () => {
   return response.json();
 };
 
-export const scanWallet = async (address) => {
+export const scanWallet = async (address, caseId = null) => {
   const response = await fetch(`${API_BASE}/scan/wallet`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ address })
+    body: JSON.stringify({ address, case_id: caseId })
   });
   if (!response.ok) throw new Error("Failed to scan wallet");
   return response.json();
@@ -136,9 +136,27 @@ export const linkCaseEntity = async (caseId, investigationLogId, notes = "") => 
 
 // ─── LOGS ────────────────────────────────────────────────────────────────────
 
-export const searchLogs = async (query = "", limit = 50) => {
+export const searchLogs = async (query = "", limit = 100, entityType = "") => {
   const params = new URLSearchParams({ q: query, limit });
+  if (entityType) params.set("entity_type", entityType);
   const response = await fetch(`${API_BASE}/logs/search?${params}`);
   if (!response.ok) throw new Error("Failed to search logs");
+  return response.json();
+};
+
+// ─── CASE LOGS + MASTER REPORT ───────────────────────────────────────────────
+
+export const getCaseLogs = async (caseId) => {
+  const response = await fetch(`${API_BASE}/cases/${caseId}/logs`);
+  if (!response.ok) throw new Error("Failed to fetch case logs");
+  return response.json();
+};
+
+export const generateMasterReport = async (caseId) => {
+  const response = await fetch(`${API_BASE}/cases/${caseId}/master-report`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  });
+  if (!response.ok) throw new Error("Failed to generate master report");
   return response.json();
 };

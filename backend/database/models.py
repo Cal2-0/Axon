@@ -74,7 +74,7 @@ class ThreatActor(Base):
     aliases = Column(JSON, default=list)
     total_stolen = Column(String(30), default="Unknown")
     known_attacks = Column(JSON, default=list)
-    status = Column(String(20), default="Active")
+    status = Column(String(200), default="Active")
     threat_level = Column(String(20), default="HIGH")
 
 
