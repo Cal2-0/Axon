@@ -71,10 +71,10 @@ async def fetch_prices(client: httpx.AsyncClient, cg_ids: set) -> dict:
     except Exception as e:
         print(f"[CROSS_CHAIN] Failed fetching prices: {e}. Using fallback prices for demo.")
         return {
-            "ethereum": {"usd": 3845.61, "inr": 320000.0},
-            "binancecoin": {"usd": 605.12, "inr": 50000.0},
-            "matic-network": {"usd": 0.72, "inr": 60.0},
-            "avalanche-2": {"usd": 35.40, "inr": 2900.0}
+            "ethereum": {"usd": 1683.31, "inr": 140000.0},
+            "binancecoin": {"usd": 575.39, "inr": 48000.0},
+            "matic-network": {"usd": 0.62, "inr": 52.0},
+            "avalanche-2": {"usd": 6.27, "inr": 520.0}
         }
 
 async def get_cross_chain_holdings(address: str) -> dict:
