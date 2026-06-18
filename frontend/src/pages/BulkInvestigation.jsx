@@ -7,7 +7,6 @@ export default function BulkInvestigation({ caseId }) {
   const [inputCaseId, setInputCaseId] = useState('');
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState(null);
-  const [expandedRow, setExpandedRow] = useState(null);
   const navigate = useNavigate();
 
   const handleScan = async (e) => {
@@ -27,7 +26,6 @@ export default function BulkInvestigation({ caseId }) {
 
     setLoading(true);
     setReport(null);
-    setExpandedRow(null);
 
     try {
       const targetCaseId = caseId || (inputCaseId ? parseInt(inputCaseId) : null);
@@ -125,8 +123,8 @@ export default function BulkInvestigation({ caseId }) {
               type="number"
               className="w-full max-w-xs bg-[#05080f] border border-axon-border rounded-lg p-3 text-white font-mono text-sm focus:border-axon-orange focus:ring-1 focus:ring-axon-orange outline-none transition-all"
               placeholder="e.g. 1"
-              value={caseId}
-              onChange={e => setCaseId(e.target.value)}
+              value={inputCaseId}
+              onChange={e => setInputCaseId(e.target.value)}
             />
           </div>
 
@@ -193,6 +191,65 @@ export default function BulkInvestigation({ caseId }) {
             </h2>
             <div className="flex gap-3">
               <button onClick={() => { setReport(null); setInputData(''); }} className="axon-button px-4 py-2 text-xs">Reset Tool</button>
+              
+              {/* Master Report Button */}
+              <button 
+                onClick={() => {
+                  const content = `AXON INTELLIGENCE PLATFORM
+CONFIDENTIAL FORENSIC REPORT - BULK SCAN
+============================================================
+
+BATCH ID: ${report.bulk_batch_id || 'N/A'}
+GENERATED: ${new Date().toISOString().replace('T', ' ').slice(0, 19)} UTC
+CLASSIFICATION: CONFIDENTIAL
+
+────────────────────────────────────────────────────────────
+EXECUTIVE SUMMARY
+────────────────────────────────────────────────────────────
+Total Entities Processed: ${report.total_processed || 0}
+Successful Scans: ${report.successful || 0}
+Failed Scans: ${report.failed || 0}
+
+Risk Distribution:
+  CRITICAL: ${report.summary?.CRITICAL || 0}
+  HIGH:     ${report.summary?.HIGH || 0}
+  MEDIUM:   ${report.summary?.MEDIUM || 0}
+  LOW:      ${report.summary?.LOW || 0}
+
+────────────────────────────────────────────────────────────
+ENTITY ROSTER
+────────────────────────────────────────────────────────────
+${(report.results || []).map((r, i) => {
+  const d = r.data || {};
+  const risk = d.risk || {};
+  const label = risk.label || 'UNKNOWN';
+  const score = risk.score || 0;
+  const name = d.identity?.name || r.address;
+  const mitre = risk.aiAnalysis?.mitre_tag || 'N/A';
+  return `${String(i+1).padStart(2, '0')}. ${r.address}
+   Name: ${name}
+   Risk: ${label} (${score}/100)
+   MITRE Tag: ${mitre}
+   Status: ${r.status}`;
+}).join('\n\n')}
+
+============================================================
+END OF REPORT — AXON INTELLIGENCE PLATFORM v2.0
+This document is confidential. Unauthorized distribution prohibited.
+`;
+                  const blob = new Blob([content], { type: 'text/plain' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `AXON-BULK-MASTER-${report.bulk_batch_id || 'export'}.txt`;
+                  a.click();
+                  URL.revokeObjectURL(url);
+                }} 
+                className="axon-button px-4 py-2 text-xs border-purple-500/30 text-purple-400 hover:bg-purple-500 hover:text-white"
+              >
+                <span>⚖️</span> Master Report (.txt)
+              </button>
+
               <button 
                 onClick={() => {
                   const json = JSON.stringify(report, null, 2);
@@ -238,7 +295,6 @@ export default function BulkInvestigation({ caseId }) {
               const isHigh = score >= 60 && score < 80;
               const isMedium = score >= 40 && score < 60;
               
-              const colorClass = isCritical ? 'red' : isHigh ? 'orange' : isMedium ? 'yellow' : 'green';
               const borderClass = isCritical ? 'border-red-500/50 hover:border-red-500' : isHigh ? 'border-orange-500/50 hover:border-orange-500' : isMedium ? 'border-yellow-500/50 hover:border-yellow-500' : 'border-axon-green/50 hover:border-axon-green';
               const bgClass = isCritical ? 'bg-red-500/5' : isHigh ? 'bg-orange-500/5' : isMedium ? 'bg-yellow-500/5' : 'bg-axon-green/5';
               const textClass = isCritical ? 'text-red-400' : isHigh ? 'text-orange-400' : isMedium ? 'text-yellow-400' : 'text-axon-green';

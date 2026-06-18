@@ -325,16 +325,31 @@ export default function CaseDashboard() {
       }
     };
     fetchCase();
+    
+    // Poll case data every 5s
+    const interval = setInterval(fetchCase, 5000);
+    return () => clearInterval(interval);
   }, [caseId]);
 
   // Load all case logs for the overview
   useEffect(() => {
     if (!caseId) return;
+    
+    const fetchLogsSilent = async () => {
+      try {
+        const data = await getCaseLogs(caseId);
+        setCaseLogs(data);
+      } catch (err) {
+        console.error("Failed to load case logs:", err);
+      }
+    };
+    
     setLogsLoading(true);
-    getCaseLogs(caseId)
-      .then(setCaseLogs)
-      .catch(err => console.error("Failed to load case logs:", err))
-      .finally(() => setLogsLoading(false));
+    fetchLogsSilent().finally(() => setLogsLoading(false));
+    
+    // Poll logs every 5s silently
+    const interval = setInterval(fetchLogsSilent, 5000);
+    return () => clearInterval(interval);
   }, [caseId]);
 
   if (loading) {

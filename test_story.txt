@@ -1,0 +1,11 @@
+Operation: "Midnight Sweep"
+
+At exactly 02:00 UTC, our intelligence desk flagged a massive burst of activity originating from the Ronin Bridge Exploiter's cold storage (0x098B716B8Aaf21512996dC57EB0615e2383E2f96). Within minutes, the funds were splintered and routed directly into the Tornado Cash 0.1 ETH pool (0xd90e2f925da726b50c4ed8d0fb90ad053324f31b) in an obvious laundering attempt.
+
+We checked if any innocent parties were caught in the crossfire. We saw significant volume hitting a classic DeFi victim, The DAO (0xbb9bc244d798123fde783fcc1c72d3bb8c189413), and we even saw some noise passing near Vitalik Buterin's known address (0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045). However, Vitalik's wallet appears completely benign.
+
+Interestingly, the attackers also attempted to swap some funds using the core WETH contract (0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2). They eventually liquidated a portion of the stolen assets directly into Binance 14 Hot Wallet (0x28C6c06298d514Db089934071355E5743bf21d60).
+
+As a distraction, the hackers simultaneously deployed a highly-promoted Scam Token reminiscent of the infamous SafeMoon rug pull (0x8076c74c5e3f5852037f31ff0093eeb8c8add8d3), trapping thousands of retail investors. 
+
+Please run a bulk diagnostic on these 7 entities immediately to separate the true threats from the legitimate blue-chip protocols and exchange infrastructure.

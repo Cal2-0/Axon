@@ -1,0 +1,11 @@
+WHALE WATCHING: ROUTINE CHECK
+=============================
+
+During routine intelligence gathering, we identified three massive addresses shifting liquidity across exchange infrastructure and decentralized aggregators. 
+
+We need to verify if these are simply legitimate whale/exchange movements or if there is malicious intent hidden in the transaction topology. Process these through the Bulk Scanner to generate a forensic consensus.
+
+Targets:
+0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045
+0x4B16c5dE96EB2117bBE5fd171E4d203624B014aa
+0x8589427373D6D84E98730D7795D8f6f8731FDA16

@@ -142,9 +142,15 @@ async def generate_master_report(case_id: int, db: Session = Depends(get_db)):
         
         signal_texts = [s.get("reason", "") for s in signals[:3] if isinstance(s, dict)]
         
+        label = "Unknown"
+        if log.raw_data and isinstance(log.raw_data, dict):
+            identity = log.raw_data.get("identity", {})
+            if isinstance(identity, dict) and "label" in identity:
+                label = identity["label"]
+
         entity_summaries.append(
             f"Entity {i+1}: {log.entity_address[:12]}... | Type: {log.entity_type} | "
-            f"Class: {log.entity_class or 'Unknown'} | Risk: {log.risk_score}/100 | "
+            f"Class: {log.entity_class or 'Unknown'} | Label: {label} | Risk: {log.risk_score}/100 | "
             f"Chain: {log.chain or 'ETH'} | Depth: {log.scan_depth} | "
             f"Signals: {'; '.join(signal_texts) if signal_texts else 'No significant signals'}"
         )

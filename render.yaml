@@ -1,0 +1,30 @@
+services:
+  # BACKEND SERVICE (FastAPI)
+  - type: web
+    name: axon-backend
+    env: python
+    rootDir: backend
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: ETHERSCAN_API_KEY
+        sync: false
+      - key: ALCHEMY_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: XAI_API_KEY
+        sync: false
+
+  # FRONTEND SERVICE (Vite React App)
+  - type: web
+    name: axon-frontend
+    env: static
+    rootDir: frontend
+    buildCommand: "npm install && npm run build"
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_URL
+        value: "https://axon-backend.onrender.com" # Change this if the backend name is different

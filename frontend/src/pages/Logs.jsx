@@ -117,12 +117,29 @@ export default function Logs() {
   const [loading,    setLoading]    = useState(false);
   const [expanded,   setExpanded]   = useState(null);
 
+  // Used to prevent stale closures in the interval
+  const queryRef = React.useRef(query);
+  const riskRef  = React.useRef(riskFilter);
+  const typeRef  = React.useRef(typeFilter);
+
   useEffect(() => {
-    fetchLogs('', '', '');
+    queryRef.current = query;
+    riskRef.current  = riskFilter;
+    typeRef.current  = typeFilter;
+  }, [query, riskFilter, typeFilter]);
+
+  useEffect(() => {
+    fetchLogs('', '', '', true);
+    
+    const interval = setInterval(() => {
+      fetchLogs(queryRef.current, riskRef.current, typeRef.current, false);
+    }, 5000);
+    
+    return () => clearInterval(interval);
   }, []);
 
-  const fetchLogs = async (q, risk, type) => {
-    setLoading(true);
+  const fetchLogs = async (q, risk, type, showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
       // Merge risk label into search query if no free text
       const searchTerm = q || risk;
@@ -131,7 +148,7 @@ export default function Logs() {
     } catch (err) {
       console.error(err);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 

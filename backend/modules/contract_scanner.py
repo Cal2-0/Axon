@@ -344,7 +344,7 @@ async def scan_contract(address: str, db: Session, depth: str = "quick", case_id
     Returns a structured dict consumed by the frontend.
     """
     import time
-    from database.models import InvestigationLog
+    from database.models import InvestigationLog, CandidateEntity
     
     # --- Cache Check ---
     recent_log = db.query(InvestigationLog).filter(
@@ -425,6 +425,11 @@ async def scan_contract(address: str, db: Session, depth: str = "quick", case_id
     # ── Step 2b: Protocol Reputation Classification ──────
     protocol_class = _classify_protocol(address, name, source_code)
     print(f"[CONTRACT] Protocol classification: {protocol_class['category']} ({protocol_class['source']}) -> base_score={protocol_class['base_score']}")
+
+    if protocol_class["category"] in ("DEFI_TRUSTED", "ORACLE", "STABLECOIN", "EXCHANGE_CONTRACT"):
+        if wallet:
+            print(f"[CONTRACT] Ignoring False Positive Threat DB match '{wallet.label}' for trusted protocol.")
+            wallet = None
 
     # ── Step 2c: Compute counterparty overlaps ───────────
     addr_lower = address.lower()
@@ -794,6 +799,7 @@ Respond with ONLY valid JSON containing exactly these three keys:
         "identity": {
             "address": address,
             "name": protocol_class["name"] if protocol_class["matched"] else name,
+            "label": protocol_class["name"] if protocol_class["matched"] else name,
             "compiler": etherscan.get("compiler", "Unknown"),
             "network": "Ethereum Mainnet",
             "license": etherscan.get("license", "None"),
@@ -860,6 +866,23 @@ Respond with ONLY valid JSON containing exactly these three keys:
             raw_data=response_data
         )
         db.add(log_entry)
+        
+        # Auto-update Threat DB Candidate queue for HIGH/CRITICAL findings
+        if final_score >= 60:
+            candidate = CandidateEntity(
+                address=address.lower(),
+                label=protocol_class["name"] if protocol_class["matched"] else name,
+                category=protocol_class["category"],
+                source="Axon Bulk Scanner Auto-Detection",
+                confidence=final_score,
+                chain="ETH",
+                status="pending"
+            )
+            # Avoid inserting duplicates
+            existing = db.query(CandidateEntity).filter_by(address=address.lower()).first()
+            if not existing:
+                db.add(candidate)
+                
         db.commit()
     except Exception as e:
         print(f"[SCAN] Error saving to investigation_log: {e}")

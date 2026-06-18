@@ -6,14 +6,30 @@ import asyncio
 import uuid
 import time
 from sqlalchemy.orm import Session
-from modules.wallet_scorer import scan_wallet
+from modules.wallet_scorer import scan_wallet, _get_etherscan_key, _etherscan_get
+from modules.contract_scanner import scan_contract
 from database.models import InvestigationLog
+import httpx
+
+async def _is_contract(address: str) -> bool:
+    key = _get_etherscan_key()
+    url = f"https://api.etherscan.io/v2/api?chainid=1&module=proxy&action=eth_getCode&address={address}&tag=latest&apikey={key}"
+    try:
+        async with httpx.AsyncClient(timeout=10) as client:
+            res = await _etherscan_get(client, url)
+            result_str = str(res.get("result", "0x"))
+            return result_str.startswith("0x") and len(result_str) > 2
+    except Exception:
+        return False
 
 async def _process_address(address: str, db: Session, semaphore: asyncio.Semaphore, batch_id: str, case_id: int = None):
     async with semaphore:
         try:
-            # Execute standard wallet scan (quick depth)
-            result = await scan_wallet(address, db, depth="quick")
+            if await _is_contract(address):
+                result = await scan_contract(address, db, depth="quick")
+            else:
+                result = await scan_wallet(address, db, depth="quick")
+
             
             # The scan_wallet function automatically writes to InvestigationLog.
             # We fetch the latest log for this address and tag it with our batch_id and case_id.

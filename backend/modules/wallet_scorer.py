@@ -262,9 +262,13 @@ def classify_entity(tx_history: list, address: str, eth_balance: float,
 
     # === Classification logic ===
 
+    # Null / Burn addresses
+    if addr_lower in ("0x0000000000000000000000000000000000000000", "0x000000000000000000000000000000000000dead"):
+        return ("Null / Burn Address", 0.0)
+
     # Exchange: high counterparty count + high round-trip, OR high exchange overlap
     if (total_counterparties > 90 and round_trip > 0.6) or exchange_cp_pct > 0.4:
-        return ("Exchange Hot Wallet", 0.5)
+        return ("Exchange Hot Wallet", 0.1)
 
     # DAO/multisig: tx_count low but high ETH balance (treasury)
     if tx_count < 200 and eth_balance > 100 and total_counterparties < 50:
@@ -273,6 +277,10 @@ def classify_entity(tx_history: list, address: str, eth_balance: float,
     # Market maker / Infrastructure: very high frequency, tighter counterparties but massive volume
     if (tx_count > 1000 and total_counterparties < 50 and round_trip > 0.8) or (total_counterparties > 40 and round_trip > 0.7 and total_out > 100):
         return ("Infrastructure / Node", 0.6)
+
+    # Known bad from DB takes precedence over behavioral guesses
+    if wallet_db and wallet_db.threat_level == "CRITICAL":
+        return ("Confirmed Threat Actor", 1.5)
 
     # Privacy mixer: equal denomination deposits + always-fresh recipients
     if top_denom_pct > 0.6 and len(in_values) > 20:
@@ -285,10 +293,6 @@ def classify_entity(tx_history: list, address: str, eth_balance: float,
     # Exploit wallet: sudden massive inflow
     if in_values and max(in_values) > 1000 and tx_count < 50:
         return ("Exploit / Drainer Wallet", 1.5)
-
-    # Known bad from DB
-    if wallet_db and wallet_db.threat_level == "CRITICAL":
-        return ("Confirmed Threat Actor", 1.5)
 
     # Regular DeFi user: moderate exchange interaction
     if exchange_cp_pct > 0.3:
@@ -444,7 +448,7 @@ async def scan_wallet(address: str, db: Session, depth: str = "quick", case_id: 
     Returns a structured dict consumed by the frontend.
     """
     import time
-    from database.models import InvestigationLog
+    from database.models import InvestigationLog, CandidateEntity
     
     print(f"\n{'='*60}")
     print(f"[SCAN] Starting wallet scan: {address} (depth: {depth})")
@@ -840,10 +844,10 @@ async def scan_wallet(address: str, db: Session, depth: str = "quick", case_id: 
     # ── Exchange legitimacy suppression ──
     # Only suppress if NOT a DB-confirmed threat
     if l4 < 70:
-        if entity_class in ("Exchange Hot Wallet", "Exchange Deposit Aggregator"):
-            legitimacy_suppressor = 0.25  # Force known/obvious exchanges down to < 25
+        if entity_class in ("Exchange Hot Wallet", "Exchange Deposit Aggregator", "Null / Burn Address"):
+            legitimacy_suppressor = 0.10  # Force known/obvious exchanges down
         elif entity_class in ("Infrastructure / Node", "DAO / Treasury Wallet", "Regular DeFi User", "Market Maker / Bot"):
-            legitimacy_suppressor = 0.35  # Force infra/nodes down safely
+            legitimacy_suppressor = 0.15  # Force infra/nodes down safely
         elif exchange_overlap_pct > 0.5:
             legitimacy_suppressor = 0.6
         elif exchange_overlap_pct > 0.3:
@@ -878,7 +882,8 @@ async def scan_wallet(address: str, db: Session, depth: str = "quick", case_id: 
 
     # ── Apply persistence floor ──
     # Once suspicious, the score never drops below the persistence floor
-    modified_score = max(modified_score, persistence_floor)
+    if entity_class not in ("Exchange Hot Wallet", "Exchange Deposit Aggregator", "Infrastructure / Node", "Null / Burn Address"):
+        modified_score = max(modified_score, persistence_floor)
 
     # ── Final clamp ──
     final_score = round(min(100.0, max(0.0, modified_score)))
@@ -1114,6 +1119,23 @@ Respond with ONLY valid JSON with exactly these three keys:
             raw_data=response_data
         )
         db.add(log_entry)
+        
+        # Auto-update Threat DB Candidate queue for HIGH/CRITICAL findings
+        if final_score >= 60:
+            candidate = CandidateEntity(
+                address=address.lower(),
+                label=entity_class,
+                category="Wallet",
+                source="Axon Bulk Scanner Auto-Detection",
+                confidence=final_score,
+                chain="ETH",
+                status="pending"
+            )
+            # Avoid inserting duplicates
+            existing = db.query(CandidateEntity).filter_by(address=address.lower()).first()
+            if not existing:
+                db.add(candidate)
+                
         db.commit()
     except Exception as e:
         print(f"[SCAN] Error saving to investigation_log: {e}")
