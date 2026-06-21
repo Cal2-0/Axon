@@ -351,15 +351,16 @@ export default function WalletInvestigation({ caseId }) {
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
     const initialAddress = searchParams.get('address');
+    const deepdive = searchParams.get('deepdive') === 'true';
     if (initialAddress) {
       setAddress(initialAddress);
       // eslint-disable-next-line no-use-before-define
-      runAnalysis(initialAddress);
+      runAnalysis(initialAddress, deepdive);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.search]);
 
-  const runAnalysis = async (targetAddress) => {
+  const runAnalysis = async (targetAddress, autoDeepDive = false) => {
     if (!targetAddress || !targetAddress.trim()) return;
     setLoading(true);
     setResult(null);
@@ -370,6 +371,19 @@ export default function WalletInvestigation({ caseId }) {
       const { scanWallet, getCrossChainHoldings } = await import('../api/axon');
       const profile = await scanWallet(targetAddress.trim(), caseId);
       setResult(profile);
+
+      if (autoDeepDive) {
+        setIsDeepDiveActive(true);
+        setDeepDiveStatus('Running full deep scan (1000 txs + 3-AI Prosecution/Defense/Judge pipeline)...');
+        scanWallet(targetAddress.trim(), caseId, 'deep').then(deepResult => {
+            setDeepDiveResult(deepResult);
+            setIsDeepDiveActive(false);
+            setDeepDiveStatus('');
+        }).catch(err => {
+            setDeepDiveError(err.message || 'Deep Dive Scan failed. Check API logs.');
+            setIsDeepDiveActive(false);
+        });
+      }
 
       // Async fetch cross-chain (single call, was duplicated before)
       getCrossChainHoldings(targetAddress.trim())

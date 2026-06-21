@@ -614,6 +614,154 @@ export async function downloadContractPDF(result) {
   _triggerPDFDownload(html, `AXON-${caseId}-Contract-Report`);
 }
 
+export async function downloadBulkPDF(report) {
+  if (!report) return;
+
+  const caseId = report.report_metadata?.report_id || `AXON-B-${Date.now().toString(36).toUpperCase().slice(0, 6)}-${report.bulk_batch_id.slice(0, 8)}`;
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+  const isoStr = now.toISOString();
+
+  const docHash = report.report_metadata?.sha256_hash || "UNVERIFIED-LOCAL-HASH";
+  const { CRITICAL = 0, HIGH = 0, MEDIUM = 0, LOW = 0 } = report.summary || {};
+  const total = CRITICAL + HIGH + MEDIUM + LOW;
+
+  const getConsensusMessage = () => {
+    if (CRITICAL > 0) return \`FORENSIC CONSENSUS: \${CRITICAL} critical threats identified out of \${total} subjects. Immediate isolation and manual review strongly recommended for high-risk assets.\`;
+    if (HIGH > 0) return \`FORENSIC CONSENSUS: Elevated risk detected. \${HIGH} subjects show suspicious behavioral patterns. Proceed with caution and monitor closely.\`;
+    if (MEDIUM > 0) return \`FORENSIC CONSENSUS: Moderate risk profile. Some subjects exhibit anomalous but non-critical behaviors.\`;
+    return \`FORENSIC CONSENSUS: Low risk profile. No immediate threats or sanctions exposure detected in the scanned batch.\`;
+  };
+  
+  const consensusMessage = getConsensusMessage();
+  const consensusColor = CRITICAL > 0 ? '#dc2626' : HIGH > 0 ? '#ea580c' : MEDIUM > 0 ? '#ca8a04' : '#16a34a';
+
+  const resultsHTML = (report.results || []).map((r, i) => {
+    const score = r.data?.risk?.score || 0;
+    const isCritical = score >= 80;
+    const isHigh = score >= 60 && score < 80;
+    const isMedium = score >= 40 && score < 60;
+    const rColor = isCritical ? '#dc2626' : isHigh ? '#ea580c' : isMedium ? '#ca8a04' : '#16a34a';
+    const rLabel = r.data?.risk?.label || "Unknown";
+    const name = r.data?.identity?.name || r.address;
+    const mitre = r.data?.risk?.aiAnalysis?.mitre_tag || 'N/A';
+
+    return \`
+      <tr>
+        <td style="font-family:'Courier New',monospace;font-size:11px;color:#64748b">\${i + 1}</td>
+        <td style="font-weight:600;font-family:'Courier New',monospace;">\${_esc(r.address)}</td>
+        <td>\${_esc(name)}</td>
+        <td><span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:700;color:\${rColor};border:1px solid \${rColor}30;background:\${rColor}10">\${rLabel} (\${score}/100)</span></td>
+        <td style="font-family:'Courier New',monospace;font-size:10px;">\${_esc(mitre)}</td>
+        <td style="font-family:'Courier New',monospace;font-size:10px;color:#64748b">\${_esc(r.status)}</td>
+      </tr>
+    \`;
+  }).join('');
+
+  const html = \`<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><title>AXON Bulk Report — \${caseId}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'Inter',sans-serif;background:#fff;color:#1e293b;font-size:12px;line-height:1.6}
+  .page{max-width:800px;margin:0 auto;padding:40px 48px}
+  @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}.page{padding:20px 28px}@page{margin:0.5in;size:A4}}
+  .cls-banner{text-align:center;padding:6px 0;font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:3px;color:#dc2626;border-bottom:2px solid #fecaca;background:#fef2f2}
+  h1{font-size:20px;font-weight:800;color:#0f172a;margin-bottom:4px}
+  h2{font-size:14px;font-weight:700;color:#0f172a;text-transform:uppercase;letter-spacing:0.08em;margin:24px 0 12px;padding-bottom:6px;border-bottom:2px solid #e2e8f0;display:flex;align-items:center;gap:8px}
+  h2 .bar{width:4px;height:18px;border-radius:2px}
+  h3{font-size:12px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.06em;margin:16px 0 8px}
+  .mono{font-family:'JetBrains Mono',monospace}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}.grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px}
+  .cell{background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:10px 12px}.cell .label{font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px;font-family:'JetBrains Mono',monospace}.cell .val{font-size:12px;color:#0f172a;font-weight:600;word-break:break-all}
+  table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:12px}
+  th{text-align:left;padding:6px 10px;font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;font-family:'JetBrains Mono',monospace;border-bottom:2px solid #e2e8f0;background:#f8fafc}
+  td{padding:6px 10px;border-bottom:1px solid #f1f5f9;color:#334155;vertical-align:top}
+  .verdict-box{background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #0284c7;border-radius:0 6px 6px 0;padding:16px 20px;margin:12px 0}
+  .risk-box{background:#f8fafc;border:2px solid #e2e8f0;border-radius:8px;padding:20px;text-align:center}
+  .footer{border-top:2px solid #e2e8f0;padding-top:16px;margin-top:24px}.footer p{font-size:9px;color:#94a3b8;line-height:1.5}
+</style></head><body><div class="page">
+  <div class="cls-banner">CONFIDENTIAL — AXON BLOCKCHAIN INTELLIGENCE — FOR AUTHORIZED RECIPIENTS ONLY</div>
+  <div style="padding:24px 0;border-bottom:2px solid #e2e8f0">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <div style="width:28px;height:28px;border-radius:6px;background:#0f172a;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:800">A</div>
+          <span style="font-size:18px;font-weight:800;letter-spacing:0.2em;color:#0f172a">AXON</span>
+        </div>
+        <div class="mono" style="font-size:9px;color:#64748b;letter-spacing:0.15em">BLOCKCHAIN FORENSIC INTELLIGENCE PLATFORM</div>
+      </div>
+      <div style="text-align:right">
+        <span style="display:inline-block;padding:3px 12px;border-radius:4px;font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;margin-bottom:4px;">CONFIDENTIAL</span>
+        <div class="mono" style="font-size:8px;color:#94a3b8;text-transform:uppercase;">SHA-256 INTEGRITY HASH</div>
+        <div class="mono" style="font-size:9px;color:#64748b;max-width:200px;word-break:break-all;">\${docHash}</div>
+      </div>
+    </div>
+    <h1>Bulk Investigation Engine Master Report</h1>
+    <p style="color:#64748b;font-size:12px;margin-bottom:16px">High-throughput forensic processing identifying systemic threats and clustered illicit behavior.</p>
+    <div class="grid4">
+      <div class="cell"><div class="label">Report ID</div><div class="val mono" style="color:#0284c7;font-size:11px">\${caseId}</div></div>
+      <div class="cell"><div class="label">Date</div><div class="val">\${dateStr}</div></div>
+      <div class="cell"><div class="label">Time (UTC)</div><div class="val mono">\${timeStr}</div></div>
+      <div class="cell"><div class="label">Status</div><div class="val" style="color:#16a34a">FINAL</div></div>
+    </div>
+  </div>
+
+  <h2><span class="bar" style="background:#0284c7"></span>1. Executive Summary</h2>
+  <div style="display:flex;gap:20px;margin-bottom:16px;">
+    <div style="flex:1">
+      <div class="grid4" style="margin-bottom:12px">
+        <div class="cell"><div class="label">Total Processed</div><div class="val" style="font-size:18px;">\${report.total_processed || 0}</div></div>
+        <div class="cell"><div class="label">Successful</div><div class="val" style="font-size:18px;color:#16a34a">\${report.successful || 0}</div></div>
+        <div class="cell"><div class="label">Failed</div><div class="val" style="font-size:18px;color:#dc2626">\${report.failed || 0}</div></div>
+        <div class="cell"><div class="label">Batch ID</div><div class="val mono" style="font-size:8px;">\${_esc(report.bulk_batch_id || 'N/A')}</div></div>
+      </div>
+      <div class="verdict-box" style="border-left-color:\${consensusColor}">
+        <div style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:2px">Automated Threat Assessment</div>
+        <p style="font-size:12px;color:#0f172a;font-weight:700">\${_esc(consensusMessage)}</p>
+      </div>
+    </div>
+  </div>
+
+  <h2><span class="bar" style="background:#dc2626"></span>2. Risk Distribution Matrix</h2>
+  <div class="grid4" style="margin-bottom:16px;">
+    <div class="risk-box" style="background:#fef2f2;border-color:#fecaca;">
+      <div class="val mono" style="font-size:32px;font-weight:800;color:#dc2626;line-height:1">\${CRITICAL}</div>
+      <div class="label" style="font-size:10px;color:#dc2626;margin-top:6px;font-weight:bold;">CRITICAL</div>
+    </div>
+    <div class="risk-box" style="background:#fff7ed;border-color:#fed7aa;">
+      <div class="val mono" style="font-size:32px;font-weight:800;color:#ea580c;line-height:1">\${HIGH}</div>
+      <div class="label" style="font-size:10px;color:#ea580c;margin-top:6px;font-weight:bold;">HIGH</div>
+    </div>
+    <div class="risk-box" style="background:#fefce8;border-color:#fef08a;">
+      <div class="val mono" style="font-size:32px;font-weight:800;color:#ca8a04;line-height:1">\${MEDIUM}</div>
+      <div class="label" style="font-size:10px;color:#ca8a04;margin-top:6px;font-weight:bold;">MEDIUM</div>
+    </div>
+    <div class="risk-box" style="background:#f0fdf4;border-color:#bbf7d0;">
+      <div class="val mono" style="font-size:32px;font-weight:800;color:#16a34a;line-height:1">\${LOW}</div>
+      <div class="label" style="font-size:10px;color:#16a34a;margin-top:6px;font-weight:bold;">LOW</div>
+    </div>
+  </div>
+
+  <h2><span class="bar" style="background:#ea580c"></span>3. Entity Roster</h2>
+  <table>
+    <thead><tr><th style="width:20px">#</th><th style="width:120px">Address</th><th>Name</th><th style="width:120px">Risk Rating</th><th>MITRE/Verdict</th><th style="width:50px">Status</th></tr></thead>
+    <tbody>\${resultsHTML}</tbody>
+  </table>
+
+  <div class="footer">
+    <p><strong style="color:#64748b">DISCLAIMER:</strong> This report was generated by AXON v2.0 Bulk Investigation Engine. Findings should be independently verified before use in legal proceedings.</p>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+      <span class="mono" style="font-size:8px;color:#94a3b8">AXON BLOCKCHAIN INTELLIGENCE v2.0</span>
+      <span class="mono" style="font-size:8px;color:#94a3b8">Case \${caseId} · END OF REPORT</span>
+    </div>
+  </div>
+  <div class="cls-banner" style="border-top:2px solid #fecaca;border-bottom:none;margin-top:16px">CONFIDENTIAL — AXON BLOCKCHAIN INTELLIGENCE — FOR AUTHORIZED RECIPIENTS ONLY</div>
+</div></body></html>\`;
+
+  _triggerPDFDownload(html, \`AXON-\${caseId}-Bulk-Report\`);
+}
 
 // ─── INTERNAL HELPERS ─────────────────────────────────────────────────────────
 

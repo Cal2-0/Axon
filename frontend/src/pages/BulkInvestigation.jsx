@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { bulkScan } from '../api/axon';
 import { useNavigate } from 'react-router-dom';
-import { jsPDF } from 'jspdf';
+import { downloadBulkPDF } from '../utils/pdfExport';
 
 export default function BulkInvestigation({ caseId }) {
   const [inputData, setInputData] = useState('');
@@ -224,76 +224,7 @@ export default function BulkInvestigation({ caseId }) {
               {/* Master Report Button */}
               <button 
                 onClick={() => {
-                  const doc = new jsPDF();
-                  
-                  doc.setFont("courier", "bold");
-                  doc.setFontSize(16);
-                  doc.text("AXON INTELLIGENCE PLATFORM", 15, 20);
-                  doc.text("CONFIDENTIAL FORENSIC REPORT - BULK SCAN", 15, 28);
-                  
-                  doc.setFontSize(10);
-                  doc.setFont("courier", "normal");
-                  doc.text("============================================================", 15, 34);
-                  doc.text(`BATCH ID: ${report.bulk_batch_id || 'N/A'}`, 15, 40);
-                  doc.text(`GENERATED: ${new Date().toISOString().replace('T', ' ').slice(0, 19)} UTC`, 15, 46);
-                  doc.text("CLASSIFICATION: CONFIDENTIAL", 15, 52);
-                  
-                  doc.text("------------------------------------------------------------", 15, 58);
-                  doc.setFont("courier", "bold");
-                  doc.text("EXECUTIVE SUMMARY", 15, 64);
-                  doc.setFont("courier", "normal");
-                  doc.text("------------------------------------------------------------", 15, 70);
-                  
-                  doc.text(`Total Entities Processed: ${report.total_processed || 0}`, 15, 78);
-                  doc.text(`Successful Scans: ${report.successful || 0}`, 15, 84);
-                  doc.text(`Failed Scans: ${report.failed || 0}`, 15, 90);
-                  
-                  doc.text("Risk Distribution:", 15, 98);
-                  doc.text(`  CRITICAL: ${report.summary?.CRITICAL || 0}`, 15, 104);
-                  doc.text(`  HIGH:     ${report.summary?.HIGH || 0}`, 15, 110);
-                  doc.text(`  MEDIUM:   ${report.summary?.MEDIUM || 0}`, 15, 116);
-                  doc.text(`  LOW:      ${report.summary?.LOW || 0}`, 15, 122);
-                  
-                  doc.text("------------------------------------------------------------", 15, 130);
-                  doc.setFont("courier", "bold");
-                  doc.text("ENTITY ROSTER", 15, 136);
-                  doc.setFont("courier", "normal");
-                  doc.text("------------------------------------------------------------", 15, 142);
-                  
-                  let y = 150;
-                  (report.results || []).forEach((r, i) => {
-                    if (y > 270) {
-                      doc.addPage();
-                      y = 20;
-                    }
-                    const d = r.data || {};
-                    const risk = d.risk || {};
-                    const label = risk.label || 'UNKNOWN';
-                    const score = risk.score || 0;
-                    const name = d.identity?.name || r.address;
-                    const mitre = risk.aiAnalysis?.mitre_tag || 'N/A';
-                    
-                    doc.text(`${String(i+1).padStart(2, '0')}. ${r.address}`, 15, y);
-                    doc.text(`   Name: ${name}`, 15, y + 5);
-                    doc.text(`   Risk: ${label} (${score}/100)`, 15, y + 10);
-                    doc.text(`   MITRE: ${mitre}`, 15, y + 15);
-                    doc.text(`   Status: ${r.status}`, 15, y + 20);
-                    y += 28;
-                  });
-                  
-                  if (y > 270) {
-                    doc.addPage();
-                    y = 20;
-                  }
-                  doc.text("============================================================", 15, y);
-                  doc.text("END OF REPORT — AXON INTELLIGENCE PLATFORM v2.0", 15, y + 6);
-                  doc.text("This document is confidential. Unauthorized distribution prohibited.", 15, y + 12);
-                  if (reportHash) {
-                    doc.setFontSize(8);
-                    doc.text(`SHA-256 PROOF: ${reportHash}`, 15, y + 18);
-                  }
-                  
-                  doc.save(`AXON-BULK-MASTER-${report.bulk_batch_id || 'export'}.pdf`);
+                  downloadBulkPDF(report);
                 }} 
                 className="axon-button px-4 py-2 text-xs border-purple-500/30 text-purple-400 hover:bg-purple-500 hover:text-white"
               >
@@ -403,7 +334,7 @@ export default function BulkInvestigation({ caseId }) {
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
-                      navigate(`/wallet?address=${r.address}`);
+                      navigate(`/wallet?address=${r.address}&deepdive=true`);
                     }}
                     className={`w-full py-2.5 rounded text-xs font-bold uppercase tracking-widest transition-all ${
                       isCritical ? 'bg-red-500/20 text-red-400 hover:bg-red-500 hover:text-white' :
