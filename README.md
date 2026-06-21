@@ -246,4 +246,4 @@ React dashboard with all investigation views, D3 graph visualization, live deplo
 
 ---
 
-<p align="center"><em>Built by Calvin Dsouza  · CERT-Army Malware Desk</em></p>
+<p align="center"><em>Built by Calvin Dsouza </em></p>
