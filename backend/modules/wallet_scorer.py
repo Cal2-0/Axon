@@ -1269,32 +1269,17 @@ Use ALL of this evidence to form a comprehensive forensic assessment. Weigh beha
         )
         db.add(log_entry)
         
-        # Save or update independent verifiable report
-        report_entry = db.query(VerificationReport).filter(
-            VerificationReport.entity_address == address.lower(),
-            VerificationReport.entity_type == "wallet"
-        ).first()
-        
-        if report_entry:
-            # Re-use the existing report_id so old PDFs don't break,
-            # and update the response payload so the frontend knows the correct ID.
-            report_meta["report_id"] = report_entry.report_id
-            
-            report_entry.report_hash = report_meta["sha256_hash"]
-            report_entry.risk_score = final_score
-            report_entry.scan_timestamp = time.time()
-            report_entry.scan_depth = depth
-        else:
-            report_entry = VerificationReport(
-                report_id=report_meta["report_id"],
-                report_hash=report_meta["sha256_hash"],
-                entity_address=address.lower(),
-                entity_type="wallet",
-                risk_score=final_score,
-                scan_timestamp=time.time(),
-                scan_depth=depth
-            )
-            db.add(report_entry)
+        # Save independent verifiable report immutably
+        report_entry = VerificationReport(
+            report_id=report_meta["report_id"],
+            report_hash=report_meta["sha256_hash"],
+            entity_address=address.lower(),
+            entity_type="wallet",
+            risk_score=final_score,
+            scan_timestamp=time.time(),
+            scan_depth=depth
+        )
+        db.add(report_entry)
         
         # Auto-update Threat DB Candidate queue for HIGH/CRITICAL findings
         if final_score >= 60:

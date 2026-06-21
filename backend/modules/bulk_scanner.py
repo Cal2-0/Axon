@@ -114,34 +114,19 @@ async def run_bulk_scan(addresses: list, db: Session, case_id: int = None) -> di
     response_data["report_metadata"] = report_meta
 
     try:
-        report_entry = db.query(VerificationReport).filter(
-            VerificationReport.entity_address == batch_id,
-            VerificationReport.entity_type == "bulk_batch"
-        ).first()
-        
-        # Max risk score from all successful results
         max_risk = max([r["data"].get("risk", {}).get("score", 0) for r in successful]) if successful else 0
         
-        if report_entry:
-            # Re-use the existing report_id so old PDFs don't break,
-            # and update the response payload so the frontend knows the correct ID.
-            report_meta["report_id"] = report_entry.report_id
-            
-            report_entry.report_hash = report_meta["sha256_hash"]
-            report_entry.risk_score = max_risk
-            report_entry.scan_timestamp = time.time()
-            report_entry.scan_depth = "quick"
-        else:
-            report_entry = VerificationReport(
-                report_id=report_meta["report_id"],
-                report_hash=report_meta["sha256_hash"],
-                entity_address=batch_id,
-                entity_type="bulk_batch",
-                risk_score=max_risk,
-                scan_timestamp=time.time(),
-                scan_depth="quick"
-            )
-            db.add(report_entry)
+        # Save independent verifiable report immutably
+        report_entry = VerificationReport(
+            report_id=report_meta["report_id"],
+            report_hash=report_meta["sha256_hash"],
+            entity_address=batch_id,
+            entity_type="bulk_batch",
+            risk_score=max_risk,
+            scan_timestamp=time.time(),
+            scan_depth="quick"
+        )
+        db.add(report_entry)
         db.commit()
     except Exception as e:
         print(f"[BULK] Error saving verification report: {e}")
