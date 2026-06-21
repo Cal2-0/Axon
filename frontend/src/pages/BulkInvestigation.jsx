@@ -35,11 +35,15 @@ export default function BulkInvestigation({ caseId }) {
       setReport(result);
       
       try {
-        const msgUint8 = new TextEncoder().encode(JSON.stringify(result));
-        const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        const docHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-        setReportHash(docHash);
+        if (result.report_metadata && result.report_metadata.sha256_hash) {
+          setReportHash(result.report_metadata.sha256_hash);
+        } else {
+          const msgUint8 = new TextEncoder().encode(JSON.stringify(result));
+          const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+          const hashArray = Array.from(new Uint8Array(hashBuffer));
+          const docHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+          setReportHash(docHash);
+        }
       } catch(e) { console.error("Hash err:", e); }
       
     } catch (err) {
@@ -210,6 +214,12 @@ export default function BulkInvestigation({ caseId }) {
             </div>
             <div className="flex gap-3">
               <button onClick={() => { setReport(null); setInputData(''); setReportHash(null); }} className="axon-button px-4 py-2 text-xs">Reset Tool</button>
+              
+              {report.report_metadata?.report_id && (
+                <button onClick={() => window.open(`/verify/${report.report_metadata.report_id}`, '_blank')} className="axon-button px-4 py-2 text-xs border-axon-purple/30 text-axon-purple hover:bg-axon-purple hover:text-white">
+                  🔒 Verify Report
+                </button>
+              )}
               
               {/* Master Report Button */}
               <button 

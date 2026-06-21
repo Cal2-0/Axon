@@ -8,8 +8,10 @@ import time
 from sqlalchemy.orm import Session
 from modules.wallet_scorer import scan_wallet, _get_etherscan_key, _etherscan_get
 from modules.contract_scanner import scan_contract
-from database.models import InvestigationLog
+from database.models import InvestigationLog, VerificationReport
 import httpx
+import hashlib
+import json
 
 async def _is_contract(address: str) -> bool:
     key = _get_etherscan_key()
@@ -83,7 +85,7 @@ async def run_bulk_scan(addresses: list, db: Session, case_id: int = None) -> di
             
     print(f"[BULK SCAN] Batch {batch_id} complete. Success: {len(successful)}, Failed: {len(failed)}")
             
-    return {
+    response_data = {
         "bulk_batch_id": batch_id,
         "case_id": case_id,
         "total_processed": len(addresses),
@@ -93,3 +95,56 @@ async def run_bulk_scan(addresses: list, db: Session, case_id: int = None) -> di
         "results": successful,
         "errors": failed
     }
+
+    # Generate master verification report for the bulk run
+    report_meta = {
+        "report_id": f"AXON-B-{int(time.time())}-{batch_id[:8]}",
+        "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "generated_timestamp": time.time(),
+        "scan_depth": "quick", # Bulk is always quick currently
+        "entity_address": batch_id,
+        "entity_type": "bulk_batch",
+        "engine_version": "2.0/3.0",
+    }
+    
+    hash_payload = json.dumps(response_data, sort_keys=True, default=str)
+    report_meta["sha256_hash"] = hashlib.sha256(hash_payload.encode()).hexdigest()
+    report_meta["hash_algorithm"] = "SHA-256"
+    report_meta["hash_scope"] = "Full response_data payload (sorted keys, pre-metadata)"
+    response_data["report_metadata"] = report_meta
+
+    try:
+        report_entry = db.query(VerificationReport).filter(
+            VerificationReport.entity_address == batch_id,
+            VerificationReport.entity_type == "bulk_batch"
+        ).first()
+        
+        # Max risk score from all successful results
+        max_risk = max([r["data"].get("risk", {}).get("score", 0) for r in successful]) if successful else 0
+        
+        if report_entry:
+            # Re-use the existing report_id so old PDFs don't break,
+            # and update the response payload so the frontend knows the correct ID.
+            report_meta["report_id"] = report_entry.report_id
+            
+            report_entry.report_hash = report_meta["sha256_hash"]
+            report_entry.risk_score = max_risk
+            report_entry.scan_timestamp = time.time()
+            report_entry.scan_depth = "quick"
+        else:
+            report_entry = VerificationReport(
+                report_id=report_meta["report_id"],
+                report_hash=report_meta["sha256_hash"],
+                entity_address=batch_id,
+                entity_type="bulk_batch",
+                risk_score=max_risk,
+                scan_timestamp=time.time(),
+                scan_depth="quick"
+            )
+            db.add(report_entry)
+        db.commit()
+    except Exception as e:
+        print(f"[BULK] Error saving verification report: {e}")
+        db.rollback()
+        
+    return response_data

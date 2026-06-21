@@ -231,11 +231,11 @@ Respond with ONLY valid JSON with exactly these keys:
     )
 
     # Handle failures gracefully
-    if isinstance(prosecution_result, Exception):
-        print(f"[AI_ANALYST] Prosecution model failed: {prosecution_result}")
+    if isinstance(prosecution_result, Exception) or not isinstance(prosecution_result, dict):
+        print(f"[AI_ANALYST] Prosecution model failed or returned non-dict: {prosecution_result}")
         prosecution_result = {"findings": "Prosecution analysis unavailable.", "risk_assessment": "MEDIUM", "confidence": 30, "key_evidence": "N/A", "mitre_tag": "N/A"}
-    if isinstance(defense_result, Exception):
-        print(f"[AI_ANALYST] Defense model failed: {defense_result}")
+    if isinstance(defense_result, Exception) or not isinstance(defense_result, dict):
+        print(f"[AI_ANALYST] Defense model failed or returned non-dict: {defense_result}")
         defense_result = {"findings": "Defense analysis unavailable.", "risk_assessment": "MEDIUM", "confidence": 30, "key_defense": "N/A", "mitre_tag": "N/A"}
 
     print(f"[AI_ANALYST] Phase 1 done — Prosecution: {prosecution_result.get('risk_assessment', '?')} | Defense: {defense_result.get('risk_assessment', '?')}")
