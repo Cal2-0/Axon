@@ -18,6 +18,47 @@ CHAINS = {
 
 # All unique CoinGecko IDs we ever need — fetch prices for all regardless of balance
 ALL_CG_IDS = set(c["cg_id"] for c in CHAINS.values())
+ALL_CG_IDS.add("bitcoin")
+ALL_CG_IDS.add("solana")
+
+def detect_address_type(address: str) -> str:
+    addr = address.strip()
+    if addr.startswith("0x") and len(addr) == 42:
+        return "EVM"
+    # Solana is base58, length usually 43-44
+    if len(addr) >= 40 and not addr.startswith("0x") and not addr.startswith("bc1"):
+        return "SOLANA"
+    if addr.startswith("1") or addr.startswith("3") or addr.startswith("bc1"):
+        return "BTC"
+    return "UNKNOWN"
+
+async def fetch_btc_balance(client: httpx.AsyncClient, address: str) -> dict:
+    try:
+        res = await client.get(f"https://blockchain.info/rawaddr/{address}", timeout=10.0)
+        if res.status_code == 200:
+            data = res.json()
+            balance_btc = data.get("final_balance", 0) / 10**8
+            return {"chain": "Bitcoin", "balance": balance_btc, "cg_id": "bitcoin", "symbol": "BTC", "error": None}
+    except Exception as e:
+        print(f"[CROSS_CHAIN] Failed fetching BTC balance: {e}")
+    return {"chain": "Bitcoin", "balance": 0.0, "cg_id": "bitcoin", "symbol": "BTC", "error": "Fetch failed"}
+
+async def fetch_solana_balance(client: httpx.AsyncClient, address: str) -> dict:
+    try:
+        payload = {
+            "jsonrpc": "2.0", "id": 1,
+            "method": "getBalance",
+            "params": [address]
+        }
+        res = await client.post("https://api.mainnet-beta.solana.com", json=payload, timeout=10.0)
+        if res.status_code == 200:
+            data = res.json()
+            if "result" in data and "value" in data["result"]:
+                balance_sol = data["result"]["value"] / 10**9
+                return {"chain": "Solana", "balance": balance_sol, "cg_id": "solana", "symbol": "SOL", "error": None}
+    except Exception as e:
+        print(f"[CROSS_CHAIN] Failed fetching SOL balance: {e}")
+    return {"chain": "Solana", "balance": 0.0, "cg_id": "solana", "symbol": "SOL", "error": "Fetch failed"}
 
 async def fetch_chain_balance(client: httpx.AsyncClient, address: str, chain_name: str, chain_info: dict, key: str) -> dict:
     url = (
@@ -74,21 +115,35 @@ async def fetch_prices(client: httpx.AsyncClient, cg_ids: set) -> dict:
             "ethereum": {"usd": 1683.31, "inr": 140000.0},
             "binancecoin": {"usd": 575.39, "inr": 48000.0},
             "matic-network": {"usd": 0.62, "inr": 52.0},
-            "avalanche-2": {"usd": 6.27, "inr": 520.0}
+            "avalanche-2": {"usd": 6.27, "inr": 520.0},
+            "bitcoin": {"usd": 60000.0, "inr": 5000000.0},
+            "solana": {"usd": 150.0, "inr": 12500.0}
         }
 
 async def get_cross_chain_holdings(address: str) -> dict:
-    key = _get_etherscan_key()
-    if not key:
-        return {"error": "Missing Etherscan API key", "holdings": [], "total_net_worth_usd": 0, "total_net_worth_inr": 0}
+    addr_type = detect_address_type(address)
 
     async with httpx.AsyncClient(timeout=20.0) as client:
-        # Fetch all chain balances + prices simultaneously
-        balance_tasks = [
-            fetch_chain_balance(client, address, name, info, key)
-            for name, info in CHAINS.items()
-        ]
+        balance_tasks = []
+        non_evm_note = None
         
+        if addr_type == "EVM":
+            key = _get_etherscan_key()
+            if not key:
+                return {"error": "Missing Etherscan API key", "holdings": [], "total_net_worth_usd": 0, "total_net_worth_inr": 0}
+            balance_tasks = [
+                fetch_chain_balance(client, address, name, info, key)
+                for name, info in CHAINS.items()
+            ]
+            non_evm_note = "To scan Bitcoin or Solana holdings, enter the suspect's native BTC or SOL address directly into the search bar."
+
+        elif addr_type == "BTC":
+            balance_tasks = [fetch_btc_balance(client, address)]
+        elif addr_type == "SOLANA":
+            balance_tasks = [fetch_solana_balance(client, address)]
+        else:
+            return {"error": "Unknown address format", "holdings": [], "total_net_worth_usd": 0, "total_net_worth_inr": 0}
+            
         # Always fetch prices for ALL chains (not just non-zero) to avoid missing data
         price_task = fetch_prices(client, ALL_CG_IDS)
         
@@ -132,4 +187,5 @@ async def get_cross_chain_holdings(address: str) -> dict:
         "holdings":             holdings,
         "total_net_worth_usd":  round(total_net_worth_usd, 2),
         "total_net_worth_inr":  round(total_net_worth_inr, 2),
+        "non_evm_note":         non_evm_note,
     }

@@ -8,6 +8,7 @@ export default function BulkInvestigation({ caseId }) {
   const [inputCaseId, setInputCaseId] = useState('');
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState(null);
+  const [reportHash, setReportHash] = useState(null);
   const navigate = useNavigate();
 
   const handleScan = async (e) => {
@@ -32,6 +33,15 @@ export default function BulkInvestigation({ caseId }) {
       const targetCaseId = caseId || (inputCaseId ? parseInt(inputCaseId) : null);
       const result = await bulkScan(addresses, targetCaseId);
       setReport(result);
+      
+      try {
+        const msgUint8 = new TextEncoder().encode(JSON.stringify(result));
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const docHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        setReportHash(docHash);
+      } catch(e) { console.error("Hash err:", e); }
+      
     } catch (err) {
       console.error(err);
       alert("Failed to run bulk scan.");
@@ -185,13 +195,21 @@ export default function BulkInvestigation({ caseId }) {
             </div>
           </div>
 
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-white flex items-center gap-3">
-              <span className="w-1.5 h-6 rounded-full bg-axon-orange"></span>
-              Investigation Matrix
-            </h2>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-bold text-white flex items-center gap-3">
+                <span className="w-1.5 h-6 rounded-full bg-axon-orange"></span>
+                Investigation Matrix
+              </h2>
+              {reportHash && (
+                <div className="mt-1 flex items-center gap-2 text-[10px] text-axon-text-muted font-mono">
+                  <span className="px-1.5 py-0.5 rounded bg-axon-card border border-axon-border text-axon-text-dim uppercase tracking-widest">SHA-256 PROOF</span>
+                  <span className="truncate max-w-[200px] md:max-w-md">{reportHash}</span>
+                </div>
+              )}
+            </div>
             <div className="flex gap-3">
-              <button onClick={() => { setReport(null); setInputData(''); }} className="axon-button px-4 py-2 text-xs">Reset Tool</button>
+              <button onClick={() => { setReport(null); setInputData(''); setReportHash(null); }} className="axon-button px-4 py-2 text-xs">Reset Tool</button>
               
               {/* Master Report Button */}
               <button 
@@ -260,6 +278,10 @@ export default function BulkInvestigation({ caseId }) {
                   doc.text("============================================================", 15, y);
                   doc.text("END OF REPORT — AXON INTELLIGENCE PLATFORM v2.0", 15, y + 6);
                   doc.text("This document is confidential. Unauthorized distribution prohibited.", 15, y + 12);
+                  if (reportHash) {
+                    doc.setFontSize(8);
+                    doc.text(`SHA-256 PROOF: ${reportHash}`, 15, y + 18);
+                  }
                   
                   doc.save(`AXON-BULK-MASTER-${report.bulk_batch_id || 'export'}.pdf`);
                 }} 

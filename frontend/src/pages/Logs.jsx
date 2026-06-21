@@ -116,53 +116,46 @@ export default function Logs() {
   const [logs,       setLogs]       = useState([]);
   const [loading,    setLoading]    = useState(false);
   const [expanded,   setExpanded]   = useState(null);
-
-  // Used to prevent stale closures in the interval
-  const queryRef = React.useRef(query);
-  const riskRef  = React.useRef(riskFilter);
-  const typeRef  = React.useRef(typeFilter);
+  const [page,       setPage]       = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
 
   useEffect(() => {
-    queryRef.current = query;
-    riskRef.current  = riskFilter;
-    typeRef.current  = typeFilter;
-  }, [query, riskFilter, typeFilter]);
-
-  useEffect(() => {
-    fetchLogs('', '', '', true);
-    
-    const interval = setInterval(() => {
-      fetchLogs(queryRef.current, riskRef.current, typeRef.current, false);
-    }, 5000);
-    
-    return () => clearInterval(interval);
+    fetchLogs('', '', '', 1);
   }, []);
 
-  const fetchLogs = async (q, risk, type, showLoading = true) => {
-    if (showLoading) setLoading(true);
+  const fetchLogs = async (q, risk, type, pg = 1) => {
+    setLoading(true);
     try {
-      // Merge risk label into search query if no free text
-      const searchTerm = q || risk;
-      const data = await searchLogs(searchTerm, 100, type);
-      setLogs(data);
+      const data = await searchLogs(q, pg, 25, type, risk);
+      setLogs(data.results || []);
+      setTotalPages(data.pages || 1);
+      setTotalCount(data.total || 0);
+      setPage(data.page || 1);
     } catch (err) {
       console.error(err);
     } finally {
-      if (showLoading) setLoading(false);
+      setLoading(false);
     }
   };
 
   const handleSearch = (e) => {
     e.preventDefault();
     setExpanded(null);
-    fetchLogs(query, riskFilter, typeFilter);
+    fetchLogs(query, riskFilter, typeFilter, 1);
   };
 
   const handleFilterChange = (risk, type) => {
     setRiskFilter(risk);
     setTypeFilter(type);
     setExpanded(null);
-    fetchLogs(query, risk, type);
+    fetchLogs(query, risk, type, 1);
+  };
+
+  const handlePageChange = (newPage) => {
+    if (newPage < 1 || newPage > totalPages) return;
+    setExpanded(null);
+    fetchLogs(query, riskFilter, typeFilter, newPage);
   };
 
   const toggleExpand = (id) => setExpanded(prev => prev === id ? null : id);
@@ -170,6 +163,7 @@ export default function Logs() {
   // Stats
   const criticalCount = logs.filter(l => l.risk_score >= 80).length;
   const highCount     = logs.filter(l => l.risk_score >= 60 && l.risk_score < 80).length;
+  const mediumCount   = logs.filter(l => l.risk_score >= 40 && l.risk_score < 60).length;
   const walletCount   = logs.filter(l => l.entity_type === 'wallet').length;
   const contractCount = logs.filter(l => l.entity_type === 'contract').length;
 
@@ -239,12 +233,13 @@ export default function Logs() {
       {/* Quick Stats Bar */}
       {logs.length > 0 && (
         <div className="flex flex-wrap gap-4 text-xs font-mono text-gray-500">
-          <span><span className="text-white font-bold">{logs.length}</span> results</span>
+          <span><span className="text-white font-bold">{totalCount}</span> total results</span>
           {criticalCount > 0 && <span><span className="text-red-400 font-bold">{criticalCount}</span> critical</span>}
           {highCount > 0 && <span><span className="text-orange-400 font-bold">{highCount}</span> high</span>}
+          {mediumCount > 0 && <span><span className="text-yellow-400 font-bold">{mediumCount}</span> medium</span>}
           <span><span className="text-[#22d3ee] font-bold">{walletCount}</span> wallets</span>
           <span><span className="text-purple-400 font-bold">{contractCount}</span> contracts</span>
-          <span className="text-gray-600">Click any row to expand signals ↓</span>
+          <span className="text-gray-600">Page {page} of {totalPages}</span>
         </div>
       )}
 
@@ -264,13 +259,17 @@ export default function Logs() {
           </thead>
           <tbody>
             {loading ? (
-              <tr>
-                <td colSpan={7} className="py-12 text-center">
-                  <div className="flex justify-center">
-                    <div className="w-8 h-8 border-2 border-green-500 border-t-transparent rounded-full animate-spin" />
-                  </div>
-                </td>
-              </tr>
+              Array.from({ length: 5 }).map((_, i) => (
+                <tr key={i} className="border-b border-[#1e293b]/60 animate-pulse">
+                  <td className="py-4 px-5"><div className="h-3 bg-[#1e293b] rounded w-24" /></td>
+                  <td className="py-4 px-5"><div className="h-3 bg-[#1e293b] rounded w-32" /></td>
+                  <td className="py-4 px-5"><div className="h-3 bg-[#1e293b] rounded w-14" /></td>
+                  <td className="py-4 px-5"><div className="h-3 bg-[#1e293b] rounded w-20" /></td>
+                  <td className="py-4 px-5"><div className="h-3 bg-[#1e293b] rounded w-20" /></td>
+                  <td className="py-4 px-5"><div className="h-3 bg-[#1e293b] rounded w-10" /></td>
+                  <td className="py-4 px-5"><div className="h-3 bg-[#1e293b] rounded w-16" /></td>
+                </tr>
+              ))
             ) : logs.length === 0 ? (
               <tr>
                 <td colSpan={7} className="py-10 text-center text-gray-600">
@@ -343,10 +342,63 @@ export default function Logs() {
         </table>
       </div>
 
-      {logs.length > 0 && (
-        <p className="text-center text-xs text-gray-600 font-mono">
-          Showing {logs.length} records · Click any row to view signals and analysis
-        </p>
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between pt-2">
+          <p className="text-xs text-gray-600 font-mono">
+            Showing {(page - 1) * 25 + 1}–{Math.min(page * 25, totalCount)} of {totalCount} records
+          </p>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => handlePageChange(1)}
+              disabled={page <= 1}
+              className="px-3 py-1.5 text-xs font-mono rounded border border-[#1e293b] text-gray-400 hover:bg-[#1e293b] hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              First
+            </button>
+            <button
+              onClick={() => handlePageChange(page - 1)}
+              disabled={page <= 1}
+              className="px-3 py-1.5 text-xs font-mono rounded border border-[#1e293b] text-gray-400 hover:bg-[#1e293b] hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              ← Prev
+            </button>
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+              let p;
+              if (totalPages <= 5) p = i + 1;
+              else if (page <= 3) p = i + 1;
+              else if (page >= totalPages - 2) p = totalPages - 4 + i;
+              else p = page - 2 + i;
+              return (
+                <button
+                  key={p}
+                  onClick={() => handlePageChange(p)}
+                  className={`px-3 py-1.5 text-xs font-mono rounded border transition-colors ${
+                    p === page
+                      ? 'bg-green-500/20 border-green-500/50 text-green-400 font-bold'
+                      : 'border-[#1e293b] text-gray-400 hover:bg-[#1e293b] hover:text-white'
+                  }`}
+                >
+                  {p}
+                </button>
+              );
+            })}
+            <button
+              onClick={() => handlePageChange(page + 1)}
+              disabled={page >= totalPages}
+              className="px-3 py-1.5 text-xs font-mono rounded border border-[#1e293b] text-gray-400 hover:bg-[#1e293b] hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              Next →
+            </button>
+            <button
+              onClick={() => handlePageChange(totalPages)}
+              disabled={page >= totalPages}
+              className="px-3 py-1.5 text-xs font-mono rounded border border-[#1e293b] text-gray-400 hover:bg-[#1e293b] hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            >
+              Last
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

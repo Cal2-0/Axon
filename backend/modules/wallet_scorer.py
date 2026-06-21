@@ -25,10 +25,14 @@ import httpx
 import statistics
 import time
 import math
+import hashlib
+import json as json_module
 from collections import Counter
 from sqlalchemy.orm import Session
 from database.models import MaliciousWallet, ExchangeWallet, KnownMixer
-from modules.ai_analyst import generate_summary
+from modules.ai_analyst import generate_summary, analyze_entity, generate_dual_quick_ratings
+from modules.osint_scraper import run_osint_scan
+from modules.defi_decoder import decode_defi_interactions
 
 
 # ─── API KEY HELPERS ──────────────────────────────────────────────────────────
@@ -64,7 +68,7 @@ async def fetch_all_etherscan_data(client: httpx.AsyncClient, address: str, dept
         return {"eth_balance": "0", "tx_count": 0, "transactions": []}
 
     base = "https://api.etherscan.io/v2/api?chainid=1"
-    result = {"eth_balance": "0", "tx_count": 0, "transactions": []}
+    result = {"eth_balance": "0", "tx_count": 0, "transactions": [], "stablecoin_flows": {"usdt_in": 0, "usdt_out": 0, "usdc_in": 0, "usdc_out": 0}}
 
     try:
         # Balance
@@ -93,7 +97,7 @@ async def fetch_all_etherscan_data(client: httpx.AsyncClient, address: str, dept
         # Transaction list
         all_txs = []
         page = 1
-        offset = 200 if depth == "quick" else 5000
+        offset = 200 if depth == "quick" else 1000
         while True:
             tx_json = await _etherscan_get(client, f"{base}&module=account&action=txlist&address={address}&page={page}&offset={offset}&sort=desc&apikey={key}")
             print(f"[ETHERSCAN] TXList: status={tx_json.get('status')}, message={tx_json.get('message')}")
@@ -101,7 +105,7 @@ async def fetch_all_etherscan_data(client: httpx.AsyncClient, address: str, dept
             res_list = tx_json.get("result")
             if isinstance(res_list, list) and len(res_list) > 0:
                 all_txs.extend(res_list)
-                if depth == "quick" or len(res_list) < offset or len(all_txs) >= 5000:
+                if depth == "quick" or len(res_list) < offset or len(all_txs) >= 1000:
                     break
                 page += 1
                 await asyncio.sleep(0.4)
@@ -110,6 +114,32 @@ async def fetch_all_etherscan_data(client: httpx.AsyncClient, address: str, dept
         
         result["transactions"] = all_txs
         print(f"[ETHERSCAN] Fetched {len(result['transactions'])} transactions")
+
+        await asyncio.sleep(0.4)
+        
+        # Stablecoin flows (USDT and USDC)
+        token_tx_url = f"{base}&module=account&action=tokentx&address={address}&page=1&offset={offset}&sort=desc&apikey={key}"
+        token_json = await _etherscan_get(client, token_tx_url)
+        usdt_in, usdt_out, usdc_in, usdc_out = 0, 0, 0, 0
+        if token_json.get("status") == "1":
+            for tx in token_json.get("result", []):
+                symbol = tx.get("tokenSymbol", "").upper()
+                if symbol not in ["USDT", "USDC"]:
+                    continue
+                decimals = int(tx.get("tokenDecimal", "6"))
+                val = float(tx.get("value", 0)) / (10**decimals)
+                if tx.get("to", "").lower() == address.lower():
+                    if symbol == "USDT": usdt_in += val
+                    if symbol == "USDC": usdc_in += val
+                if tx.get("from", "").lower() == address.lower():
+                    if symbol == "USDT": usdt_out += val
+                    if symbol == "USDC": usdc_out += val
+        
+        result["stablecoin_flows"] = {
+            "usdt_in": usdt_in, "usdt_out": usdt_out,
+            "usdc_in": usdc_in, "usdc_out": usdc_out,
+            "total_usd_volume": usdt_in + usdt_out + usdc_in + usdc_out
+        }
 
     except Exception as e:
         print(f"[ETHERSCAN] Fatal error: {e}")
@@ -448,7 +478,7 @@ async def scan_wallet(address: str, db: Session, depth: str = "quick", case_id: 
     Returns a structured dict consumed by the frontend.
     """
     import time
-    from database.models import InvestigationLog, CandidateEntity
+    from database.models import InvestigationLog, CandidateEntity, VerificationReport
     
     print(f"\n{'='*60}")
     print(f"[SCAN] Starting wallet scan: {address} (depth: {depth})")
@@ -491,22 +521,25 @@ async def scan_wallet(address: str, db: Session, depth: str = "quick", case_id: 
 
     # ── Step 2: Parallel Data Fetch ──────────────────────────────
     async with httpx.AsyncClient(timeout=45.0) as client:
-        etherscan_result, alchemy_tokens, forta_count, eth_price = await asyncio.gather(
+        etherscan_result, alchemy_tokens, forta_count, eth_price, osint_data = await asyncio.gather(
             fetch_all_etherscan_data(client, address, depth=depth),
             fetch_alchemy_tokens(client, address),
             fetch_forta_alerts(client, address),
             fetch_eth_price(client),
+            run_osint_scan(address),
             return_exceptions=True
         )
 
     if isinstance(etherscan_result, Exception):
-        etherscan_result = {"eth_balance": "0", "tx_count": 0, "transactions": []}
+        etherscan_result = {"eth_balance": "0", "tx_count": 0, "transactions": [], "stablecoin_flows": {}}
     if isinstance(alchemy_tokens, Exception):
         alchemy_tokens = []
     if isinstance(forta_count, Exception):
         forta_count = 0
     if isinstance(eth_price, Exception):
         eth_price = 3500.0
+    if isinstance(osint_data, Exception):
+        osint_data = {"summary": {}, "details": {}}
 
     eth_balance_str = etherscan_result["eth_balance"]
     tx_count = etherscan_result["tx_count"]
@@ -572,6 +605,20 @@ async def scan_wallet(address: str, db: Session, depth: str = "quick", case_id: 
     if timestamps:
         first_seen = time.strftime("%Y-%m-%d", time.gmtime(min(timestamps)))
         last_seen = time.strftime("%Y-%m-%d", time.gmtime(max(timestamps)))
+
+    # ── Temporal Activity Analysis (Timezone Heatmap) ──
+    temporal_activity = []
+    temporal_grid = [[0]*24 for _ in range(7)]
+    for ts in timestamps:
+        dt = time.gmtime(ts)
+        day_of_week = dt.tm_wday  # 0=Monday, 6=Sunday
+        hour_of_day = dt.tm_hour
+        temporal_grid[day_of_week][hour_of_day] += 1
+    
+    for day in range(7):
+        for hour in range(24):
+            if temporal_grid[day][hour] > 0:
+                temporal_activity.append({"day": day, "hour": hour, "count": temporal_grid[day][hour]})
 
     total_received_eth = total_received_wei / 10**18
     total_sent_eth = total_sent_wei / 10**18
@@ -688,19 +735,23 @@ async def scan_wallet(address: str, db: Session, depth: str = "quick", case_id: 
     # ── L2: Graph Topology (max 100) ─────────────────────────────
     l2 = 0
 
-    if tx_history:
+    if tx_history and len(tx_history) > 0:
+        tx_len = len(tx_history)
+        unique_recv_ratio = len(unique_receivers) / tx_len
+        unique_send_ratio = len(unique_senders) / tx_len
+
         # Fan-out: 1 sender -> many unique receivers
-        if len(unique_receivers) > 200:
+        if unique_recv_ratio > 0.8 and tx_len >= 20:
             l2 = max(l2, 75)
-            signals.append(("High fan-out: funds distributed to {} unique addresses".format(len(unique_receivers)), "🕸️", "L2"))
-        elif len(unique_receivers) > 50:
+            signals.append(("High fan-out: {:.0%} of transactions to unique addresses".format(unique_recv_ratio), "🕸️", "L2"))
+        elif unique_recv_ratio > 0.4 and tx_len >= 10:
             l2 = max(l2, 50)
-            signals.append(("Elevated fan-out: {} unique recipient addresses".format(len(unique_receivers)), "🕸️", "L2"))
+            signals.append(("Elevated fan-out: {:.0%} of transactions to unique addresses".format(unique_recv_ratio), "🕸️", "L2"))
 
         # Star-in topology: many unique senders -> this wallet
-        if len(unique_senders) > 100 and len(unique_receivers) < 10:
+        if unique_send_ratio > 0.8 and unique_recv_ratio < 0.1 and tx_len >= 20:
             l2 = max(l2, 60)
-            signals.append(("Aggregation hub: {} unique senders, only {} receivers".format(len(unique_senders), len(unique_receivers)), "⬇️", "L2"))
+            signals.append(("Aggregation hub: {:.0%} unique senders, {:.0%} receivers".format(unique_send_ratio, unique_recv_ratio), "⬇️", "L2"))
 
         # Mixer contract interaction (NOW using full DB, not just 7 hardcoded)
         mixer_counterparties = all_counterparties & all_mixer_addrs
@@ -730,24 +781,25 @@ async def scan_wallet(address: str, db: Session, depth: str = "quick", case_id: 
     # ── L3: Economic Signals (max 100) ───────────────────────────
     l3 = 0
 
-    # Adaptive transaction burst detection (replaces flat >50 threshold)
-    if date_counts:
+    # Adaptive transaction burst detection (ratio-based)
+    if date_counts and len(tx_history) > 0:
         avg_daily = sum(date_counts.values()) / len(date_counts)
         peak_daily = max(date_counts.values())
         peak_day = max(date_counts, key=date_counts.get)
+        peak_ratio = peak_daily / len(tx_history)
 
-        if peak_daily >= 150:
-            # 150+ txs in one day is extreme — near-certain automation/attack
+        if peak_ratio > 0.6 and len(tx_history) >= 20:
+            # 60%+ of all observed txs happened in a single day
             l3 = max(l3, 85)
-            signals.append(("EXTREME burst: {} transactions on {} (avg {:.1f}/day)".format(peak_daily, peak_day, avg_daily), "⚡", "L3"))
-        elif peak_daily >= 50:
-            # 50+ still very suspicious
+            signals.append(("EXTREME burst: {:.0%} of activity on {} ({} txs)".format(peak_ratio, peak_day, peak_daily), "⚡", "L3"))
+        elif peak_ratio > 0.35 and len(tx_history) >= 10:
+            # 35%+ of all observed txs happened in a single day
             l3 = max(l3, 65)
-            signals.append(("Transaction burst: {} transactions on {} (avg {:.1f}/day)".format(peak_daily, peak_day, avg_daily), "⚡", "L3"))
+            signals.append(("Transaction burst: {:.0%} of activity on {} ({} txs)".format(peak_ratio, peak_day, peak_daily), "⚡", "L3"))
         elif avg_daily > 0:
             burst_ratio = peak_daily / avg_daily
             if burst_ratio >= 10 and peak_daily >= 20:
-                # 10x normal activity in a single day
+                # 10x normal activity
                 l3 = max(l3, 55)
                 signals.append(("Relative burst: {} txs on {} ({:.0f}x daily average)".format(peak_daily, peak_day, burst_ratio), "⚡", "L3"))
             elif burst_ratio >= 5 and peak_daily >= 10:
@@ -888,6 +940,24 @@ async def scan_wallet(address: str, db: Session, depth: str = "quick", case_id: 
     # ── Final clamp ──
     final_score = round(min(100.0, max(0.0, modified_score)))
 
+    # Integrate OSINT scores (CAPPED to prevent unbounded score inflation)
+    osint_adjustment = 0
+    if osint_data.get("summary", {}).get("twitter_mentions", 0) > 0:
+        signals.append(("Address mentioned {} times on Twitter/X".format(osint_data['summary']['twitter_mentions']), "🐦", "OSINT"))
+        osint_adjustment += 5
+    if osint_data.get("summary", {}).get("github_mentions", 0) > 0:
+        signals.append(("Address found in {} GitHub repos".format(osint_data['summary']['github_mentions']), "💻", "OSINT"))
+        osint_adjustment += 8
+    if osint_data.get("summary", {}).get("reddit_mentions", 0) > 0:
+        signals.append(("Address mentioned {} times on Reddit".format(osint_data['summary']['reddit_mentions']), "👽", "OSINT"))
+        osint_adjustment += 5
+    if osint_data.get("summary", {}).get("ens_name"):
+        signals.append(("Resolved ENS domain: {}".format(osint_data['summary']['ens_name']), "🏷️", "OSINT"))
+        osint_adjustment -= 3
+    # Cap total OSINT adjustment to ±15 to prevent single-source score inflation
+    osint_adjustment = max(-5, min(osint_adjustment, 15))
+    final_score = max(0, min(100, final_score + osint_adjustment))
+
     if final_score >= 80:
         label = "CRITICAL"
     elif final_score >= 60:
@@ -928,7 +998,32 @@ Analyze this wallet from a forensic perspective. If the entity class explains an
 Respond with ONLY valid JSON with exactly these three keys:
 {{"hypothesis": "1-2 sentence forensic hypothesis about this wallet's purpose and risk", "mitre_tag": "Most relevant MITRE ATT&CK technique tag", "verdict": "One sentence executive forensic verdict"}}"""
 
-    ai_data = await generate_summary(ai_prompt)
+    # For deep scans, expand evidence context with ALL available data
+    if depth == "deep":
+        stablecoin_info = etherscan_result.get("stablecoin_flows", {})
+        defi_interactions = await decode_defi_interactions(tx_history)
+        temporal_activity = etherscan_result.get("temporal_activity", [])
+        defi_summary = [d.get('simple_name', 'unknown') for d in defi_interactions[:8]] if defi_interactions else []
+        osint_summary = osint_data.get('summary', {})
+        graph_node_count = counterparties + 1
+        graph_edge_count = min(100, len(tx_history))
+        ai_prompt += f"""
+
+ADDITIONAL DEEP SCAN EVIDENCE (1000 tx analysis):
+- OSINT: Twitter mentions={osint_summary.get('twitter_mentions', 0)}, GitHub={osint_summary.get('github_mentions', 0)}, Reddit={osint_summary.get('reddit_mentions', 0)}, ENS={osint_summary.get('ens_name', 'None')}
+- DeFi Protocol Interactions: {len(defi_interactions)} decoded calls. Top methods: {defi_summary}
+- Temporal Activity: {len(temporal_activity)} active hour-slots across the week
+- Stablecoin Flows: USDT In=${stablecoin_info.get('usdt_in', 0):,.0f}, USDT Out=${stablecoin_info.get('usdt_out', 0):,.0f}, USDC In=${stablecoin_info.get('usdc_in', 0):,.0f}, USDC Out=${stablecoin_info.get('usdc_out', 0):,.0f}
+- Graph Topology: {graph_node_count} nodes, {graph_edge_count} edges
+- Exchange Counterparties: {exchange_overlap_count} ({exchange_overlap_pct:.1%} of all)
+- Mixer Counterparties: {mixer_overlap_count} ({mixer_overlap_pct:.1%} of all)
+- Known-Bad Counterparties: {len(known_bad_map)} found in threat DB
+- Total Volume: {total_volume_eth:.2f} ETH (~${total_volume_eth * eth_price:,.0f} USD)
+- Dormancy: persistence_floor={persistence_floor}, dormancy_modifier={dormancy_modifier}
+
+Use ALL of this evidence to form a comprehensive forensic assessment. Weigh behavioral patterns, OSINT reputation, and financial flow data together."""
+
+    ai_data = await analyze_entity(ai_prompt, depth=depth, entity_type="wallet")
 
     if not isinstance(ai_data, dict) or "hypothesis" not in ai_data:
         ai_data = _build_wallet_fallback(l1, l2, l3, l4, l5, label, entity_class, signals,
@@ -937,6 +1032,9 @@ Respond with ONLY valid JSON with exactly these three keys:
         ai_data = _build_wallet_fallback(l1, l2, l3, l4, l5, label, entity_class, signals,
                                           exchange_overlap_pct, mixer_overlap_pct)
 
+    # ── Layer 6 & 7: Independent AI Agent Ratings ──
+    dual_ratings = await generate_dual_quick_ratings(ai_prompt, entity_type="wallet")
+    
     print(f"[SCAN] Final: {final_score}/100 ({label}) | Entity: {entity_class}")
 
     # ─── Build Graph (with accurate risk scores from DB) ──────────
@@ -1022,12 +1120,15 @@ Respond with ONLY valid JSON with exactly these three keys:
         ui_factors.append({"reason": "No significant forensic signals detected", "icon": "✅", "layer": "L1", "penalty": 0})
 
     # ─── Return Response ──────────────────────────────────────────
+    if depth != "deep":
+        defi_interactions = await decode_defi_interactions(tx_history)
+    
     response_data = {
         "shortName": wallet_db.label if wallet_db else "Unknown Wallet",
         "tag": label,
         "identity": {
             "address": address,
-            "ens": "N/A",
+            "ens": osint_data.get("summary", {}).get("ens_name"),
             "label": wallet_db.label if wallet_db else "Unlabeled Wallet",
             "tag": label,
             "firstSeen": wallet_db.first_seen if wallet_db else first_seen,
@@ -1058,22 +1159,30 @@ Respond with ONLY valid JSON with exactly these three keys:
             "exchangeOverlap": round(exchange_overlap_pct, 3),
             "mixerOverlap": round(mixer_overlap_pct, 3),
             "factors": ui_factors,
+            "aiAgentA": dual_ratings.get("agentA"),
+            "aiAgentB": dual_ratings.get("agentB"),
             "aiAnalysis": {
                 "rating": label,
                 "hypothesis": ai_data.get("hypothesis", ""),
                 "mitre_tag": ai_data.get("mitre_tag", ""),
-                "verdict": ai_data.get("verdict", "")
+                "verdict": ai_data.get("verdict", ""),
+                "confidence": ai_data.get("confidence", None),
+                "consensus_level": ai_data.get("consensus_level", None),
+                "judge_reasoning": ai_data.get("judge_reasoning", None),
+                "prosecution_summary": ai_data.get("prosecution_summary", None),
+                "defense_summary": ai_data.get("defense_summary", None),
+                "engine_type": ai_data.get("engine_type", "single")
             }
         },
         "osint": {
-            "summary": ai_data.get("verdict", ""),
+            "summary": osint_data.get("summary", {}),
             "aiAnalysis": {
                 "hypothesis": ai_data.get("hypothesis", ""),
                 "mitre_tag": ai_data.get("mitre_tag", ""),
                 "verdict": ai_data.get("verdict", "")
             },
-            "githubMentions": [],
-            "redditMentions": [],
+            "githubMentions": osint_data.get("details", {}).get("github_mentions", []),
+            "redditMentions": osint_data.get("details", {}).get("reddit_mentions", []),
             "aliases": [wallet_db.label] if wallet_db else [],
             "walletMentions": forta_count * 2
         },
@@ -1095,14 +1204,38 @@ Respond with ONLY valid JSON with exactly these three keys:
         },
         "graph": {
             "nodes": graph_nodes,
-            "edges": graph_edges
+            "edges": graph_edges,
+            "tokens": alchemy_tokens,
+            "osint": osint_data,
+            "defi_interactions": defi_interactions[:20] # Return top 20 decoded txs
         },
+        "signals": signals,
         "holdings": {
             "erc20_count": len(alchemy_tokens),
-            "forta_alerts": forta_count
+            "forta_alerts": forta_count,
+            "stablecoin_flows": etherscan_result.get("stablecoin_flows", {})
         },
-        "transactions": tx_history
+        "temporal_activity": temporal_activity,
+        "transactions": tx_history,
+        "evidence_context": ai_prompt
     }
+
+    # ── Server-Side Hash & Report Metadata (tamper-proof) ──
+    report_meta = {
+        "report_id": f"AXON-W-{int(time.time())}-{address[:10]}",
+        "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "generated_timestamp": time.time(),
+        "scan_depth": depth,
+        "entity_address": address.lower(),
+        "entity_type": "wallet",
+        "engine_version": "2.0",
+    }
+    # Hash over sorted JSON for deterministic output
+    hash_payload = json_module.dumps(response_data, sort_keys=True, default=str)
+    report_meta["sha256_hash"] = hashlib.sha256(hash_payload.encode()).hexdigest()
+    report_meta["hash_algorithm"] = "SHA-256"
+    report_meta["hash_scope"] = "Full response_data payload (sorted keys, pre-metadata)"
+    response_data["report_metadata"] = report_meta
     
     # --- Save to InvestigationLog ---
     try:
@@ -1120,6 +1253,18 @@ Respond with ONLY valid JSON with exactly these three keys:
         )
         db.add(log_entry)
         
+        # Save independent verifiable report
+        report_entry = VerificationReport(
+            report_id=report_meta["report_id"],
+            report_hash=report_meta["sha256_hash"],
+            entity_address=address.lower(),
+            entity_type="wallet",
+            risk_score=final_score,
+            scan_timestamp=time.time(),
+            scan_depth=depth
+        )
+        db.add(report_entry)
+        
         # Auto-update Threat DB Candidate queue for HIGH/CRITICAL findings
         if final_score >= 60:
             candidate = CandidateEntity(
@@ -1135,6 +1280,38 @@ Respond with ONLY valid JSON with exactly these three keys:
             existing = db.query(CandidateEntity).filter_by(address=address.lower()).first()
             if not existing:
                 db.add(candidate)
+
+        # ── Auto-Learn: Promote CRITICAL findings directly to MaliciousWallet DB ──
+        if final_score >= 80 and not wallet_db:
+            try:
+                new_threat = MaliciousWallet(
+                    address=address.lower(),
+                    label=f"Auto-Detected: {entity_class}",
+                    category="Auto-Detected",
+                    chain="ETH",
+                    amount_usd=f"~${total_volume_eth * eth_price:,.0f}",
+                    threat_level="CRITICAL" if final_score >= 90 else "HIGH",
+                    sanctioned=False,
+                    last_active=last_seen,
+                    risk_score=final_score,
+                    description=f"Auto-detected by Axon scan engine. Entity class: {entity_class}. "
+                               f"L1={l1}, L2={l2}, L3={l3}, L4={l4}, L5={l5}. "
+                               f"Top signals: {', '.join(s[0][:60] for s in signals[:3])}",
+                    tags=["auto-detected", entity_class.lower().replace(" ", "-")],
+                    first_seen=first_seen,
+                    total_received_eth=f"{total_received_eth:.4f}",
+                    total_sent_eth=f"{total_sent_eth:.4f}",
+                    tx_count=tx_count,
+                    counterparties=counterparties,
+                    source="axon-auto-detect",
+                    confidence=final_score,
+                )
+                existing_threat = db.query(MaliciousWallet).filter_by(address=address.lower()).first()
+                if not existing_threat:
+                    db.add(new_threat)
+                    print(f"[SCAN] AUTO-LEARNED: {address} added to MaliciousWallet DB (score={final_score}, class={entity_class})")
+            except Exception as e:
+                print(f"[SCAN] Auto-learn error: {e}")
                 
         db.commit()
     except Exception as e:

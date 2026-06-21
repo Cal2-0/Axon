@@ -1,84 +1,96 @@
 // src/api/axon.js - API client for Axon Backend
-const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8001";
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8001';
 
-export const scanContract = async (address, caseId = null) => {
+export const scanContract = async (address, caseId = null, depth = 'quick') => {
   const response = await fetch(`${API_BASE}/scan/contract`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ address, case_id: caseId })
+    body: JSON.stringify({ address, depth, case_id: caseId })
   });
-  if (!response.ok) throw new Error("Failed to scan contract");
+  if (!response.ok) throw new Error('Failed to scan contract');
   return response.json();
 };
 
 export const getAnalysisTask = async (taskId) => {
   const response = await fetch(`${API_BASE}/scan/analysis/${taskId}`);
-  if (!response.ok) throw new Error("Failed to fetch analysis task status");
+  if (!response.ok) throw new Error('Failed to fetch analysis task status');
   return response.json();
 };
 
 export const checkApiHealth = async () => {
   const response = await fetch(`${API_BASE}/health/apis`);
-  if (!response.ok) throw new Error("Failed to check API health");
+  if (!response.ok) throw new Error('Failed to check API health');
   return response.json();
 };
 
-export const scanWallet = async (address, caseId = null) => {
+export const scanWallet = async (address, caseId = null, depth = 'quick') => {
   const response = await fetch(`${API_BASE}/scan/wallet`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ address, case_id: caseId })
+    body: JSON.stringify({ address, depth, case_id: caseId })
   });
-  if (!response.ok) throw new Error("Failed to scan wallet");
+  if (!response.ok) throw new Error('Failed to scan wallet');
+  return response.json();
+};
+
+export const scanDeepDive = async (entityType, evidenceContext) => {
+  const response = await fetch(`${API_BASE}/scan/deep-dive`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ entity_type: entityType, evidence_context: evidenceContext })
+  });
+  if (!response.ok) throw new Error('Failed to run deep dive analysis');
   return response.json();
 };
 
 export const getGraph = async (address, hops = 2) => {
   const response = await fetch(`${API_BASE}/graph/${address}?hops=${hops}`);
-  if (!response.ok) throw new Error("Failed to fetch graph");
+  if (!response.ok) throw new Error('Failed to fetch graph');
   return response.json();
 };
 
-export const getIntelWallets = async (query = "", page = 1, limit = 50, category = "", threat = "") => {
+export const getCrossChainHoldings = async (address) => {
+  const response = await fetch(`${API_BASE}/scan/wallet/${address}/cross-chain-holdings`);
+  if (!response.ok) throw new Error('Failed to fetch cross-chain holdings');
+  return response.json();
+};
+
+export const getIntelWallets = async (query = '', page = 1, limit = 50, category = '', threat = '') => {
   const params = new URLSearchParams({ q: query, page, limit, category, threat });
   const response = await fetch(`${API_BASE}/intel/wallets?${params}`);
-  if (!response.ok) throw new Error("Failed to fetch intel wallets");
+  if (!response.ok) throw new Error('Failed to fetch intel wallets');
   return response.json();
 };
 
-export const getIntelExchanges = async (query = "") => {
+export const getIntelExchanges = async (query = '') => {
   const response = await fetch(`${API_BASE}/intel/exchanges?q=${query}`);
-  if (!response.ok) throw new Error("Failed to fetch exchanges");
+  if (!response.ok) throw new Error('Failed to fetch exchanges');
   return response.json();
 };
 
-export const getIntelMixers = async (query = "") => {
+export const getIntelMixers = async (query = '') => {
   const response = await fetch(`${API_BASE}/intel/mixers?q=${query}`);
-  if (!response.ok) throw new Error("Failed to fetch mixers");
+  if (!response.ok) throw new Error('Failed to fetch mixers');
   return response.json();
 };
 
-export const getIntelThreats = async (query = "") => {
+export const getIntelThreats = async (query = '') => {
   const response = await fetch(`${API_BASE}/intel/threats?q=${query}`);
-  if (!response.ok) throw new Error("Failed to fetch threat actors");
+  if (!response.ok) throw new Error('Failed to fetch threat actors');
+  return response.json();
+};
+
+export const getIntelBridges = async (query = '') => {
+  const response = await fetch(`${API_BASE}/intel/bridges?q=${query}`);
+  if (!response.ok) throw new Error('Failed to fetch bridges');
   return response.json();
 };
 
 export const getIntelStats = async () => {
   const response = await fetch(`${API_BASE}/intel/stats`);
-  if (!response.ok) throw new Error("Failed to fetch intel stats");
+  if (!response.ok) throw new Error('Failed to fetch stats');
   return response.json();
 };
-
-// ─── CROSS-CHAIN ─────────────────────────────────────────────────────────────
-
-export const getCrossChainHoldings = async (address) => {
-  const response = await fetch(`${API_BASE}/scan/wallet/${address}/cross-chain-holdings`);
-  if (!response.ok) throw new Error("Failed to fetch cross-chain holdings");
-  return response.json();
-};
-
-// ─── BULK INVESTIGATION ──────────────────────────────────────────────────────
 
 export const bulkScan = async (addresses, caseId = null) => {
   const response = await fetch(`${API_BASE}/scan/bulk`, {
@@ -86,31 +98,48 @@ export const bulkScan = async (addresses, caseId = null) => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ addresses, case_id: caseId })
   });
-  if (!response.ok) throw new Error("Failed to run bulk scan");
+  if (!response.ok) throw new Error('Failed to run bulk scan');
   return response.json();
 };
 
-// ─── CASE MANAGEMENT ─────────────────────────────────────────────────────────
-
-export const createCase = async (title, description = "") => {
+export const createCase = async (title, description = '', priority = 'P2', category = 'General', assignedTo = '', tags = []) => {
   const response = await fetch(`${API_BASE}/cases/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title, description })
+    body: JSON.stringify({ title, description, priority, category, assigned_to: assignedTo, tags })
   });
-  if (!response.ok) throw new Error("Failed to create case");
+  if (!response.ok) throw new Error('Failed to create case');
   return response.json();
 };
 
 export const listCases = async () => {
   const response = await fetch(`${API_BASE}/cases/`);
-  if (!response.ok) throw new Error("Failed to list cases");
+  if (!response.ok) throw new Error('Failed to list cases');
   return response.json();
 };
+
 
 export const getCase = async (caseId) => {
   const response = await fetch(`${API_BASE}/cases/${caseId}`);
   if (!response.ok) throw new Error("Failed to fetch case");
+  return response.json();
+};
+
+export const updateCase = async (caseId, data) => {
+  const response = await fetch(`${API_BASE}/cases/${caseId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!response.ok) throw new Error("Failed to update case");
+  return response.json();
+};
+
+export const deleteCase = async (caseId) => {
+  const response = await fetch(`${API_BASE}/cases/${caseId}`, {
+    method: 'DELETE'
+  });
+  if (!response.ok) throw new Error("Failed to delete case");
   return response.json();
 };
 
@@ -134,11 +163,26 @@ export const linkCaseEntity = async (caseId, investigationLogId, notes = "") => 
   return response.json();
 };
 
+export const removeCaseEntity = async (caseId, logId) => {
+  const response = await fetch(`${API_BASE}/cases/${caseId}/entities/${logId}`, {
+    method: 'DELETE'
+  });
+  if (!response.ok) throw new Error("Failed to remove case entity");
+  return response.json();
+};
+
+export const getCaseTimeline = async (caseId) => {
+  const response = await fetch(`${API_BASE}/cases/${caseId}/timeline`);
+  if (!response.ok) throw new Error("Failed to fetch case timeline");
+  return response.json();
+};
+
 // ─── LOGS ────────────────────────────────────────────────────────────────────
 
-export const searchLogs = async (query = "", limit = 100, entityType = "") => {
-  const params = new URLSearchParams({ q: query, limit });
+export const searchLogs = async (query = "", page = 1, perPage = 25, entityType = "", riskLevel = "") => {
+  const params = new URLSearchParams({ q: query, page, per_page: perPage });
   if (entityType) params.set("entity_type", entityType);
+  if (riskLevel) params.set("risk_level", riskLevel);
   const response = await fetch(`${API_BASE}/logs/search?${params}`);
   if (!response.ok) throw new Error("Failed to search logs");
   return response.json();

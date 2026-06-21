@@ -1,34 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { REAL_PROFILES } from '../data/realProfiles';
 
-// ─── KNOWN ADDRESS DATABASE (Demo) ──────────────────────────────────────────
-const KNOWN_ADDRESSES = {
-  // SAFE / Legitimate
-  '0xd8da6bf26964af9d7eed9e03e53415d37aa96045': { label: 'vitalik.eth (Ethereum Co-founder)', risk: 'SAFE', category: 'Public Figure', ens: 'vitalik.eth' },
-  '0x7a250d5630b4cf539739df2c5dacb4c659f2488d': { label: 'Uniswap V2 Router', risk: 'SAFE', category: 'DEX', ens: null },
-  '0x1f9840a85d5af5bf1d1762f925bdaddc4201f984': { label: 'Uniswap (UNI Token)', risk: 'SAFE', category: 'Token', ens: null },
-  '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2': { label: 'Wrapped Ether (WETH)', risk: 'SAFE', category: 'Token', ens: null },
-  '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48': { label: 'USD Coin (USDC)', risk: 'SAFE', category: 'Token', ens: null },
-  '0x6b175474e89094c44da98b954eedeac495271d0f': { label: 'Dai Stablecoin (DAI)', risk: 'SAFE', category: 'Token', ens: null },
-  '0x514910771af9ca656af840dff83e8264ecf986ca': { label: 'Chainlink (LINK)', risk: 'SAFE', category: 'Token', ens: null },
-
-  // EXCHANGES
-  '0x28c6c06298d514db089934071355e5743bf21d60': { label: 'Binance Hot Wallet', risk: 'SAFE', category: 'Exchange', ens: null },
-  '0xa9d1e08c7793af67e9d92fe308d5697fb81d3e43': { label: 'Coinbase', risk: 'SAFE', category: 'Exchange', ens: null },
-  '0x2910543af39aba0cd09dbb2d50200b3e800a63d2': { label: 'Kraken', risk: 'SAFE', category: 'Exchange', ens: null },
-
-  // CRITICAL / Malicious
-  '0x098b716b8aaf21512996dc57eb0615e2383e2f96': { label: 'Ronin Bridge Exploiter', risk: 'CRITICAL', category: 'Hacker', ens: null },
-  '0x3cbded43efdaf0fc77b9c55f6fc9988fcc9b37d9': { label: 'FTX Exchange Drainer', risk: 'CRITICAL', category: 'Hacker', ens: null },
-  '0x1da5821544e25c636c1417ba96ade4cf6d2f9b5a': { label: 'Bitfinex Hacker 2016', risk: 'CRITICAL', category: 'Hacker', ens: null },
-  '0x4f26ffbe5f04ed43630fdc30a87638d53d0b0876': { label: 'Lazarus Group Wallet', risk: 'CRITICAL', category: 'State Actor', ens: null },
-  '0x00000000219ab540356cbb839cbe05303d7705fa': { label: 'Wintermute Exploiter', risk: 'CRITICAL', category: 'Hacker', ens: null },
-
-  // MEDIUM RISK
-  '0xdac17f958d2ee523a2206206994597c13d831ec7': { label: 'USDT Tether', risk: 'MEDIUM', category: 'Centralized Token', ens: null },
-
-  // Mixers
-  '0xd90e2f925da726b50c4ed8d0fb90ad053324f31b': { label: 'Tornado Cash', risk: 'CRITICAL', category: 'Mixer (OFAC Sanctioned)', ens: null },
-};
+// ─── KNOWN ADDRESS DATABASE (Real Test Bank) ──────────────────────────────────────────
+// Build KNOWN_ADDRESSES from REAL_PROFILES
+const KNOWN_ADDRESSES = {};
+REAL_PROFILES.forEach(profile => {
+  KNOWN_ADDRESSES[profile.address.toLowerCase()] = {
+    label: profile.name,
+    category: profile.type,
+    risk: profile.expectedRisk,
+    ens: null
+  };
+});
 
 // Ethereum address checksum validation
 function isValidEthAddress(addr) {
@@ -108,11 +91,11 @@ export default function SmartAddressInput({ value, onChange, onSubmit, loading, 
     if (!validation) return 'border-axon-border';
     if (validation === 'typing') return 'border-axon-border';
     if (validation === 'invalid') return 'border-red-500/60 ring-1 ring-red-500/30';
-    if (validation === 'valid') return 'border-axon-green/60 ring-1 ring-axon-green/30';
+    if (validation === 'valid') return 'border-axon-cyan/60 ring-1 ring-axon-cyan/30';
     if (validation === 'known') {
       if (knownInfo?.risk === 'CRITICAL') return 'border-red-500/60 ring-1 ring-red-500/30';
-      if (knownInfo?.risk === 'MEDIUM') return 'border-axon-orange/60 ring-1 ring-axon-orange/30';
-      return 'border-axon-green/60 ring-1 ring-axon-green/30';
+      if (knownInfo?.risk === 'MEDIUM') return 'border-orange-500/60 ring-1 ring-orange-500/30';
+      return 'border-green-500/60 ring-1 ring-green-500/30';
     }
     return 'border-axon-border';
   };
@@ -126,13 +109,13 @@ export default function SmartAddressInput({ value, onChange, onSubmit, loading, 
       </div>
     );
     if (validation === 'valid') return (
-      <div className="flex items-center gap-1.5 text-axon-green">
+      <div className="flex items-center gap-1.5 text-axon-cyan">
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-        <span className="text-[10px] font-mono">VALID ADDRESS</span>
+        <span className="text-[10px] font-mono">VALID FORMAT</span>
       </div>
     );
     if (validation === 'known') {
-      const riskColorMap = { SAFE: 'text-axon-green', MEDIUM: 'text-axon-orange', CRITICAL: 'text-red-400' };
+      const riskColorMap = { LOW: 'text-green-400', MEDIUM: 'text-orange-400', CRITICAL: 'text-red-400' };
       return (
         <div className={`flex items-center gap-1.5 ${riskColorMap[knownInfo?.risk] || 'text-axon-cyan'}`}>
           {knownInfo?.risk === 'CRITICAL' ? (
@@ -187,14 +170,14 @@ export default function SmartAddressInput({ value, onChange, onSubmit, loading, 
       {knownInfo && validation === 'known' && (
         <div className={`mt-2 p-3 rounded-lg border flex items-center justify-between animate-fade-in ${
           knownInfo.risk === 'CRITICAL' ? 'bg-red-500/5 border-red-500/30'
-          : knownInfo.risk === 'MEDIUM' ? 'bg-axon-orange/5 border-axon-orange/30'
-          : 'bg-axon-green/5 border-axon-green/30'
+          : knownInfo.risk === 'MEDIUM' ? 'bg-orange-500/5 border-orange-500/30'
+          : 'bg-green-500/5 border-green-500/30'
         }`}>
           <div className="flex items-center gap-3">
             <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold ${
               knownInfo.risk === 'CRITICAL' ? 'bg-red-500/20 text-red-400'
-              : knownInfo.risk === 'MEDIUM' ? 'bg-axon-orange/20 text-axon-orange'
-              : 'bg-axon-green/20 text-axon-green'
+              : knownInfo.risk === 'MEDIUM' ? 'bg-orange-500/20 text-orange-400'
+              : 'bg-green-500/20 text-green-400'
             }`}>
               {knownInfo.risk === 'CRITICAL' ? '⚠' : knownInfo.risk === 'MEDIUM' ? '◆' : '✓'}
             </div>
@@ -205,17 +188,17 @@ export default function SmartAddressInput({ value, onChange, onSubmit, loading, 
           </div>
           <span className={`px-2.5 py-1 text-xs font-bold font-mono rounded border ${
             knownInfo.risk === 'CRITICAL' ? 'bg-red-500/10 text-red-400 border-red-500/30'
-            : knownInfo.risk === 'MEDIUM' ? 'bg-axon-orange/10 text-axon-orange border-axon-orange/30'
-            : 'bg-axon-green/10 text-axon-green border-axon-green/30'
+            : knownInfo.risk === 'MEDIUM' ? 'bg-orange-500/10 text-orange-400 border-orange-500/30'
+            : 'bg-green-500/10 text-green-400 border-green-500/30'
           }`}>{knownInfo.risk}</span>
         </div>
       )}
 
       {/* Autocomplete Dropdown */}
       {showDropdown && (
-        <div ref={dropdownRef} className="absolute z-50 w-full mt-1 bg-axon-surface border border-axon-border rounded-lg shadow-2xl overflow-hidden animate-fade-in">
+        <div ref={dropdownRef} className="absolute z-50 w-full mt-1 bg-axon-surface border border-axon-border rounded-lg shadow-2xl overflow-hidden animate-fade-in max-h-60 overflow-y-auto">
           <div className="px-3 py-2 border-b border-axon-border">
-            <span className="text-[10px] font-mono text-axon-text-dim uppercase tracking-wider">Known Addresses ({suggestions.length})</span>
+            <span className="text-[10px] font-mono text-axon-text-dim uppercase tracking-wider">Test Profiles ({suggestions.length})</span>
           </div>
           {suggestions.map(([address, info]) => (
             <button
@@ -229,8 +212,8 @@ export default function SmartAddressInput({ value, onChange, onSubmit, loading, 
               </div>
               <span className={`shrink-0 px-2 py-0.5 text-[10px] font-bold font-mono rounded border ${
                 info.risk === 'CRITICAL' ? 'bg-red-500/10 text-red-400 border-red-500/30'
-                : info.risk === 'MEDIUM' ? 'bg-axon-orange/10 text-axon-orange border-axon-orange/30'
-                : 'bg-axon-green/10 text-axon-green border-axon-green/30'
+                : info.risk === 'MEDIUM' ? 'bg-orange-500/10 text-orange-400 border-orange-500/30'
+                : 'bg-green-500/10 text-green-400 border-green-500/30'
               }`}>{info.risk}</span>
             </button>
           ))}

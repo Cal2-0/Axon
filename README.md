@@ -1,6 +1,6 @@
 <p align="center">
   <h1 align="center">AXON</h1>
-  <p align="center"><strong>Blockchain Behavioral Forensics & Threat Intelligence Platform</strong></p>
+  <p align="center"><strong>Advanced Blockchain Behavioral Forensics & Threat Intelligence Platform</strong></p>
   <p align="center">
     <em>Axon doesn't ask what a wallet <b>is</b>. It determines what a wallet <b>does</b>.</em>
   </p>
@@ -21,11 +21,50 @@ This approach has two critical failure modes:
 
 ## The Solution
 
-**Axon** is a behavioral forensics engine that answers one question before any interaction with a wallet or smart contract: ***Can I trust this?***
+**Axon** is an advanced behavioral forensics engine that answers one question before any interaction with a wallet or smart contract: ***Can I trust this?***
 
 Instead of relying on static databases, Axon runs a proprietary **5-Layer Behavioral Forensic Engine** that analyzes *what an entity does on-chain* — its transaction rhythms, network topology, economic flow patterns, and threat intelligence footprint — before arriving at a defensible, auditable risk verdict.
 
 Every risk assessment is generated algorithmically from on-chain evidence. The database is confirmation, not proof.
+
+---
+
+## 🚀 Advanced Platform Features
+
+Axon has been massively upgraded into a full-scale, professional cybercrime investigation lab. Here are the core capabilities:
+
+### 🤖 3-Agent "Dueling AI" Forensic Model
+Instead of a single AI model returning a flat verdict, Axon spawns **three distinct AI agents** using the Groq Engine:
+1. **Prosecution AI:** Hunts for every red flag, exploiting behavior, and risk vector.
+2. **Defense AI:** Attempts to find legitimate, benign explanations for the wallet's behavior.
+3. **Chief Judge AI:** Synthesizes the debate into a final, court-ready MITRE ATT&CK forensic verdict.
+
+### 🌐 Multi-Chain Portfolio Exposure
+Cross-chain crime requires cross-chain tracking. Axon actively fetches balances across **Bitcoin (BTC)**, **Solana (SOL)**, and **EVM Chains** (Ethereum, BNB, Arbitrum, Base, Optimism, Polygon, Avalanche) to provide a complete global net worth exposure map for any suspect.
+
+### 🕵️ Smart OSINT Intelligence Engine
+Axon doesn't just look on-chain. It runs a live Open-Source Intelligence (OSINT) scraper that hunts down mentions of an address across **Reddit, GitHub, Twitter**, and the open web via DuckDuckGo. It also automatically resolves `.eth` domains using the Ethereum Name Service (ENS).
+
+### 🕸️ Interactive Sankey & Force-Directed Graphs
+Visualize capital flight and laundering patterns effortlessly. Axon maps 2nd and 3rd degree interactions, identifying choke points, intermediary hops, and star-topology distribution nodes using interactive **D3.js Force Graphs** and **Sankey Diagrams**.
+
+### 💼 Comprehensive Case Management
+Track long-running investigations natively. Create persistent cases, assign specific investigators (e.g., "Agent Smith"), tag threats (`Laundering`, `Phishing`, `Critical`), and attach forensic logs and Bulk Scans directly to your digital workspace.
+
+### ⚡ Bulk / Batch Scanning Mode
+Upload 50+ addresses at once. The engine will sequentially investigate each address, throttling automatically to bypass API rate limits, and output a massive CSV / Data Table to instantly triage the most dangerous entities in a massive dataset.
+
+### 🔐 DeFi Protocol Signature Decoder
+Say goodbye to raw Hex Calldata. Axon taps into the Openchain 4byte signature database to automatically translate confusing, unverified smart contract calls into plain English (e.g., converting `0x38ed1739` to `swapExactTokensForETH`).
+
+### 💵 Stablecoin Flow Tracking
+Explicitly scrapes and tracks ERC-20 `tokentx` events for USDT and USDC, mapping how stablecoin liquidity enters and exits a suspect wallet.
+
+### 🛡️ Cryptographically Verifiable Reports
+Axon generates tamper-proof PDF dossiers. Every generated report automatically embeds an authentic, backend-generated SHA-256 integrity hash that is permanently sealed in the Verification Database. Any third party can independently verify the hash to ensure the document has not been altered since generation.
+
+### 🧠 Auto-Learning Threat Engine
+The platform dynamically learns from its own intelligence gathering. If a previously unknown smart contract or wallet scans with a CRITICAL risk score (80+), Axon's auto-learn mechanism automatically commits it to the internal Threat Database, ensuring future scans immediately recognize the threat without requiring manual analyst intervention.
 
 ---
 
@@ -36,16 +75,15 @@ Axon is a full-stack intelligence platform built on a **React + TailwindCSS** fr
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                    AXON FRONTEND                        │
-│  React · TailwindCSS · D3.js Force Graph · Vite        │
-│  Pages: Overview │ Wallet Investigation │ Contract      │
-│         Investigation │ Intelligence Databases          │
+│  React · TailwindCSS · D3.js Force/Sankey Graph · Vite  │
+│  Pages: Investigation Lab │ Case Management │ Live Data │
 ├─────────────────────────────────────────────────────────┤
 │                     AXON API                            │
-│  FastAPI · Uvicorn · SQLAlchemy · httpx                 │
-│  /scan/wallet  · /scan/contract · /graph · /intel       │
+│  FastAPI · Uvicorn · SQLAlchemy · httpx · BeautifulSoup │
+│  /scan/wallet  · /scan/contract · /scan/bulk · /cases   │
 ├──────────┬──────────┬──────────┬──────────┬─────────────┤
-│ Etherscan│ Alchemy  │  Forta   │  GoPlus  │  Groq LLM   │
-│ API v2   │ RPC      │ Network  │ Security │  (Llama 3)   │
+│ Etherscan│ Alchemy  │  Forta   │ DuckDuck │  Groq LLM   │
+│ API v2   │ RPC      │ Network  │ Go OSINT │ (3 Agents)  │
 ├──────────┴──────────┴──────────┴──────────┴─────────────┤
 │              AXON THREAT INTELLIGENCE DB                 │
 │  13,847+ labeled entities · OFAC sanctions · Mixers     │
@@ -57,86 +95,17 @@ Axon is a full-stack intelligence platform built on a **React + TailwindCSS** fr
 
 ## The 5-Layer Behavioral Forensic Engine
 
-Both the **Smart Contract Scanner** and the **Wallet Investigator** are powered by the same parallel multi-axis behavioral model. Each layer operates independently and produces a score from 0–100. The final risk verdict is a weighted composite with cross-axis amplification.
+Both the **Smart Contract Scanner** and the **Wallet Investigator** are powered by the same parallel multi-axis behavioral model. Each layer operates independently and produces a score from 0–100.
 
 ### Wallet Investigation — 5-Layer Model
 
 | Layer | Name | Weight | What It Measures |
 |-------|------|--------|-----------------|
-| **L1** | Behavioral Telemetry | 30% | Transaction rhythm, round-denomination detection, accumulate-then-drain patterns, bot fingerprinting (coefficient of variation), wallet age vs. value anomalies |
-| **L2** | Graph Topology | 25% | Fan-out/fan-in ratios, star topology detection, 1-hop contamination trace from known threat actors, mixer contract interaction mapping |
-| **L3** | Economic Signals | 20% | Velocity spikes (single-day burst detection), peel chain structuring, dormancy-then-spike patterns, pass-through analysis (high volume + low retention) |
-| **L4** | Attribution Intelligence | 15% | Cross-reference against 13,847+ entity threat corpus, OFAC sanctions matching, Forta Network real-time alerts, known mixer contract interaction count |
-| **L5** | Adversarial AI Interpreter | 10% | LLM acts as a *forensic defense attorney* — attempts to find legitimate explanations for triggered signals. Returns a MITRE ATT&CK tag, a plausible hypothesis, and an executive verdict |
-
-### Smart Contract Scanner — 5-Axis Model
-
-| Axis | Name | Weight | What It Measures |
-|------|------|--------|-----------------|
-| **A1** | Code Security | 20% | Honeypot detection, unverified bytecode, self-destruct capability, transfer pausability, external call risk |
-| **A2** | Admin & Economic Risk | 15% | Proxy upgradeability, buy/sell tax analysis, mint authority, blacklist functions, hidden ownership, balance manipulation |
-| **A3** | Behavioral Fingerprint | 30% | Deposit uniformity (mixer signature via CV analysis), drain ratios, high-volume zero-balance contracts |
-| **A4** | Network Topology | 15% | Star-in/star-out detection, edge concentration, choke-point identification |
-| **A5** | Threat Intelligence | 20% | Threat DB matching, sanctioned protocol keyword detection, Forta Network alerts |
-
-### Pre-Step: Entity Class Classifier
-
-Before scoring begins, every wallet is dynamically classified into one of **8 entity classes** based on its behavioral fingerprint. Each class carries a risk modifier (0.5x–1.5x) that contextualizes the final score:
-
-| Entity Class | Modifier | Detection Logic |
-|-------------|----------|-----------------|
-| Exchange Hot Wallet | 0.5x | >500 counterparties + high round-trip ratio |
-| DAO / Treasury | 0.6x | Low tx count + high balance + few counterparties |
-| Market Maker / Bot | 0.7x | >5,000 txs + tight counterparty set |
-| Normal EOA | 1.0x | Default classification |
-| Scam / Distribution | 1.3x | High outflow to many fresh wallets + low round-trip |
-| Privacy Mixer | 1.4x | >60% equal-denomination deposits |
-| Exploit / Drainer | 1.5x | Sudden massive inflow + low tx count |
-| Confirmed Threat Actor | 1.5x | DB-confirmed critical threat |
-
-### Cross-Axis Amplification
-
-When multiple axes trigger simultaneously, Axon applies **correlated risk multipliers** to prevent dangerous entities from hiding behind a single clean layer:
-
-- **Rug Vector** (A2 > 60 + A5 > 70): 1.7x — admin powers combined with known threat intelligence
-- **Laundering Path** (A3 > 50 + A4 > 50): 1.6x — suspicious behavior + suspicious topology
-- **Bad Actor + Blind Code** (A5 > 60 + A1 > 50): 1.8x — known threat + unverified contract
-- **Honeypot + Admin Drain** (A1 > 80 + A2 > 60): 1.5x — trap contract with extraction capability
-
----
-
-## Platform Modules
-
-### 1. Wallet Investigation
-Full-depth forensic analysis of any Ethereum wallet address. Runs all 5 layers in parallel, producing:
-- **Identity Profile** — ENS resolution, balance, volume, wallet age, counterparty count
-- **Risk Assessment** — Composite score with per-layer breakdown and triggered signal list
-- **Transaction Graph** — Interactive D3.js force-directed graph with mixer/exchange/threat coloring
-- **OSINT & Threat Alerts** — Forta Network alerts, ERC-20 token holdings (Alchemy), threat mentions
-- **Exchange Detection** — Identifies cash-out events to known exchange deposit addresses
-- **Mixer Detection** — Maps interactions with Tornado Cash, RenBridge, and other privacy protocols
-- **Forensic Report** — Exportable structured intelligence report
-
-### 2. Smart Contract Investigation
-Automated security and risk analysis for any deployed smart contract:
-- **Contract Identity** — Name, compiler version, verification status, proxy detection, license type
-- **Source Code Analysis** — Fetches verified Solidity source from Etherscan
-- **GoPlus Security Engine** — Live token security checks (honeypot, mint, blacklist, tax analysis)
-- **5-Axis Risk Matrix** — Independent scoring across code, admin, behavior, topology, and intelligence
-- **AI Forensic Verdict** — MITRE ATT&CK tagged assessment with executive summary
-
-### 3. Intelligence Databases
-Searchable, filterable access to Axon's curated threat intelligence corpus:
-- **13,847+ labeled wallet entities** across hackers, scammers, mixers, exchanges, and sanctioned addresses
-- **OFAC sanctions cross-reference**
-- **Category and threat-level filtering**
-- **Fuzzy search across labels, addresses, and aliases**
-
-### 4. Live Dashboard
-Real-time platform overview with:
-- Live ETH price, gas tracker, and block height
-- API health monitoring for all external data sources
-- Platform statistics and threat corpus metrics
+| **L1** | Behavioral Telemetry | 30% | Transaction rhythm, round-denomination detection, accumulate-then-drain patterns, bot fingerprinting |
+| **L2** | Graph Topology | 25% | Fan-out/fan-in ratios, star topology detection, 1-hop contamination trace from known threat actors |
+| **L3** | Economic Signals | 20% | Velocity spikes, peel chain structuring, dormancy-then-spike patterns, pass-through analysis |
+| **L4** | Attribution Intelligence | 15% | Cross-reference against 13,847+ entity threat corpus, OFAC sanctions, Forta Network alerts |
+| **L5** | Adversarial AI Interpreter | 10% | 3-Agent AI debate (Prosecutor vs Defense vs Judge) delivering the final hypothesis |
 
 ---
 
@@ -147,9 +116,9 @@ Real-time platform overview with:
 | **Etherscan API v2** | Transaction history, balance, contract source code, ABI | REST API |
 | **Alchemy RPC** | ERC-20 token balances, on-chain state queries | JSON-RPC |
 | **Forta Network** | Real-time security alerts and threat detection | GraphQL |
-| **GoPlus Security** | Token-level security analysis (honeypot, tax, admin) | REST API |
-| **Groq (Llama 3)** | Adversarial AI forensic interpreter (L5/A5) | REST API |
-| **CoinGecko** | Real-time ETH/USD pricing | REST API |
+| **DuckDuckGo/OSINT** | Live threat intelligence scraping on Reddit/GitHub | Web Scraping |
+| **Openchain 4Byte** | Decoding unverified contract calldata | REST API |
+| **Groq Engine** | Multi-Agent AI Debate System (Llama 3 / Mixtral) | REST API |
 | **Axon Threat DB** | 13,847+ curated threat entities | SQLite (SQLAlchemy) |
 
 ---
@@ -161,7 +130,7 @@ Real-time platform overview with:
 | Frontend | React 18 · TailwindCSS · Vite · D3.js |
 | Backend | Python · FastAPI · Uvicorn · SQLAlchemy |
 | Database | SQLite (axon_intel.db) |
-| AI/ML | Groq Cloud (Llama 3 70B) |
+| AI/ML | Groq Cloud (Multi-Agent Architecture) |
 | Deployment | Netlify (frontend) · Render (backend) |
 
 ---
@@ -186,7 +155,6 @@ GROQ_API_KEY=your_groq_api_key
 ```
 - Frontend: `http://localhost:5173`
 - Backend: `http://localhost:8001`
-- API Docs: `http://localhost:8001/docs`
 
 ### Manual Start
 ```bash
@@ -203,24 +171,16 @@ npm run dev
 
 ---
 
-## Live Deployment
+## Real-World Asset Testing Bank
 
-| Service | URL |
-|---------|-----|
-| Frontend | [theaxon.netlify.app](https://theaxon.netlify.app) |
-| Backend API | [axon-backend-rf6y.onrender.com](https://axon-backend-rf6y.onrender.com) |
-| API Documentation | [axon-backend-rf6y.onrender.com/docs](https://axon-backend-rf6y.onrender.com/docs) |
+Axon ships with a curated `DemoSamples` bank containing real-world historical threats so you can test the algorithmic engine against live, mainnet data:
 
----
-
-## Test Addresses
-
-| Entity | Risk Level | Address |
+| Entity | Expected Classification | Address |
 |--------|-----------|---------|
-| USDT (Tether) | LOW | `0xdAC17F958D2ee523a2206206994597C13D831ec7` |
-| vitalik.eth | LOW | `0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045` |
-| Ronin Bridge Exploiter | CRITICAL | `0x098B716B8Aaf21512996dC57EB0615e2383E2f96` |
-| FTX Drainer | CRITICAL | `0x3cbded43efdaf0fc77b9c55f6fc9988fcc9b37d9` |
+| **Lazarus Group** | CRITICAL | `0x098B716B8Aaf21512996dC57EB0615e2383E2f96` |
+| **Tornado Cash Router** | MIXER | `0xd90e2f925DA726b50C4Ed8D0Fb90Ad053324F31b` |
+| **Binance Hot Wallet 14** | EXCHANGE | `0x28C6c06298d514Db089934071355E5743bf21d60` |
+| **vitalik.eth** | EOA / LOW | `0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045` |
 
 ---
 
@@ -230,19 +190,19 @@ npm run dev
 Documentation, API research, threat corpus compilation, engine design.
 
 ### Phase 2 — Core Forensic Modules `100%`
-5-Layer Wallet Scorer, 5-Axis Contract Scanner, Intelligence Database, AI Interpreter.
+5-Layer Wallet Scorer, 5-Axis Contract Scanner, Intelligence Database.
 
 ### Phase 3 — Frontend Dashboard & Deployment `100%`
-React dashboard with all investigation views, D3 graph visualization, live deployment on Netlify + Render. Currently in testing and fine-tuning.
+React dashboard with all investigation views, D3 graph visualization, Netlify/Render CI/CD.
 
-### Phase 4 — Advanced Capabilities `30%`
-- Case Management Engine (persistent investigation workspaces)
-- Behavioral Clustering & Campaign Detection
+### Phase 4 — Advanced Capabilities `100%`
+- Case Management Engine (assignees, threat tags)
+- OSINT Scraper & ENS Lookups
+- Dueling 3-Agent AI Forensic Debate
 - Bulk/Batch Investigation Mode
-- Deep-Dive Transaction Analysis (full history pagination)
-- Sankey Diagrams for money flow visualization
-- Automated Alerting & Webhooks
-- Court-Ready PDF Dossier Export
+- Sankey Diagrams & Transaction Maps
+- Multi-Chain Portfolio Scraping
+- Real-World Demo Data Integration
 
 ---
 

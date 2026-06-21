@@ -13,14 +13,17 @@
  * Generate and download a PDF dossier for a wallet scan result.
  * @param {Object} result - The full wallet scan result object
  */
-export function downloadWalletPDF(result) {
+export async function downloadWalletPDF(result) {
   if (!result) return;
 
-  const caseId = `AXN-${Date.now().toString(36).toUpperCase().slice(0, 6)}-${result.identity.address.slice(2, 8).toUpperCase()}`;
+  const caseId = result.report_metadata?.report_id || `AXN-${Date.now().toString(36).toUpperCase().slice(0, 6)}-${result.identity.address.slice(2, 8).toUpperCase()}`;
   const now = new Date();
   const dateStr = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
   const isoStr = now.toISOString();
+
+  // Use the Authentic Database Hash from the backend if available
+  const docHash = result.report_metadata?.sha256_hash || "UNVERIFIED-LOCAL-HASH";
 
   const score = result.risk?.score ?? 0;
   const label = result.risk?.label ?? 'UNKNOWN';
@@ -222,7 +225,9 @@ export function downloadWalletPDF(result) {
         <div class="mono" style="font-size:9px;color:#64748b;letter-spacing:0.15em">BLOCKCHAIN FORENSIC INTELLIGENCE PLATFORM</div>
       </div>
       <div style="text-align:right">
-        <span style="display:inline-block;padding:3px 12px;border-radius:4px;font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;background:#fef2f2;color:#dc2626;border:1px solid #fecaca">CONFIDENTIAL</span>
+        <span style="display:inline-block;padding:3px 12px;border-radius:4px;font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;margin-bottom:4px;">CONFIDENTIAL</span>
+        <div class="mono" style="font-size:8px;color:#94a3b8;text-transform:uppercase;">SHA-256 INTEGRITY HASH</div>
+        <div class="mono" style="font-size:9px;color:#64748b;max-width:200px;word-break:break-all;">${docHash}</div>
       </div>
     </div>
 
@@ -460,17 +465,16 @@ export function downloadWalletPDF(result) {
 }
 
 
-/**
- * Generate and download a PDF dossier for a contract scan result.
- * @param {Object} result - The full contract scan result object
- */
-export function downloadContractPDF(result) {
+export async function downloadContractPDF(result) {
   if (!result) return;
 
-  const caseId = `AXN-${Date.now().toString(36).toUpperCase().slice(0, 6)}-${(result.identity?.address || '000000').slice(2, 8).toUpperCase()}`;
+  const caseId = result.report_metadata?.report_id || `AXN-${Date.now().toString(36).toUpperCase().slice(0, 6)}-${(result.identity?.address || '000000').slice(2, 8).toUpperCase()}`;
   const now = new Date();
   const dateStr = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+
+  // Use the Authentic Database Hash from the backend if available
+  const docHash = result.report_metadata?.sha256_hash || "UNVERIFIED-LOCAL-HASH";
 
   const score = result.risk?.score ?? 0;
   const label = result.risk?.label ?? 'UNKNOWN';
@@ -548,7 +552,11 @@ export function downloadContractPDF(result) {
         </div>
         <div class="mono" style="font-size:9px;color:#64748b;letter-spacing:0.15em">BLOCKCHAIN FORENSIC INTELLIGENCE PLATFORM</div>
       </div>
-      <span style="display:inline-block;padding:3px 12px;border-radius:4px;font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;background:#fef2f2;color:#dc2626;border:1px solid #fecaca">CONFIDENTIAL</span>
+      <div style="text-align:right">
+        <span style="display:inline-block;padding:3px 12px;border-radius:4px;font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;margin-bottom:4px;">CONFIDENTIAL</span>
+        <div class="mono" style="font-size:8px;color:#94a3b8;text-transform:uppercase;">SHA-256 INTEGRITY HASH</div>
+        <div class="mono" style="font-size:9px;color:#64748b;max-width:200px;word-break:break-all;">${docHash}</div>
+      </div>
     </div>
     <h1>Contract Forensic Intelligence Report</h1>
     <p style="color:#64748b;font-size:12px;margin-bottom:16px">5-Axis behavioral forensic analysis with GoPlus security integration.</p>

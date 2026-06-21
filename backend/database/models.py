@@ -79,29 +79,50 @@ class ThreatActor(Base):
 
 
 class InvestigationLog(Base):
-    """Persistent history of all scanned wallets and contracts."""
+    """Log of all scans and their results."""
     __tablename__ = "investigation_log"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     entity_address = Column(String(42), index=True, nullable=False)
-    entity_type = Column(String(20), index=True, nullable=False) # "wallet" or "contract"
+    entity_type = Column(String(20), default="wallet")  # wallet, contract
     chain = Column(String(30), default="ETH")
-    scan_timestamp = Column(Float, index=True, nullable=False) # unix timestamp
+    scan_timestamp = Column(Float, nullable=False)
     risk_score = Column(Integer, default=0)
-    entity_class = Column(String(100), default="Unknown")
+    entity_class = Column(String(100), default="")
     triggered_signals = Column(JSON, default=list)
-    scan_depth = Column(String(20), default="quick") # "quick" or "deep"
-    case_id = Column(Integer, nullable=True, index=True)
-    bulk_batch_id = Column(String(50), nullable=True, index=True)
-    raw_data = Column(JSON, default=dict) # to cache full scan responses
+    scan_depth = Column(String(20), default="quick")
+    case_id = Column(Integer, index=True, nullable=True)
+    bulk_batch_id = Column(String(50), index=True, nullable=True)
+    raw_data = Column(JSON, default=dict)
+
+class VerificationReport(Base):
+    """Tamper-proof verifiable reports stored independently."""
+    __tablename__ = "verification_reports"
+
+    report_id = Column(String(50), primary_key=True, index=True)
+    report_hash = Column(String(64), nullable=False)
+    entity_address = Column(String(42), index=True, nullable=False)
+    entity_type = Column(String(20), default="wallet")
+    risk_score = Column(Integer, default=0)
+    scan_timestamp = Column(Float, nullable=False)
+    scan_depth = Column(String(20), default="quick")
 
 class Case(Base):
     __tablename__ = "cases"
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    case_number = Column(String(30), unique=True, nullable=True)
     title = Column(String(200), nullable=False)
     description = Column(Text, default="")
     created_at = Column(Float, nullable=False)
-    status = Column(String(20), default="Open")
+    updated_at = Column(Float, nullable=True)
+    status = Column(String(20), default="Open")  # Open, Active, Closed, Archived
+    priority = Column(String(10), default="P2")  # P1, P2, P3
+    category = Column(String(50), default="General")  # Ransomware, Rug Pull, etc.
+    tags = Column(JSON, default=list)
+    assigned_to = Column(String(100), default="")
+    total_entities = Column(Integer, default=0)
+    highest_risk = Column(Integer, default=0)
+
 
 class CaseEntity(Base):
     __tablename__ = "case_entities"
@@ -127,3 +148,7 @@ class CandidateEntity(Base):
     confidence = Column(Integer, default=50)
     chain = Column(String(30), default="ETH")
     status = Column(String(20), default="pending")
+    discovered_at = Column(Float, nullable=True)  # unix timestamp
+    auto_detected = Column(Boolean, default=False)
+    promoted_to_db = Column(Boolean, default=False)  # Track if promoted
+

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import SmartAddressInput from '../components/SmartAddressInput';
 import ContractForensicReport from '../components/ContractForensicReport';
 import { downloadContractPDF } from '../utils/pdfExport';
-
-
+import GraphView from '../components/GraphView';
 // ─── HELPERS ───────────────────────────────────────────────────────────────
 function CopyButton({ text }) {
   const [copied, setCopied] = useState(false);
@@ -88,22 +88,70 @@ export default function ContractInvestigation({ caseId }) {
   const [result, setResult] = useState(null);
   const [activeCodeTab, setActiveCodeTab] = useState('source');
   const [showReport, setShowReport] = useState(false);
+  const [reportHash, setReportHash] = useState(null);
+  const [isDeepDiving, setIsDeepDiving] = useState(false);
+  const [deepDiveError, setDeepDiveError] = useState(null);
+  const [deepDiveResult, setDeepDiveResult] = useState(null);
+  const [deepDiveStatus, setDeepDiveStatus] = useState('Running full deep scan (1000 txs + 3-AI Prosecution/Defense/Judge pipeline)...');
+  const location = useLocation();
 
-  // Removed async polling for Grok AI as it is now integrated synchronously.
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const initialAddress = searchParams.get('address');
+    if (initialAddress) {
+      setAddress(initialAddress);
+      runAnalysis(initialAddress);
+    }
+  }, [location.search]);
+
+  const runAnalysis = async (targetAddress) => {
+    if (!targetAddress.trim()) return;
+    setLoading(true); setResult(null); setDeepDiveResult(null);
+    try {
+      const { scanContract } = await import('../api/axon');
+      const data = await scanContract(targetAddress, caseId);
+      setResult(data);
+      
+      // Use server-side hash if available, otherwise compute client-side
+      if (data.report_metadata && data.report_metadata.sha256_hash) {
+        setReportHash(data.report_metadata.sha256_hash);
+      } else {
+        try {
+          const msgUint8 = new TextEncoder().encode(JSON.stringify(data));
+          const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+          const hashArray = Array.from(new Uint8Array(hashBuffer));
+          const docHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+          setReportHash(docHash);
+        } catch(e) { console.error("Hash err:", e); }
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to fetch contract analysis.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleAnalyze = async (e) => {
     e.preventDefault();
-    if (!address.trim()) return;
-    setLoading(true); setResult(null);
+    runAnalysis(address);
+  };
+
+
+  const handleDeepDive = async () => {
+    if (!result || !result.identity || !result.identity.address) return;
+    setIsDeepDiving(true);
+    setDeepDiveError(null);
     try {
       const { scanContract } = await import('../api/axon');
-      const data = await scanContract(address.trim(), caseId);
-      setResult(data);
+      // Full re-scan at depth='deep' — runs 3-AI pipeline, produces updated score
+      const deepResult = await scanContract(result.identity.address, caseId, 'deep');
+      setDeepDiveResult(deepResult);
     } catch (err) {
       console.error(err);
-      alert("Failed to fetch contract analysis from backend.");
+      setDeepDiveError("Failed to run deep dive analysis.");
     } finally {
-      setLoading(false);
+      setIsDeepDiving(false);
     }
   };
 
@@ -181,12 +229,20 @@ export default function ContractInvestigation({ caseId }) {
         <div className="space-y-6 animate-fade-in">
 
           {/* Export Bar */}
-          <div className="flex items-center justify-between">
-            <div className="text-sm text-axon-text-dim font-mono">
-              Scan complete · <span className="text-white">7 modules</span> · {new Date().toLocaleString()}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <div className="text-sm text-axon-text-dim font-mono">
+                Scan complete · <span className="text-white">7 modules</span> · {new Date().toLocaleString()}
+              </div>
+              {reportHash && (
+                <div className="mt-1 flex items-center gap-2 text-[10px] text-axon-text-muted font-mono">
+                  <span className="px-1.5 py-0.5 rounded bg-axon-card border border-axon-border text-axon-text-dim uppercase tracking-widest">SHA-256 PROOF</span>
+                  <span className="truncate max-w-[200px] md:max-w-md">{reportHash}</span>
+                </div>
+              )}
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={() => downloadContractPDF(result)} className="axon-button text-xs px-4 py-2 gap-1.5 bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500 hover:text-white" id="contract-download-pdf-btn">
+              <button onClick={async () => await downloadContractPDF(result)} className="axon-button text-xs px-4 py-2 gap-1.5 bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500 hover:text-white" id="contract-download-pdf-btn">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                 📄 Download PDF
               </button>
@@ -258,9 +314,9 @@ export default function ContractInvestigation({ caseId }) {
               </div>
               <div className="flex-1 space-y-6">
                 
-                {/* Strict Forensic Verdict */}
-                {result.risk.aiAnalysis && result.risk.aiAnalysis.verdict && (
-                  <div className="bg-[#1e293b]/50 rounded-xl border border-blue-500/30 p-5 font-sans text-sm leading-relaxed text-gray-200">
+                {/* Initial Quick Forensic Verdict */}
+                {result.risk.aiAnalysis && result.risk.aiAnalysis.verdict ? (
+                  <div className="mb-6 bg-[#1e293b]/50 rounded-xl border border-blue-500/30 p-5 font-sans text-sm leading-relaxed text-gray-200">
                     <div className="flex items-center gap-2 mb-4 border-b border-blue-500/20 pb-2">
                       <span className="px-2 py-0.5 text-[10px] font-mono font-bold tracking-widest text-white bg-blue-600 rounded">FORENSIC VERDICT</span>
                       <span className="text-xs font-mono font-bold text-blue-400">{result.risk.aiAnalysis.mitre_tag || "N/A"}</span>
@@ -268,15 +324,29 @@ export default function ContractInvestigation({ caseId }) {
                     
                     <div className="mb-4">
                       <div className="text-[10px] font-bold text-blue-400/70 uppercase tracking-widest mb-1">Plausible Hypothesis</div>
-                      <p className="text-gray-300 font-mono text-xs">{result.risk.aiAnalysis.hypothesis}</p>
+                      <p className="text-gray-300 font-mono text-xs break-words">{result.risk.aiAnalysis.hypothesis}</p>
                     </div>
 
                     <div>
                       <div className="text-[10px] font-bold text-blue-400/70 uppercase tracking-widest mb-1">Executive Verdict</div>
-                      <p className="text-white font-bold">{result.risk.aiAnalysis.verdict}</p>
+                      <p className="text-white font-bold break-words">{result.risk.aiAnalysis.verdict}</p>
                     </div>
+
+                    <div className="mt-6 border-t border-blue-500/20 pt-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                      <div className="text-xs text-blue-300/70 max-w-sm">
+                        This is a quick summary. For a comprehensive forensic analysis, run the Dual Adversarial AI Engine.
+                      </div>
+                      <button
+                        onClick={handleDeepDive}
+                        disabled={isDeepDiving}
+                        className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold font-mono tracking-wider rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap shadow-[0_0_15px_rgba(37,99,235,0.4)]"
+                      >
+                        {isDeepDiving ? 'ANALYZING...' : 'RUN DEEP DIVE ANALYSIS'}
+                      </button>
+                    </div>
+                    {deepDiveError && <div className="mt-3 text-red-400 text-xs">{deepDiveError}</div>}
                   </div>
-                )}
+                ) : null}
 
                 <div>
                   <div className="text-sm font-bold text-axon-text-dim uppercase tracking-wider mb-3">Top Signals Triggered</div>
@@ -291,6 +361,101 @@ export default function ContractInvestigation({ caseId }) {
             </div>
             </div>
           </CollapsibleSection>
+
+          {/* Deep Dive Independent Module */}
+          {deepDiveResult && deepDiveResult.risk && deepDiveResult.risk.aiAnalysis && (
+            <CollapsibleSection color="cyan" icon="🧠" title="Dual-Adversarial Deep Scan" badge="3-AI PIPELINE" defaultOpen={true}>
+
+              {/* Updated Risk Score Delta */}
+              {deepDiveResult.risk.score !== undefined && (
+                <div className="mb-6 flex items-center gap-6 p-4 bg-axon-bg rounded-xl border border-axon-purple/30">
+                  <div className="flex items-center gap-4">
+                    <div className="text-center">
+                      <div className="text-[10px] font-bold text-axon-text-dim uppercase tracking-widest mb-1">Quick Scan</div>
+                      <div className="text-2xl font-bold font-mono text-white">{result.risk.score}</div>
+                    </div>
+                    <div className="text-2xl text-axon-text-dim">→</div>
+                    <div className="text-center">
+                      <div className="text-[10px] font-bold text-axon-purple uppercase tracking-widest mb-1">Deep Scan</div>
+                      <div className={`text-2xl font-bold font-mono ${deepDiveResult.risk.score >= 80 ? 'text-red-400' : deepDiveResult.risk.score >= 60 ? 'text-orange-400' : deepDiveResult.risk.score >= 40 ? 'text-yellow-400' : 'text-green-400'}`}>
+                        {deepDiveResult.risk.score}
+                      </div>
+                    </div>
+                    <div className={`px-3 py-1 text-sm font-bold font-mono rounded border ${
+                      deepDiveResult.risk.score - result.risk.score > 0
+                        ? 'bg-red-500/10 text-red-400 border-red-500/30'
+                        : deepDiveResult.risk.score - result.risk.score < 0
+                        ? 'bg-green-500/10 text-green-400 border-green-500/30'
+                        : 'bg-axon-card text-axon-text-dim border-axon-border'
+                    }`}>
+                      Δ {deepDiveResult.risk.score - result.risk.score > 0 ? '+' : ''}{deepDiveResult.risk.score - result.risk.score}
+                    </div>
+                  </div>
+                  <div className="ml-auto text-right">
+                    <div className={`text-lg font-extrabold font-mono tracking-widest ${deepDiveResult.risk.score >= 80 ? 'text-red-400' : deepDiveResult.risk.score >= 60 ? 'text-orange-400' : deepDiveResult.risk.score >= 40 ? 'text-yellow-400' : 'text-green-400'}`}>
+                      {deepDiveResult.risk.label}
+                    </div>
+                    <div className="text-[10px] text-axon-text-dim font-mono">Updated Risk Rating</div>
+                  </div>
+                </div>
+              )}
+
+              <div className="mb-6 font-sans text-sm leading-relaxed">
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4">
+                  {/* Prosecution Panel */}
+                  <div className="bg-red-950/20 rounded-xl border border-red-500/30 p-4">
+                    <div className="flex items-center justify-between mb-3 border-b border-red-500/20 pb-2">
+                      <span className="px-2 py-0.5 text-[10px] font-mono font-bold tracking-widest text-white bg-red-600 rounded">PROSECUTION AI</span>
+                      <span className="text-xs font-mono font-bold text-red-400">{deepDiveResult.risk.aiAnalysis.prosecution_risk} RISK</span>
+                    </div>
+                    <p className="text-gray-300 font-mono text-xs break-words">{deepDiveResult.risk.aiAnalysis.prosecution_summary}</p>
+                  </div>
+
+                  {/* Defense Panel */}
+                  <div className="bg-[#064e3b]/40 rounded-xl border border-emerald-500/30 p-4">
+                    <div className="flex items-center justify-between mb-3 border-b border-emerald-500/20 pb-2">
+                      <span className="px-2 py-0.5 text-[10px] font-mono font-bold tracking-widest text-white bg-emerald-600 rounded">DEFENSE AI</span>
+                      <span className="text-xs font-mono font-bold text-emerald-400">{deepDiveResult.risk.aiAnalysis.defense_risk} RISK</span>
+                    </div>
+                    <p className="text-gray-300 font-mono text-xs break-words">{deepDiveResult.risk.aiAnalysis.defense_summary}</p>
+                  </div>
+                </div>
+
+                {/* Judge Panel */}
+                <div className="bg-[#1e293b]/50 rounded-xl border border-blue-500/30 p-5 shadow-lg relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 blur-[40px] rounded-full"></div>
+                  <div className="flex items-center justify-between mb-4 border-b border-blue-500/20 pb-2 relative z-10">
+                    <div className="flex items-center gap-2">
+                      <span className="px-2 py-0.5 text-[10px] font-mono font-bold tracking-widest text-white bg-blue-600 rounded">CHIEF JUDGE VERDICT</span>
+                      <span className="text-xs font-mono font-bold text-blue-400">{deepDiveResult.risk.aiAnalysis.mitre_tag || "N/A"}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-[10px] font-bold text-blue-400/70 uppercase tracking-widest">Confidence</span>
+                      <span className="text-xs font-mono font-bold text-white bg-blue-500/20 px-2 py-0.5 rounded">{deepDiveResult.risk.aiAnalysis.confidence}%</span>
+                    </div>
+                  </div>
+                  
+                  <div className="mb-4 relative z-10">
+                    <div className="text-[10px] font-bold text-blue-400/70 uppercase tracking-widest mb-1">Synthesized Hypothesis</div>
+                    <p className="text-gray-300 font-mono text-xs break-words">{deepDiveResult.risk.aiAnalysis.hypothesis}</p>
+                  </div>
+
+                  <div className="mb-4 relative z-10">
+                    <div className="text-[10px] font-bold text-blue-400/70 uppercase tracking-widest mb-1">Judge Reasoning</div>
+                    <p className="text-gray-400 italic text-xs break-words border-l-2 border-blue-500/30 pl-3">{deepDiveResult.risk.aiAnalysis.judge_reasoning}</p>
+                  </div>
+
+                  <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 relative z-10">
+                    <div className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-1 flex justify-between">
+                      <span>Final Executive Verdict</span>
+                      <span className="opacity-70">Consensus: {deepDiveResult.risk.aiAnalysis.consensus_level}</span>
+                    </div>
+                    <p className="text-white font-bold break-words">{deepDiveResult.risk.aiAnalysis.verdict}</p>
+                  </div>
+                </div>
+              </div>
+            </CollapsibleSection>
+          )}
 
           {/* 3. Main Analysis Engine (GoPlus) */}
           <CollapsibleSection color="green" icon="🛡️" title="Main Analysis Engine (GoPlus)" badge={result.goplus.overall.toUpperCase()} defaultOpen={false}>
@@ -418,6 +583,75 @@ export default function ContractInvestigation({ caseId }) {
               </div>
             )}
           </CollapsibleSection>
+
+          {/* 7. DeFi Protocol Interactions */}
+          {result.graph && result.graph.defi_interactions && result.graph.defi_interactions.length > 0 && (
+            <CollapsibleSection color="cyan" icon="🧩" title="DeFi Protocol Interactions" badge="DECODED" defaultOpen={false}>
+              <div className="mb-4 p-3 bg-axon-cyan/5 border border-axon-cyan/20 rounded-lg text-sm text-axon-text-muted">
+                Analyzed raw hex calldata and mapped to known smart contract ABI signatures using Openchain database.
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm font-mono">
+                  <thead>
+                    <tr className="border-b border-axon-border text-left">
+                      {['Date', 'Method', 'Narrative', 'To Contract', 'Hash'].map(h => (
+                        <th key={h} className="pb-2 pr-4 text-xs text-axon-text-dim uppercase tracking-wider">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {result.graph.defi_interactions.map((tx, i) => {
+                      const date = new Date(parseInt(tx.timestamp) * 1000).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                      return (
+                        <tr key={i} className="border-b border-axon-border/50 hover:bg-axon-card/30 transition-colors">
+                          <td className="py-3 pr-4 text-axon-text-dim whitespace-nowrap">{date}</td>
+                          <td className="py-3 pr-4">
+                            <span className={`px-2 py-0.5 text-xs font-bold rounded border ${tx.is_defi ? 'bg-axon-purple/10 text-axon-purple border-axon-purple/30' : 'bg-axon-card text-white border-axon-border'}`}>
+                              {tx.simple_name}
+                            </span>
+                          </td>
+                          <td className="py-3 pr-4 text-white max-w-[300px] truncate" title={tx.narrative}>{tx.narrative}</td>
+                          <td className="py-3 pr-4 text-axon-cyan text-xs">
+                            <a href={`https://etherscan.io/address/${tx.to}`} target="_blank" rel="noreferrer" className="hover:underline">
+                              {tx.to.slice(0, 8)}...
+                            </a>
+                          </td>
+                          <td className="py-3 pr-4 text-axon-text-muted text-xs">
+                            <a href={`https://etherscan.io/tx/${tx.hash}`} target="_blank" rel="noreferrer" className="hover:text-white transition-colors">
+                              {tx.hash.slice(0, 10)}...
+                            </a>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </CollapsibleSection>
+          )}
+
+          {/* 8. Graph & Topology */}
+          {result.graph && result.graph.nodes && result.graph.nodes.length > 0 && (
+            <CollapsibleSection color="orange" icon="🕸️" title="Money Flow & Topology" badge="VISUALIZATION" defaultOpen={true}>
+              <div className="h-[500px] rounded-lg overflow-hidden bg-axon-bg border border-axon-border">
+                <GraphView data={result.graph} />
+              </div>
+              <div className="flex flex-wrap gap-4 mt-4 text-xs font-mono">
+                {[
+                  { color: 'bg-red-500', label: 'Hacker/Suspect' },
+                  { color: 'bg-purple-500', label: 'Mixer' },
+                  { color: 'bg-blue-500', label: 'Exchange' },
+                  { color: 'bg-axon-cyan', label: 'Victim' },
+                  { color: 'bg-slate-600', label: 'Normal' },
+                ].map(item => (
+                  <div key={item.label} className="flex items-center gap-1.5 text-axon-text-dim">
+                    <span className={`w-3 h-3 rounded-full ${item.color}`} />
+                    {item.label}
+                  </div>
+                ))}
+              </div>
+            </CollapsibleSection>
+          )}
 
         </div>
       )}

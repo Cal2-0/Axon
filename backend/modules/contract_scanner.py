@@ -43,10 +43,13 @@ import httpx
 import asyncio
 import statistics
 import json
+import time
+import hashlib
 from sqlalchemy.orm import Session
-from database.models import MaliciousWallet, ExchangeWallet, KnownMixer
+from database.models import MaliciousWallet, ExchangeWallet, KnownMixer, InvestigationLog, CandidateEntity
 from modules.wallet_scorer import fetch_forta_alerts, fetch_all_etherscan_data, _load_known_addresses
-from modules.ai_analyst import generate_summary
+from modules.ai_analyst import generate_summary, analyze_entity, generate_dual_quick_ratings
+from modules.defi_decoder import decode_defi_interactions
 
 
 def _get_etherscan_key():
@@ -344,7 +347,7 @@ async def scan_contract(address: str, db: Session, depth: str = "quick", case_id
     Returns a structured dict consumed by the frontend.
     """
     import time
-    from database.models import InvestigationLog, CandidateEntity
+    from database.models import InvestigationLog, CandidateEntity, VerificationReport
     
     # --- Cache Check ---
     recent_log = db.query(InvestigationLog).filter(
@@ -454,6 +457,21 @@ async def scan_contract(address: str, db: Session, depth: str = "quick", case_id
     is_known_mixer = addr_lower in all_mixer_addrs
 
     print(f"[CONTRACT] Counterparty overlap: {exchange_overlap_count} exchanges, {mixer_overlap_count} mixers | Self: exchange={is_known_exchange}, mixer={is_known_mixer}")
+
+    # Batch DB Lookup for ALL counterparties to build accurate graph risks
+    known_bad_map = {}
+    if all_counterparties:
+        try:
+            cp_list = list(all_counterparties)
+            for i in range(0, len(cp_list), 500):
+                batch = cp_list[i:i+500]
+                bad_wallets = db.query(MaliciousWallet).filter(
+                    MaliciousWallet.address.in_(batch)
+                ).all()
+                for w in bad_wallets:
+                    known_bad_map[w.address.lower()] = w
+        except Exception as e:
+            print(f"[SCAN] Batch DB lookup error: {e}")
 
     # ═══════════════════════════════════════════════════════
     # 5-AXIS BEHAVIORAL FORENSIC ENGINE v3.0
@@ -747,7 +765,30 @@ Triggered Signals: {json.dumps(signals[:10])}
 Respond with ONLY valid JSON containing exactly these three keys:
 {{"hypothesis": "1-2 sentence forensic hypothesis referencing the protocol classification and specific evidence", "mitre_tag": "{mitre_tag}", "verdict": "One sentence executive verdict that MUST align with the {label} risk classification"}}"""
 
-    ai_data = await generate_summary(ai_prompt)
+    # For deep scans, expand evidence context with GoPlus + topology + DeFi data
+    if depth == "deep":
+        goplus_summary = []
+        if goplus:
+            goplus_summary = [f"{k}={v}" for k, v in list(goplus.items())[:15]]
+        ai_prompt += f"""
+
+ADDITIONAL DEEP SCAN EVIDENCE:
+- GoPlus Token Security: {', '.join(goplus_summary[:10]) if goplus_summary else 'N/A (not an ERC-20 token)'}
+- Buy Tax: {buy_tax:.1f}%, Sell Tax: {sell_tax:.1f}%
+- Source Code Verified: {is_verified}
+- Proxy Contract: {is_proxy}
+- Transaction Count: {tx_count}
+- Cross-Axis Multiplier: {multiplier}x
+- Exchange Counterparty Overlap: {exchange_overlap_pct:.1%}
+- Mixer Counterparty Overlap: {mixer_overlap_pct:.1%}
+- Is Known Exchange: {is_known_exchange}
+- Is Known Mixer: {is_known_mixer}
+- Protocol Category: {protocol_class['category']}
+- Protocol Context: {protocol_class.get('context', 'N/A')}
+
+Use ALL of this evidence to form a comprehensive forensic assessment."""
+
+    ai_data = await analyze_entity(ai_prompt, depth=depth, entity_type="contract")
 
     # Validate AI response has the expected keys
     if not isinstance(ai_data, dict) or "hypothesis" not in ai_data:
@@ -758,6 +799,9 @@ Respond with ONLY valid JSON containing exactly these three keys:
 
     # Force MITRE tag to evidence-driven value (don't trust LLM to set it)
     ai_data["mitre_tag"] = mitre_tag
+
+    # ── Layer 6 & 7: Independent AI Agent Ratings ──
+    dual_ratings = await generate_dual_quick_ratings(ai_prompt, entity_type="contract")
 
     # ═══════════════════════════════════════════════════════
     # FORMAT GOPLUS CHECKS FOR UI
@@ -790,6 +834,82 @@ Respond with ONLY valid JSON containing exactly these three keys:
                 })
     else:
         goplus_checks = [{"name": "Token Security", "status": "OK", "detail": "Not an ERC-20 token — GoPlus N/A"}]
+
+    # ═══════════════════════════════════════════════════════
+    # BUILD GRAPH & DEFI DATA
+    # ═══════════════════════════════════════════════════════
+
+    graph_nodes = [{
+        "id": addr_lower,
+        "label": protocol_class["name"] if protocol_class["matched"] else name[:12] + "...",
+        "type": "target",
+        "risk": min(final_score, 100)
+    }]
+    graph_edges = []
+    node_ids = {addr_lower}
+
+    for tx in tx_history[:100]:
+        frm = tx.get("from", "").lower()
+        to_addr = tx.get("to", "").lower()
+        if not frm or not to_addr:
+            continue
+
+        # Add source node
+        if frm not in node_ids:
+            is_mixer = frm in all_mixer_addrs
+            is_exchange = frm in all_exchange_addrs
+            db_entry = known_bad_map.get(frm)
+            if db_entry:
+                node_risk = min(db_entry.risk_score, 100)
+                node_type = "malicious"
+                node_label = db_entry.label[:10] + "..."
+            elif is_mixer:
+                node_risk = 90
+                node_type = "mixer"
+                node_label = frm[:6] + "..."
+            elif is_exchange:
+                node_risk = 5
+                node_type = "exchange"
+                node_label = frm[:6] + "..."
+            else:
+                node_risk = 10
+                node_type = "default"
+                node_label = frm[:6] + "..."
+            graph_nodes.append({"id": frm, "label": node_label, "type": node_type, "risk": node_risk})
+            node_ids.add(frm)
+
+        # Add target node
+        if to_addr not in node_ids:
+            is_mixer = to_addr in all_mixer_addrs
+            is_exchange = to_addr in all_exchange_addrs
+            db_entry = known_bad_map.get(to_addr)
+            if db_entry:
+                node_risk = min(db_entry.risk_score, 100)
+                node_type = "malicious"
+                node_label = db_entry.label[:10] + "..."
+            elif is_mixer:
+                node_risk = 90
+                node_type = "mixer"
+                node_label = to_addr[:6] + "..."
+            elif is_exchange:
+                node_risk = 5
+                node_type = "exchange"
+                node_label = to_addr[:6] + "..."
+            else:
+                node_risk = 10
+                node_type = "default"
+                node_label = to_addr[:6] + "..."
+            graph_nodes.append({"id": to_addr, "label": node_label, "type": node_type, "risk": node_risk})
+            node_ids.add(to_addr)
+
+        try:
+            value = float(tx.get("value", 0)) / 10**18
+        except:
+            value = 0
+
+        graph_edges.append({"source": frm, "target": to_addr, "value": value, "hash": tx.get("hash", "")})
+
+    defi_interactions = await decode_defi_interactions(tx_history)
 
     # ═══════════════════════════════════════════════════════
     # BUILD RESPONSE
@@ -835,11 +955,19 @@ Respond with ONLY valid JSON containing exactly these three keys:
             "factors": [{"reason": s, "icon": "🔹", "penalty": 0} for s in signals],
             "axes": axis,
             "multiplier": multiplier,
+            "aiAgentA": dual_ratings.get("agentA"),
+            "aiAgentB": dual_ratings.get("agentB"),
             "aiAnalysis": {
                 "rating": label,
                 "hypothesis": ai_data.get("hypothesis", ""),
                 "mitre_tag": ai_data.get("mitre_tag", ""),
-                "verdict": ai_data.get("verdict", "")
+                "verdict": ai_data.get("verdict", ""),
+                "confidence": ai_data.get("confidence", None),
+                "consensus_level": ai_data.get("consensus_level", None),
+                "judge_reasoning": ai_data.get("judge_reasoning", None),
+                "prosecution_summary": ai_data.get("prosecution_summary", None),
+                "defense_summary": ai_data.get("defense_summary", None),
+                "engine_type": ai_data.get("engine_type", "single")
             }
         },
         "goplus": {
@@ -848,8 +976,28 @@ Respond with ONLY valid JSON containing exactly these three keys:
         },
         "sourceCode": source_code,
         "abi": etherscan.get("abi", "[]"),
-        "slither": _simulate_slither_analysis(source_code)
+        "slither": _simulate_slither_analysis(source_code),
+        "evidence_context": ai_prompt,
+        "graph_nodes": graph_nodes,
+        "graph_edges": graph_edges,
+        "defi_interactions": defi_interactions
     }
+
+    # ── Server-Side Hash & Report Metadata (tamper-proof) ──
+    report_meta = {
+        "report_id": f"AXON-C-{int(time.time())}-{address[:10]}",
+        "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "generated_timestamp": time.time(),
+        "scan_depth": depth,
+        "entity_address": address.lower(),
+        "entity_type": "contract",
+        "engine_version": "3.0",
+    }
+    hash_payload = json.dumps(response_data, sort_keys=True, default=str)
+    report_meta["sha256_hash"] = hashlib.sha256(hash_payload.encode()).hexdigest()
+    report_meta["hash_algorithm"] = "SHA-256"
+    report_meta["hash_scope"] = "Full response_data payload (sorted keys, pre-metadata)"
+    response_data["report_metadata"] = report_meta
     
     # --- Save to InvestigationLog ---
     try:
@@ -867,6 +1015,18 @@ Respond with ONLY valid JSON containing exactly these three keys:
         )
         db.add(log_entry)
         
+        # Save independent verifiable report
+        report_entry = VerificationReport(
+            report_id=report_meta["report_id"],
+            report_hash=report_meta["sha256_hash"],
+            entity_address=address.lower(),
+            entity_type="contract",
+            risk_score=final_score,
+            scan_timestamp=time.time(),
+            scan_depth=depth
+        )
+        db.add(report_entry)
+        
         # Auto-update Threat DB Candidate queue for HIGH/CRITICAL findings
         if final_score >= 60:
             candidate = CandidateEntity(
@@ -882,6 +1042,32 @@ Respond with ONLY valid JSON containing exactly these three keys:
             existing = db.query(CandidateEntity).filter_by(address=address.lower()).first()
             if not existing:
                 db.add(candidate)
+
+        # ── Auto-Learn: Promote CRITICAL contract findings to MaliciousWallet DB ──
+        if final_score >= 80:
+            try:
+                existing_threat = db.query(MaliciousWallet).filter_by(address=address.lower()).first()
+                if not existing_threat:
+                    new_threat = MaliciousWallet(
+                        address=address.lower(),
+                        label=f"Auto-Detected Contract: {protocol_class['name'] if protocol_class['matched'] else name}",
+                        category="Malicious Contract",
+                        chain="ETH",
+                        amount_usd="Unknown",
+                        threat_level="CRITICAL" if final_score >= 90 else "HIGH",
+                        sanctioned=protocol_class.get("category") == "SANCTIONED",
+                        risk_score=final_score,
+                        description=f"Auto-detected by Axon contract scanner. Protocol: {protocol_class['category']}. "
+                                   f"A1={axis['A1']}, A2={axis['A2']}, A3={axis['A3']}, A4={axis['A4']}, A5={axis['A5']}. "
+                                   f"Top signals: {', '.join(signals[:3])}",
+                        tags=["auto-detected", "contract", protocol_class.get("category", "unknown").lower()],
+                        source="axon-auto-detect",
+                        confidence=final_score,
+                    )
+                    db.add(new_threat)
+                    print(f"[CONTRACT] AUTO-LEARNED: {address} added to MaliciousWallet DB (score={final_score}, proto={protocol_class['category']})")
+            except Exception as e:
+                print(f"[CONTRACT] Auto-learn error: {e}")
                 
         db.commit()
     except Exception as e:

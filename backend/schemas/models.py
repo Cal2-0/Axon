@@ -15,6 +15,10 @@ class BulkScanRequest(BaseModel):
     addresses: List[str]
     case_id: Optional[int] = None
 
+class DeepDiveRequest(BaseModel):
+    entity_type: str = "wallet"
+    evidence_context: str
+
 # --- Responses (Matching Frontend DEMO_PROFILES structure) ---
 
 # Intelligence Database Models
@@ -132,12 +136,29 @@ class CaseEntityModel(BaseModel):
     class Config:
         from_attributes = True
 
+class UpdateCaseRequest(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    status: Optional[str] = None
+    priority: Optional[str] = None
+    category: Optional[str] = None
+    tags: Optional[List[str]] = None
+    assigned_to: Optional[str] = None
+
 class CaseModel(BaseModel):
     id: int
+    case_number: Optional[str] = None
     title: str
     description: str
     created_at: float
+    updated_at: Optional[float] = None
     status: str
+    priority: Optional[str] = "P2"
+    category: Optional[str] = "General"
+    tags: Optional[List[str]] = []
+    assigned_to: Optional[str] = ""
+    total_entities: Optional[int] = 0
+    highest_risk: Optional[int] = 0
     notes: Optional[List[CaseNoteModel]] = []
     entities: Optional[List[InvestigationLogModel]] = []
 

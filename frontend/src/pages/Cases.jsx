@@ -8,16 +8,26 @@ export default function Cases() {
   const [showNewModal, setShowNewModal] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newDesc, setNewDesc] = useState('');
+  const [newPriority, setNewPriority] = useState('P2');
+  const [newCategory, setNewCategory] = useState('General');
+  const [newAssignedTo, setNewAssignedTo] = useState('');
+  const [newTags, setNewTags] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchCases();
-  }, []);
+  }, [statusFilter]);
 
   const fetchCases = async () => {
     try {
+      setLoading(true);
       const data = await listCases();
-      setCases(data);
+      if (statusFilter !== 'All') {
+        setCases(data.filter(c => c.status === statusFilter));
+      } else {
+        setCases(data);
+      }
     } catch (err) {
       console.error(err);
     } finally {
@@ -29,10 +39,15 @@ export default function Cases() {
     e.preventDefault();
     if (!newTitle.trim()) return;
     try {
-      const c = await createCase(newTitle, newDesc);
+      const tagsArray = newTags.split(',').map(t => t.trim()).filter(t => t);
+      const c = await createCase(newTitle, newDesc, newPriority, newCategory, newAssignedTo, tagsArray);
       setShowNewModal(false);
       setNewTitle('');
       setNewDesc('');
+      setNewPriority('P2');
+      setNewCategory('General');
+      setNewAssignedTo('');
+      setNewTags('');
       await fetchCases();
       navigate(`/cases/${c.id}`);
     } catch (err) {
@@ -50,6 +65,17 @@ export default function Cases() {
             <span className="px-3 py-1 text-xs font-mono font-bold tracking-widest text-axon-purple bg-axon-purple/10 border border-axon-purple/30 rounded-full">
               CASE MANAGEMENT
             </span>
+            <div className="flex items-center gap-1 border border-axon-border rounded overflow-hidden">
+              {['All', 'Open', 'Active', 'Closed', 'Archived'].map(s => (
+                <button 
+                  key={s}
+                  onClick={() => setStatusFilter(s)}
+                  className={`px-3 py-1 text-xs font-bold transition-colors ${statusFilter === s ? 'bg-axon-purple text-white' : 'bg-axon-surface text-axon-text-dim hover:text-white'}`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
           </div>
           <h1 className="text-4xl font-extrabold text-white tracking-tight">Active Cases</h1>
           <p className="text-axon-text-muted mt-1 text-base max-w-2xl">
@@ -91,17 +117,60 @@ export default function Cases() {
               <div className="absolute top-0 left-0 w-1.5 h-full bg-axon-purple opacity-50 group-hover:opacity-100 transition-opacity"></div>
               
               <div className="flex justify-between items-start mb-4">
-                <span className={`px-2 py-0.5 text-[10px] font-bold rounded border ${c.status === 'Open' ? 'bg-axon-green/20 text-axon-green border-axon-green/40' : 'bg-axon-text-dim/20 text-axon-text-muted border-axon-border'}`}>
-                  {c.status.toUpperCase()}
-                </span>
-                <span className="text-[10px] font-mono text-axon-text-dim">ID: {c.id}</span>
+                <div className="flex items-center gap-2">
+                  <span className={`px-2 py-0.5 text-[10px] font-bold rounded border ${
+                    c.status === 'Open' ? 'bg-axon-green/20 text-axon-green border-axon-green/40' : 
+                    c.status === 'Active' ? 'bg-blue-500/20 text-blue-400 border-blue-500/40' :
+                    'bg-axon-text-dim/20 text-axon-text-muted border-axon-border'}`}>
+                    {c.status.toUpperCase()}
+                  </span>
+                  <span className={`px-2 py-0.5 text-[10px] font-bold rounded border ${
+                    c.priority === 'P1' ? 'bg-red-500/20 text-red-400 border-red-500/40' : 
+                    c.priority === 'P2' ? 'bg-orange-500/20 text-orange-400 border-orange-500/40' :
+                    'bg-green-500/20 text-green-400 border-green-500/40'}`}>
+                    {c.priority}
+                  </span>
+                </div>
+                <span className="text-[10px] font-mono text-axon-text-dim">{c.case_number || `ID: ${c.id}`}</span>
               </div>
               
+              <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">{c.category || 'General'}</div>
               <h3 className="text-xl font-bold text-white mb-2 group-hover:text-axon-purple transition-colors">{c.title}</h3>
-              <p className="text-sm text-axon-text-muted line-clamp-3 mb-6 flex-1">
+              <p className="text-sm text-axon-text-muted line-clamp-2 mb-3 flex-1">
                 {c.description || "No description provided."}
               </p>
               
+              {c.assigned_to && (
+                <div className="flex items-center gap-1.5 mb-2 text-[10px] text-axon-text-dim uppercase tracking-wider font-bold">
+                  <span className="w-4 h-4 rounded-full bg-axon-purple/20 flex items-center justify-center text-[8px] text-axon-purple">
+                    {c.assigned_to.charAt(0)}
+                  </span>
+                  {c.assigned_to}
+                </div>
+              )}
+              
+              {c.tags && c.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1 mb-4">
+                  {c.tags.slice(0,3).map(tag => (
+                    <span key={tag} className="px-1.5 py-0.5 text-[9px] uppercase tracking-wider bg-[#1e293b]/50 border border-[#1e293b] text-gray-400 rounded">
+                      #{tag}
+                    </span>
+                  ))}
+                  {c.tags.length > 3 && <span className="text-[9px] text-gray-500 self-center">+{c.tags.length-3}</span>}
+                </div>
+              )}
+              
+              <div className="flex items-center gap-4 mb-4 text-xs font-mono">
+                <div className="flex flex-col">
+                  <span className="text-gray-500 uppercase text-[9px]">Entities</span>
+                  <span className="text-white">{c.total_entities || 0}</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-gray-500 uppercase text-[9px]">Max Risk</span>
+                  <span className={c.highest_risk >= 80 ? 'text-red-400' : c.highest_risk >= 60 ? 'text-orange-400' : 'text-white'}>{c.highest_risk || 0}</span>
+                </div>
+              </div>
+
               <div className="flex items-center justify-between mt-auto pt-4 border-t border-axon-border/50 text-xs font-mono text-axon-text-dim">
                 <span>{new Date(c.created_at * 1000).toLocaleDateString()}</span>
                 <span className="group-hover:text-axon-purple transition-colors flex items-center gap-1">
@@ -141,6 +210,57 @@ export default function Cases() {
                   placeholder="e.g. Operation Silk Road, Lazarus Exploit Q4"
                 />
               </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-axon-text-dim mb-1.5 uppercase tracking-wider">Priority</label>
+                  <select
+                    value={newPriority}
+                    onChange={e => setNewPriority(e.target.value)}
+                    className="w-full bg-[#05080f] border border-axon-border rounded-lg px-4 py-3 text-white text-sm focus:border-axon-purple outline-none focus:ring-1 focus:ring-axon-purple transition-all"
+                  >
+                    <option value="P1">P1 - Critical</option>
+                    <option value="P2">P2 - High</option>
+                    <option value="P3">P3 - Routine</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-axon-text-dim mb-1.5 uppercase tracking-wider">Category</label>
+                  <select
+                    value={newCategory}
+                    onChange={e => setNewCategory(e.target.value)}
+                    className="w-full bg-[#05080f] border border-axon-border rounded-lg px-4 py-3 text-white text-sm focus:border-axon-purple outline-none focus:ring-1 focus:ring-axon-purple transition-all"
+                  >
+                    {['General', 'Ransomware', 'Rug Pull', 'Pig Butchering', 'Exchange Hack', 'Bridge Exploit', 'Mixer Tracing', 'Sanctions Evasion', 'Money Laundering', 'Asset Recovery'].map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-axon-text-dim mb-1.5 uppercase tracking-wider">Assign To</label>
+                  <input 
+                    type="text" 
+                    value={newAssignedTo} 
+                    onChange={e => setNewAssignedTo(e.target.value)} 
+                    className="w-full bg-[#05080f] border border-axon-border rounded-lg px-4 py-3 text-white text-sm focus:border-axon-purple outline-none focus:ring-1 focus:ring-axon-purple transition-all" 
+                    placeholder="e.g. John Doe"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-axon-text-dim mb-1.5 uppercase tracking-wider">Tags (comma separated)</label>
+                  <input 
+                    type="text" 
+                    value={newTags} 
+                    onChange={e => setNewTags(e.target.value)} 
+                    className="w-full bg-[#05080f] border border-axon-border rounded-lg px-4 py-3 text-white text-sm focus:border-axon-purple outline-none focus:ring-1 focus:ring-axon-purple transition-all" 
+                    placeholder="e.g. lazarus, urgent"
+                  />
+                </div>
+              </div>
+
               <div>
                 <label className="block text-xs font-bold text-axon-text-dim mb-1.5 uppercase tracking-wider">Brief Description (Optional)</label>
                 <textarea 
