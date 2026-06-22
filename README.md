@@ -195,7 +195,7 @@ Documentation, API research, threat corpus compilation, engine design.
 ### Phase 3 — Frontend Dashboard & Deployment `100%`
 React dashboard with all investigation views, D3 graph visualization, Netlify/Render CI/CD.
 
-### Phase 4 — Advanced Capabilities `100%`
+### Phase 4 — Advanced Capabilities `75%`
 - Case Management Engine (assignees, threat tags)
 - OSINT Scraper & ENS Lookups
 - Dueling 3-Agent AI Forensic Debate
