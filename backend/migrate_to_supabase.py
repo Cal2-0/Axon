@@ -15,6 +15,7 @@ from database.models import (
     KnownMixer,
     ThreatActor,
     InvestigationLog,
+    VerificationReport,
     Case,
     CaseEntity,
     CaseNote,
@@ -71,7 +72,8 @@ def migrate():
         ExchangeWallet,
         KnownMixer,
         ThreatActor,
-        InvestigationLog
+        InvestigationLog,
+        VerificationReport
     ]
 
     # Inspect SQLite database to check if tables exist

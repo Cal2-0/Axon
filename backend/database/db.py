@@ -35,5 +35,8 @@ def get_db():
 
 def init_db():
     """Create all tables if they don't exist."""
-    from database.models import MaliciousWallet, ExchangeWallet, KnownMixer, ThreatActor  # noqa: F401
+    from database.models import (
+        MaliciousWallet, ExchangeWallet, KnownMixer, ThreatActor,
+        InvestigationLog, VerificationReport, Case, CaseEntity, CaseNote, CandidateEntity
+    )  # noqa: F401
     Base.metadata.create_all(bind=engine)
