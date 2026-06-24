@@ -13,17 +13,21 @@ REAL_PROFILES.forEach(profile => {
   };
 });
 
-// Ethereum address checksum validation
-function isValidEthAddress(addr) {
-  return /^0x[0-9a-fA-F]{40}$/.test(addr);
+// Multi-chain address checksum validation
+export function isValidAddress(addr) {
+  if (/^0x[0-9a-fA-F]{40}$/.test(addr)) return true; // EVM
+  if (/^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,59}$/i.test(addr)) return true; // BTC
+  if (/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(addr) && !addr.startsWith('0x') && !addr.startsWith('bc1')) return true; // SOL
+  if (/^T[A-Za-z1-9]{33}$/.test(addr)) return true; // TRON
+  return false;
 }
 
-function isPartialEthAddress(addr) {
-  return /^0x[0-9a-fA-F]{0,40}$/.test(addr);
+function isPartialAddress(addr) {
+  return addr.length > 0;
 }
 
 // ─── SMART ADDRESS INPUT ─────────────────────────────────────────────────────
-export default function SmartAddressInput({ value, onChange, onSubmit, loading, placeholder = '0x... (Ethereum address)' }) {
+export default function SmartAddressInput({ value, onChange, onSubmit, loading, placeholder = '0x... (ETH, BTC, SOL)' }) {
   const [focused, setFocused] = useState(false);
   const [validation, setValidation] = useState(null); // null | 'typing' | 'invalid' | 'valid' | 'known'
   const [knownInfo, setKnownInfo] = useState(null);
@@ -51,7 +55,7 @@ export default function SmartAddressInput({ value, onChange, onSubmit, loading, 
     setSuggestions(matches);
     setShowDropdown(matches.length > 0 && focused && addr.length >= 3);
 
-    if (isValidEthAddress(addr)) {
+    if (isValidAddress(addr)) {
       const known = KNOWN_ADDRESSES[addr.toLowerCase()];
       if (known) {
         setValidation('known');
@@ -60,7 +64,7 @@ export default function SmartAddressInput({ value, onChange, onSubmit, loading, 
         setValidation('valid');
         setKnownInfo(null);
       }
-    } else if (isPartialEthAddress(addr)) {
+    } else if (isPartialAddress(addr)) {
       setValidation('typing');
       setKnownInfo(null);
     } else {
@@ -158,7 +162,7 @@ export default function SmartAddressInput({ value, onChange, onSubmit, loading, 
               {getStatusIcon()}
               {value.trim().length > 0 && (
                 <span className="text-[10px] text-axon-text-dim font-mono">
-                  {value.trim().length}/42
+                  {value.trim().length} chars
                 </span>
               )}
             </>

@@ -21,16 +21,18 @@ ALL_CG_IDS = set(c["cg_id"] for c in CHAINS.values())
 ALL_CG_IDS.add("bitcoin")
 ALL_CG_IDS.add("solana")
 
-def detect_address_type(address: str) -> str:
+def detect_address_type(address: str) -> dict:
     addr = address.strip()
     if addr.startswith("0x") and len(addr) == 42:
-        return "EVM"
+        return {"chain": "EVM", "type": "EVM"}
+    if addr.startswith("T") and len(addr) == 34:
+        return {"chain": "Tron", "type": "TRON"}
     # Solana is base58, length usually 43-44
     if len(addr) >= 40 and not addr.startswith("0x") and not addr.startswith("bc1"):
-        return "SOLANA"
+        return {"chain": "Solana", "type": "SOLANA"}
     if addr.startswith("1") or addr.startswith("3") or addr.startswith("bc1"):
-        return "BTC"
-    return "UNKNOWN"
+        return {"chain": "Bitcoin", "type": "BTC"}
+    return {"chain": "Unknown", "type": "UNKNOWN"}
 
 async def fetch_btc_balance(client: httpx.AsyncClient, address: str) -> dict:
     try:
@@ -121,7 +123,8 @@ async def fetch_prices(client: httpx.AsyncClient, cg_ids: set) -> dict:
         }
 
 async def get_cross_chain_holdings(address: str) -> dict:
-    addr_type = detect_address_type(address)
+    addr_info = detect_address_type(address)
+    addr_type = addr_info["type"]
 
     async with httpx.AsyncClient(timeout=20.0) as client:
         balance_tasks = []
@@ -141,6 +144,8 @@ async def get_cross_chain_holdings(address: str) -> dict:
             balance_tasks = [fetch_btc_balance(client, address)]
         elif addr_type == "SOLANA":
             balance_tasks = [fetch_solana_balance(client, address)]
+        elif addr_type == "TRON":
+            balance_tasks = [] # Tron balances not implemented yet
         else:
             return {"error": "Unknown address format", "holdings": [], "total_net_worth_usd": 0, "total_net_worth_inr": 0}
             

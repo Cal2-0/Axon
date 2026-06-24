@@ -628,10 +628,10 @@ export async function downloadBulkPDF(report) {
   const total = CRITICAL + HIGH + MEDIUM + LOW;
 
   const getConsensusMessage = () => {
-    if (CRITICAL > 0) return \`FORENSIC CONSENSUS: \${CRITICAL} critical threats identified out of \${total} subjects. Immediate isolation and manual review strongly recommended for high-risk assets.\`;
-    if (HIGH > 0) return \`FORENSIC CONSENSUS: Elevated risk detected. \${HIGH} subjects show suspicious behavioral patterns. Proceed with caution and monitor closely.\`;
-    if (MEDIUM > 0) return \`FORENSIC CONSENSUS: Moderate risk profile. Some subjects exhibit anomalous but non-critical behaviors.\`;
-    return \`FORENSIC CONSENSUS: Low risk profile. No immediate threats or sanctions exposure detected in the scanned batch.\`;
+    if (CRITICAL > 0) return `FORENSIC CONSENSUS: ${CRITICAL} critical threats identified out of ${total} subjects. Immediate isolation and manual review strongly recommended for high-risk assets.`;
+    if (HIGH > 0) return `FORENSIC CONSENSUS: Elevated risk detected. ${HIGH} subjects show suspicious behavioral patterns. Proceed with caution and monitor closely.`;
+    if (MEDIUM > 0) return `FORENSIC CONSENSUS: Moderate risk profile. Some subjects exhibit anomalous but non-critical behaviors.`;
+    return `FORENSIC CONSENSUS: Low risk profile. No immediate threats or sanctions exposure detected in the scanned batch.`;
   };
   
   const consensusMessage = getConsensusMessage();
@@ -647,20 +647,20 @@ export async function downloadBulkPDF(report) {
     const name = r.data?.identity?.name || r.address;
     const mitre = r.data?.risk?.aiAnalysis?.mitre_tag || 'N/A';
 
-    return \`
+    return `
       <tr>
-        <td style="font-family:'Courier New',monospace;font-size:11px;color:#64748b">\${i + 1}</td>
-        <td style="font-weight:600;font-family:'Courier New',monospace;">\${_esc(r.address)}</td>
-        <td>\${_esc(name)}</td>
-        <td><span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:700;color:\${rColor};border:1px solid \${rColor}30;background:\${rColor}10">\${rLabel} (\${score}/100)</span></td>
-        <td style="font-family:'Courier New',monospace;font-size:10px;">\${_esc(mitre)}</td>
-        <td style="font-family:'Courier New',monospace;font-size:10px;color:#64748b">\${_esc(r.status)}</td>
+        <td style="font-family:'Courier New',monospace;font-size:11px;color:#64748b">${i + 1}</td>
+        <td style="font-weight:600;font-family:'Courier New',monospace;">${_esc(r.address)}</td>
+        <td>${_esc(name)}</td>
+        <td><span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:700;color:${rColor};border:1px solid ${rColor}30;background:${rColor}10">${rLabel} (${score}/100)</span></td>
+        <td style="font-family:'Courier New',monospace;font-size:10px;">${_esc(mitre)}</td>
+        <td style="font-family:'Courier New',monospace;font-size:10px;color:#64748b">${_esc(r.status)}</td>
       </tr>
-    \`;
+    `;
   }).join('');
 
-  const html = \`<!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"><title>AXON Bulk Report — \${caseId}</title>
+  const html = `<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><title>AXON Bulk Report — ${caseId}</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
   *{margin:0;padding:0;box-sizing:border-box}
@@ -695,15 +695,15 @@ export async function downloadBulkPDF(report) {
       <div style="text-align:right">
         <span style="display:inline-block;padding:3px 12px;border-radius:4px;font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;margin-bottom:4px;">CONFIDENTIAL</span>
         <div class="mono" style="font-size:8px;color:#94a3b8;text-transform:uppercase;">SHA-256 INTEGRITY HASH</div>
-        <div class="mono" style="font-size:9px;color:#64748b;max-width:200px;word-break:break-all;">\${docHash}</div>
+        <div class="mono" style="font-size:9px;color:#64748b;max-width:200px;word-break:break-all;">${docHash}</div>
       </div>
     </div>
     <h1>Bulk Investigation Engine Master Report</h1>
     <p style="color:#64748b;font-size:12px;margin-bottom:16px">High-throughput forensic processing identifying systemic threats and clustered illicit behavior.</p>
     <div class="grid4">
-      <div class="cell"><div class="label">Report ID</div><div class="val mono" style="color:#0284c7;font-size:11px">\${caseId}</div></div>
-      <div class="cell"><div class="label">Date</div><div class="val">\${dateStr}</div></div>
-      <div class="cell"><div class="label">Time (UTC)</div><div class="val mono">\${timeStr}</div></div>
+      <div class="cell"><div class="label">Report ID</div><div class="val mono" style="color:#0284c7;font-size:11px">${caseId}</div></div>
+      <div class="cell"><div class="label">Date</div><div class="val">${dateStr}</div></div>
+      <div class="cell"><div class="label">Time (UTC)</div><div class="val mono">${timeStr}</div></div>
       <div class="cell"><div class="label">Status</div><div class="val" style="color:#16a34a">FINAL</div></div>
     </div>
   </div>
@@ -712,14 +712,14 @@ export async function downloadBulkPDF(report) {
   <div style="display:flex;gap:20px;margin-bottom:16px;">
     <div style="flex:1">
       <div class="grid4" style="margin-bottom:12px">
-        <div class="cell"><div class="label">Total Processed</div><div class="val" style="font-size:18px;">\${report.total_processed || 0}</div></div>
-        <div class="cell"><div class="label">Successful</div><div class="val" style="font-size:18px;color:#16a34a">\${report.successful || 0}</div></div>
-        <div class="cell"><div class="label">Failed</div><div class="val" style="font-size:18px;color:#dc2626">\${report.failed || 0}</div></div>
-        <div class="cell"><div class="label">Batch ID</div><div class="val mono" style="font-size:8px;">\${_esc(report.bulk_batch_id || 'N/A')}</div></div>
+        <div class="cell"><div class="label">Total Processed</div><div class="val" style="font-size:18px;">${report.total_processed || 0}</div></div>
+        <div class="cell"><div class="label">Successful</div><div class="val" style="font-size:18px;color:#16a34a">${report.successful || 0}</div></div>
+        <div class="cell"><div class="label">Failed</div><div class="val" style="font-size:18px;color:#dc2626">${report.failed || 0}</div></div>
+        <div class="cell"><div class="label">Batch ID</div><div class="val mono" style="font-size:8px;">${_esc(report.bulk_batch_id || 'N/A')}</div></div>
       </div>
-      <div class="verdict-box" style="border-left-color:\${consensusColor}">
+      <div class="verdict-box" style="border-left-color:${consensusColor}">
         <div style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:2px">Automated Threat Assessment</div>
-        <p style="font-size:12px;color:#0f172a;font-weight:700">\${_esc(consensusMessage)}</p>
+        <p style="font-size:12px;color:#0f172a;font-weight:700">${_esc(consensusMessage)}</p>
       </div>
     </div>
   </div>
@@ -727,19 +727,19 @@ export async function downloadBulkPDF(report) {
   <h2><span class="bar" style="background:#dc2626"></span>2. Risk Distribution Matrix</h2>
   <div class="grid4" style="margin-bottom:16px;">
     <div class="risk-box" style="background:#fef2f2;border-color:#fecaca;">
-      <div class="val mono" style="font-size:32px;font-weight:800;color:#dc2626;line-height:1">\${CRITICAL}</div>
+      <div class="val mono" style="font-size:32px;font-weight:800;color:#dc2626;line-height:1">${CRITICAL}</div>
       <div class="label" style="font-size:10px;color:#dc2626;margin-top:6px;font-weight:bold;">CRITICAL</div>
     </div>
     <div class="risk-box" style="background:#fff7ed;border-color:#fed7aa;">
-      <div class="val mono" style="font-size:32px;font-weight:800;color:#ea580c;line-height:1">\${HIGH}</div>
+      <div class="val mono" style="font-size:32px;font-weight:800;color:#ea580c;line-height:1">${HIGH}</div>
       <div class="label" style="font-size:10px;color:#ea580c;margin-top:6px;font-weight:bold;">HIGH</div>
     </div>
     <div class="risk-box" style="background:#fefce8;border-color:#fef08a;">
-      <div class="val mono" style="font-size:32px;font-weight:800;color:#ca8a04;line-height:1">\${MEDIUM}</div>
+      <div class="val mono" style="font-size:32px;font-weight:800;color:#ca8a04;line-height:1">${MEDIUM}</div>
       <div class="label" style="font-size:10px;color:#ca8a04;margin-top:6px;font-weight:bold;">MEDIUM</div>
     </div>
     <div class="risk-box" style="background:#f0fdf4;border-color:#bbf7d0;">
-      <div class="val mono" style="font-size:32px;font-weight:800;color:#16a34a;line-height:1">\${LOW}</div>
+      <div class="val mono" style="font-size:32px;font-weight:800;color:#16a34a;line-height:1">${LOW}</div>
       <div class="label" style="font-size:10px;color:#16a34a;margin-top:6px;font-weight:bold;">LOW</div>
     </div>
   </div>
@@ -747,20 +747,20 @@ export async function downloadBulkPDF(report) {
   <h2><span class="bar" style="background:#ea580c"></span>3. Entity Roster</h2>
   <table>
     <thead><tr><th style="width:20px">#</th><th style="width:120px">Address</th><th>Name</th><th style="width:120px">Risk Rating</th><th>MITRE/Verdict</th><th style="width:50px">Status</th></tr></thead>
-    <tbody>\${resultsHTML}</tbody>
+    <tbody>${resultsHTML}</tbody>
   </table>
 
   <div class="footer">
     <p><strong style="color:#64748b">DISCLAIMER:</strong> This report was generated by AXON v2.0 Bulk Investigation Engine. Findings should be independently verified before use in legal proceedings.</p>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
       <span class="mono" style="font-size:8px;color:#94a3b8">AXON BLOCKCHAIN INTELLIGENCE v2.0</span>
-      <span class="mono" style="font-size:8px;color:#94a3b8">Case \${caseId} · END OF REPORT</span>
+      <span class="mono" style="font-size:8px;color:#94a3b8">Case ${caseId} · END OF REPORT</span>
     </div>
   </div>
   <div class="cls-banner" style="border-top:2px solid #fecaca;border-bottom:none;margin-top:16px">CONFIDENTIAL — AXON BLOCKCHAIN INTELLIGENCE — FOR AUTHORIZED RECIPIENTS ONLY</div>
-</div></body></html>\`;
+</div></body></html>`;
 
-  _triggerPDFDownload(html, \`AXON-\${caseId}-Bulk-Report\`);
+  _triggerPDFDownload(html, `AXON-${caseId}-Bulk-Report`);
 }
 
 // ─── INTERNAL HELPERS ─────────────────────────────────────────────────────────

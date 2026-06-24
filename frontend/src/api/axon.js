@@ -55,6 +55,18 @@ export const getCrossChainHoldings = async (address) => {
   return response.json();
 };
 
+export const resolveChain = async (address) => {
+  const response = await fetch(`${API_BASE}/scan/chain-resolution/${address}`);
+  if (!response.ok) throw new Error('Failed to resolve chain');
+  return response.json();
+};
+
+export const resolveChainAI = async (address) => {
+  const response = await fetch(`${API_BASE}/scan/chain-resolution-ai/${address}`);
+  if (!response.ok) throw new Error('Failed to resolve chain via AI');
+  return response.json();
+};
+
 export const getIntelWallets = async (query = '', page = 1, limit = 50, category = '', threat = '') => {
   const params = new URLSearchParams({ q: query, page, limit, category, threat });
   const response = await fetch(`${API_BASE}/intel/wallets?${params}`);

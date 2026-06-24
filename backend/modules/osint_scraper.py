@@ -3,7 +3,7 @@ import httpx
 from duckduckgo_search import DDGS
 from bs4 import BeautifulSoup
 from typing import Dict, Any, List
-
+import time
 async def search_reddit(address: str, client: httpx.AsyncClient) -> List[Dict]:
     """Search Reddit for mentions of the address using pushshift or standard json."""
     results = []
@@ -88,14 +88,20 @@ async def search_web_mentions(address: str) -> Dict[str, List[Dict]]:
     general_query = f'"{address}" -site:twitter.com -site:x.com -site:reddit.com'
     general_task = loop.run_in_executor(None, _sync_ddgs_search, general_query)
     
-    twitter_results, general_results = await asyncio.gather(twitter_task, general_task)
+    try:
+        twitter_results, general_results = await asyncio.wait_for(
+            asyncio.gather(twitter_task, general_task), timeout=10.0
+        )
+    except asyncio.TimeoutError:
+        print(f"[OSINT] DDGS web search timed out for {address}")
+        twitter_results, general_results = [], []
     
     return {
         "twitter": twitter_results,
         "general_web": general_results
     }
 
-async def run_osint_scan(address: str) -> Dict[str, Any]:
+async def run_osint_scan(address: str, chain: str = "Ethereum") -> Dict[str, Any]:
     """
     Run a full OSINT sweep for a given blockchain address.
     Returns structured data from Reddit, GitHub, ENS, Twitter, and General Web.

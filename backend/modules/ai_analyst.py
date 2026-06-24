@@ -23,41 +23,73 @@ import os
 import httpx
 import json
 import asyncio
+import random
 
 # ─── MODEL REGISTRY ────────────────────────────────────────────────────────────
 MODELS = {
-    "fast":        "llama-3.1-8b-instant",      # Quick scans + bulk
-    "prosecution": "llama-3.3-70b-versatile",    # Deep: find red flags
-    "defense":     "llama-3.1-8b-instant",       # Deep: find legit reasons
-    "judge":       "llama-3.3-70b-versatile",    # Deep: final synthesis
+    "fast":        "llama-3.1-8b-instant",               # Groq (Bulk / Contracts)
+    "smart":       "llama-3.3-70b-versatile",            # Groq (Smarter, used for chain resolution)
+    "prosecution": "meta-llama/llama-3.3-70b-instruct:free", # OpenRouter (Deep Scans)
+    "defense":     "qwen/qwen-2.5-72b-instruct:free",        # OpenRouter (Deep Scans)
+    "judge":       "google/gemini-2.0-flash-exp:free",       # OpenRouter (Deep Scans)
 }
 
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
+OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 
 def _get_groq_key():
-    """Read key at call time, not import time."""
-    return os.environ.get("GROQ_API_KEY", "")
+    """Read all available Groq keys and return one randomly."""
+    keys = []
+    
+    # Check comma-separated list if provided
+    keys_str = os.environ.get("GROQ_API_KEYS", "")
+    if keys_str:
+        keys.extend([k.strip() for k in keys_str.split(",") if k.strip()])
+        
+    # Check individual keys explicitly
+    for key_name in ["GROQ_API_KEY", "GROQ_API_KEY1", "GROQ_API_KEY2"]:
+        val = os.environ.get(key_name, "").strip()
+        if val and val not in keys:
+            keys.append(val)
+            
+    if not keys:
+        return ""
+    return random.choice(keys)
 
 
-async def _call_groq(model: str, system_prompt: str, user_prompt: str,
+def _get_openrouter_key():
+    """Read OpenRouter API key."""
+    return os.environ.get("OPENROUTER_API_KEY", "")
+
+
+async def _call_api(model: str, system_prompt: str, user_prompt: str,
                      temperature: float = 0.2, max_tokens: int = 600) -> dict:
-    """Make a single Groq API call and return parsed JSON."""
+    """Make an API call to OpenRouter or Groq based on model name."""
     fallback = {
         "hypothesis": "AI analysis unavailable.",
         "mitre_tag": "N/A",
         "verdict": "Manual verification required."
     }
 
-    key = _get_groq_key()
+    is_openrouter = "/" in model
+    api_url = OPENROUTER_API_URL if is_openrouter else GROQ_API_URL
+    key = _get_openrouter_key() if is_openrouter else _get_groq_key()
+    provider_name = "OpenRouter" if is_openrouter else "Groq"
+
     if not key:
-        print(f"[AI_ANALYST] WARNING: GROQ_API_KEY is EMPTY — check .env")
+        print(f"[AI_ANALYST] WARNING: API Key for {provider_name} is EMPTY")
         return fallback
 
     headers = {
         "Authorization": f"Bearer {key}",
         "Content-Type": "application/json"
     }
+
+    if is_openrouter:
+        headers["HTTP-Referer"] = "https://github.com/axon-forensics"
+        headers["X-Title"] = "Axon Forensic Engine"
+
     payload = {
         "model": model,
         "response_format": {"type": "json_object"},
@@ -71,12 +103,14 @@ async def _call_groq(model: str, system_prompt: str, user_prompt: str,
 
     try:
         async with httpx.AsyncClient(timeout=45.0) as client:
-            response = await client.post(GROQ_API_URL, headers=headers, json=payload)
+            response = await client.post(api_url, headers=headers, json=payload)
 
             if response.status_code == 429:
-                print(f"[AI_ANALYST] Rate limited on {model}, waiting 3s...")
+                print(f"[AI_ANALYST] Rate limited on {model} ({provider_name}), waiting 3s...")
                 await asyncio.sleep(3.0)
-                response = await client.post(GROQ_API_URL, headers=headers, json=payload)
+                if not is_openrouter:
+                    headers["Authorization"] = f"Bearer {_get_groq_key()}"
+                response = await client.post(api_url, headers=headers, json=payload)
 
             if response.status_code != 200:
                 print(f"[AI_ANALYST] {model} API Error {response.status_code}: {response.text[:200]}")
@@ -100,7 +134,7 @@ async def _call_groq(model: str, system_prompt: str, user_prompt: str,
 
 async def generate_summary(prompt: str) -> dict:
     """Original interface — single fast model. Used by quick scans and bulk."""
-    return await _call_groq(
+    return await _call_api(
         model=MODELS["fast"],
         system_prompt=(
             "You are Axon AI, an elite cybersecurity forensic engine. "
@@ -141,8 +175,8 @@ async def generate_dual_quick_ratings(evidence_context: str, entity_type: str = 
 Respond with ONLY valid JSON."""
 
     alpha_result, beta_result = await asyncio.gather(
-        _call_groq(MODELS["fast"], agent_system, agent_prompt, temperature=0.2, max_tokens=200),
-        _call_groq(MODELS["defense"], agent_system, agent_prompt, temperature=0.3, max_tokens=200),
+        _call_api(MODELS["fast"], agent_system, agent_prompt, temperature=0.2, max_tokens=200),
+        _call_api(MODELS["defense"], agent_system, agent_prompt, temperature=0.3, max_tokens=200),
         return_exceptions=True
     )
 
@@ -225,8 +259,8 @@ Respond with ONLY valid JSON with exactly these keys:
 
     # Run both in parallel
     prosecution_result, defense_result = await asyncio.gather(
-        _call_groq(MODELS["prosecution"], prosecution_system, prosecution_prompt, temperature=0.3, max_tokens=500),
-        _call_groq(MODELS["defense"], defense_system, defense_prompt, temperature=0.3, max_tokens=500),
+        _call_api(MODELS["prosecution"], prosecution_system, prosecution_prompt, temperature=0.3, max_tokens=500),
+        _call_api(MODELS["defense"], defense_system, defense_prompt, temperature=0.3, max_tokens=500),
         return_exceptions=True
     )
 
@@ -275,7 +309,7 @@ Respond with ONLY valid JSON with exactly these keys:
   "consensus_level": "UNANIMOUS if both agree, MAJORITY if judge sides with one, SPLIT if genuinely unclear",
   "judge_reasoning": "1-2 sentences explaining why you sided with prosecution or defense"}}"""
 
-    judge_result = await _call_groq(
+    judge_result = await _call_api(
         MODELS["judge"], judge_system, judge_prompt,
         temperature=0.15, max_tokens=600
     )
@@ -319,6 +353,40 @@ Respond with ONLY valid JSON with exactly these keys:
 
     return final
 
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# UNKNOWN CHAIN RESOLUTION (AI Fallback)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+async def resolve_unknown_chain(address: str) -> dict:
+    """Uses a fast AI model to attempt to identify the chain format of an unknown address."""
+    print(f"[AI_ANALYST] Attempting to resolve unknown chain for address: {address}")
+    system_prompt = (
+        "You are an elite cryptocurrency forensic expert. "
+        "Your task is to identify the blockchain network that uses the provided wallet address format. "
+        "If you are reasonably confident, provide the chain name, the most trusted block explorer URL, "
+        "and the official website of the cryptocurrency/blockchain. If it is impossible to determine, say Unknown. "
+        "Respond ONLY in valid JSON with exactly these keys: "
+        "'chain' (string, e.g., 'Monero', 'Cardano', 'Ripple', 'Unknown'), "
+        "'explorer_url' (string, e.g., 'https://xmrchain.net/search?value=<address>', or null), "
+        "'official_website' (string, e.g., 'https://getmonero.org', or null), "
+        "'confidence' (integer 0-100)."
+    )
+    user_prompt = f"Identify the blockchain network for this address: {address}\nRemember to replace <address> in the explorer URL with the actual address if possible, or leave it as a template."
+    
+    result = await _call_api(
+        model=MODELS["smart"],
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        temperature=0.1,
+        max_tokens=200
+    )
+    
+    # Fallback structure if the AI fails
+    if not isinstance(result, dict) or "chain" not in result:
+        return {"chain": "Unknown", "explorer_url": None, "official_website": None, "confidence": 0}
+        
+    return result
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # SMART ROUTER — Picks quick or dual analysis based on scan depth

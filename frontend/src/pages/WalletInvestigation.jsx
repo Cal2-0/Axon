@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import GraphView from '../components/GraphView';
-import SmartAddressInput from '../components/SmartAddressInput';
+import SmartAddressInput, { isValidAddress } from '../components/SmartAddressInput';
 import ForensicReport from '../components/ForensicReport';
 import { downloadWalletPDF } from '../utils/pdfExport';
 import { formatINR, formatIndian } from '../utils/indianFormat';
@@ -328,6 +328,7 @@ export default function WalletInvestigation({ caseId }) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [crossChain, setCrossChain] = useState(null);
+  const [chainData, setChainData] = useState(null);
   const [isDeepDiveActive, setIsDeepDiveActive] = useState(false);
   const [deepDiveStatus, setDeepDiveStatus] = useState('');
   const [deepDiveError, setDeepDiveError] = useState('');
@@ -335,6 +336,8 @@ export default function WalletInvestigation({ caseId }) {
   const [showReport, setShowReport] = useState(false);
   const [ethPrice, setEthPrice] = useState({ usd: 3500, inr: 290500 });
   const [reportHash, setReportHash] = useState(null);
+  const [isAiAnalyzingChain, setIsAiAnalyzingChain] = useState(false);
+  const [aiOneCardResult, setAiOneCardResult] = useState(null);
   const location = useLocation();
 
   useEffect(() => {
@@ -366,13 +369,31 @@ export default function WalletInvestigation({ caseId }) {
     setResult(null);
     setDeepDiveResult(null);
     setCrossChain(null);
+    setChainData(null);
     
     try {
-      const { scanWallet, getCrossChainHoldings } = await import('../api/axon');
-      const profile = await scanWallet(targetAddress.trim(), caseId);
+      const { scanWallet, getCrossChainHoldings, resolveChain } = await import('../api/axon');
+      
+      const chainInfo = await resolveChain(targetAddress.trim());
+      setChainData(chainInfo);
+
+      let profile;
+      try {
+        profile = await scanWallet(targetAddress.trim(), caseId);
+      } catch (err) {
+        // Fallback to error profile
+        profile = {
+          identity: { address: targetAddress.trim(), tag: 'EXTERNAL', label: `${chainInfo?.chain || 'Unknown'} Wallet`, ethBalance: 'N/A', totalVolumeUSD: 'N/A' },
+          risk: { score: 0, label: 'ERROR', mlClassification: 'Unknown', anomalyScore: 0, factors: [] },
+          osint: { summary: `Failed to scan address. Error: ${err.message}`, aliases: [], walletMentions: 0 },
+          exchange: { detected: false, findings: [], cashOutEvents: 0, totalCashOutUSD: '$0', summary: 'N/A' },
+          mixer: { detected: false, findings: [], bridgeActivity: [], launderingIndicators: [], totalMixedETH: '0' },
+          graph: { nodes: [], edges: [] }
+        };
+      }
       setResult(profile);
 
-      if (autoDeepDive) {
+      if (autoDeepDive && chainInfo.type === 'EVM') {
         setIsDeepDiveActive(true);
         setDeepDiveStatus('Running full deep scan (1000 txs + 3-AI Prosecution/Defense/Judge pipeline)...');
         scanWallet(targetAddress.trim(), caseId, 'deep').then(deepResult => {
@@ -413,6 +434,8 @@ export default function WalletInvestigation({ caseId }) {
 
   const handleAnalyze = (e) => {
     if (e) e.preventDefault();
+    if (!isValidAddress(address.trim())) return; // Prevent investigating unknown
+    setAiOneCardResult(null);
     runAnalysis(address);
   };
 
@@ -437,6 +460,24 @@ export default function WalletInvestigation({ caseId }) {
       setIsDeepDiveActive(false);
     }
   };
+
+  const handleAiChainAnalyze = async (targetAddress = address) => {
+    if (!targetAddress || !targetAddress.trim()) return;
+    setIsAiAnalyzingChain(true);
+    setAiOneCardResult(null);
+    try {
+      const { resolveChainAI } = await import('../api/axon');
+      const aiInfo = await resolveChainAI(targetAddress.trim());
+      setAiOneCardResult(aiInfo);
+      setChainData(aiInfo); // Also update the main display if it's there
+    } catch (err) {
+      console.error(err);
+      alert('AI Chain Analysis failed.');
+    } finally {
+      setIsAiAnalyzingChain(false);
+    }
+  };
+
 
   const handleExport = () => {
     const json = JSON.stringify(result, null, 2);
@@ -471,29 +512,39 @@ export default function WalletInvestigation({ caseId }) {
         <div className="flex flex-col md:flex-row gap-4 items-start md:items-end">
           <SmartAddressInput
             value={address}
-            onChange={setAddress}
+            onChange={(val) => { setAddress(val); setAiOneCardResult(null); }}
             onSubmit={handleAnalyze}
             loading={loading}
             placeholder="0x... or search by name (e.g. Vitalik, Tornado, Binance)"
           />
-          <button type="submit" disabled={loading || !address.trim()} className="axon-button axon-button-primary px-8 py-3.5 min-w-[160px] font-bold" id="wallet-analyze-btn">
-            {loading ? (
-              <>
-                <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                </svg>
-                Analyzing...
-              </>
-            ) : (
-              <>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
-                Investigate
-              </>
-            )}
-          </button>
+          <div className="flex gap-2">
+            <button type="button" onClick={() => handleAiChainAnalyze(address)} disabled={isAiAnalyzingChain || !address.trim()} className="axon-button px-6 py-3.5 min-w-[140px] font-bold bg-axon-purple/20 border border-axon-purple/50 text-axon-purple hover:bg-axon-purple hover:text-white transition-colors whitespace-nowrap">
+              {isAiAnalyzingChain ? (
+                <svg className="animate-spin w-5 h-5 inline mr-2" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+              ) : (
+                <svg className="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+              )}
+              Which Coin?
+            </button>
+            <button type="submit" disabled={loading || !address.trim() || !isValidAddress(address.trim())} className="axon-button axon-button-primary px-8 py-3.5 min-w-[160px] font-bold" id="wallet-analyze-btn" title={!isValidAddress(address.trim()) && address.trim() ? "Invalid Format. Click 'Which Coin?' to identify." : ""}>
+              {loading ? (
+                <>
+                  <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                  </svg>
+                  Analyzing...
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                  Investigate
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
 
@@ -504,6 +555,39 @@ export default function WalletInvestigation({ caseId }) {
           ))}
         </div>
       </form>
+
+      {/* Simple AI Card Result */}
+      {aiOneCardResult && (
+        <div className="glass-panel p-6 border border-axon-purple/40 animate-fade-in bg-gradient-to-r from-axon-bg to-axon-purple/5">
+          <div className="flex items-center gap-3 mb-2">
+            <span className="text-xl">🤖</span>
+            <h3 className="text-lg font-bold text-white tracking-tight">AI Coin Identification</h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+            <div className="p-3 bg-axon-card rounded-lg border border-axon-border">
+              <div className="text-[10px] uppercase font-bold text-axon-text-dim mb-1">Most Likely Crypto</div>
+              <div className="text-base font-mono text-axon-cyan font-bold">{aiOneCardResult.chain}</div>
+              <div className="text-[10px] text-axon-text-dim mt-1">Confidence: {aiOneCardResult.confidence}%</div>
+            </div>
+            {aiOneCardResult.official_website && (
+              <div className="p-3 bg-axon-card rounded-lg border border-axon-border">
+                <div className="text-[10px] uppercase font-bold text-axon-text-dim mb-1">Official Website</div>
+                <a href={aiOneCardResult.official_website} target="_blank" rel="noreferrer" className="text-base font-medium text-axon-purple hover:underline truncate block">
+                  {aiOneCardResult.official_website.replace(/^https?:\/\//, '')}
+                </a>
+              </div>
+            )}
+            {aiOneCardResult.explorer_url && (
+              <div className="p-3 bg-axon-card rounded-lg border border-axon-border">
+                <div className="text-[10px] uppercase font-bold text-axon-text-dim mb-1">Block Explorer</div>
+                <a href={aiOneCardResult.explorer_url.replace('<address>', address)} target="_blank" rel="noreferrer" className="text-sm font-medium text-blue-400 hover:underline break-all block">
+                  View Address on Explorer ↗
+                </a>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Loading State */}
       {loading && (
@@ -565,24 +649,59 @@ export default function WalletInvestigation({ caseId }) {
 
           {/* ── 1. Identity Panel ─────────────────────────────────────── */}
           <CollapsibleSection color="cyan" icon="🔍" title="Wallet Identity">
-            <div className="flex items-center gap-3 mb-4">
-              <span 
-                className="font-mono text-base text-white break-all cursor-pointer hover:text-axon-cyan transition-colors"
-                onClick={() => navigator.clipboard.writeText(result.identity.address)}
-                title="Click to copy"
-              >
-                {result.identity.address}
-              </span>
-              <CopyButton text={result.identity.address} />
-              <span className={`shrink-0 px-2 py-0.5 text-xs font-bold rounded border ${
-                result.identity.tag === 'HACKER' || result.identity.tag === 'CRITICAL' ? 'bg-red-500/20 text-red-400 border-red-500/40'
-                : result.identity.tag === 'PUBLIC FIGURE' || result.identity.tag === 'LOW' ? 'bg-axon-green/20 text-axon-green border-axon-green/40'
-                : 'bg-axon-cyan/20 text-axon-cyan border-axon-cyan/40'
-              }`}>{result.identity.tag}</span>
-              {result.identity.entityClass && (
-                <span className="shrink-0 px-2 py-0.5 text-[10px] font-bold font-mono tracking-widest text-axon-purple bg-axon-purple/10 border border-axon-purple/30 rounded uppercase">
-                  {result.identity.entityClass} ×{result.identity.classModifier || 1.0}
+            <div className="flex flex-col gap-3 mb-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <span 
+                  className="font-mono text-base text-white break-all cursor-pointer hover:text-axon-cyan transition-colors"
+                  onClick={() => navigator.clipboard.writeText(result.identity.address)}
+                  title="Click to copy"
+                >
+                  {result.identity.address}
                 </span>
+                <CopyButton text={result.identity.address} />
+                <span className={`shrink-0 px-2 py-0.5 text-xs font-bold rounded border ${
+                  result.identity.tag === 'HACKER' || result.identity.tag === 'CRITICAL' ? 'bg-red-500/20 text-red-400 border-red-500/40'
+                  : result.identity.tag === 'PUBLIC FIGURE' || result.identity.tag === 'LOW' ? 'bg-axon-green/20 text-axon-green border-axon-green/40'
+                  : result.identity.tag === 'EXTERNAL' ? 'bg-axon-orange/20 text-axon-orange border-axon-orange/40'
+                  : 'bg-axon-cyan/20 text-axon-cyan border-axon-cyan/40'
+                }`}>{result.identity.tag}</span>
+                {chainData && chainData.chain && (
+                  <span className="shrink-0 px-2 py-0.5 text-[10px] font-bold font-mono tracking-widest text-axon-orange bg-axon-orange/10 border border-axon-orange/30 rounded uppercase">
+                    CHAIN: {chainData.chain}
+                  </span>
+                )}
+                {result.identity.entityClass && (
+                  <span className="shrink-0 px-2 py-0.5 text-[10px] font-bold font-mono tracking-widest text-axon-purple bg-axon-purple/10 border border-axon-purple/30 rounded uppercase">
+                    {result.identity.entityClass} ×{result.identity.classModifier || 1.0}
+                  </span>
+                )}
+              </div>
+              
+              {chainData && chainData.explorer_url && (
+                 <div className="flex items-center gap-2">
+                   <a href={chainData.explorer_url.replace('<address>', result.identity.address)} target="_blank" rel="noreferrer" className="axon-button text-[10px] px-3 py-1.5 gap-1.5 bg-axon-bg border-axon-border hover:border-axon-cyan hover:text-white transition-colors">
+                     🔗 View in Block Explorer
+                     <svg className="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                   </a>
+                   {chainData.official_website && (
+                     <a href={chainData.official_website} target="_blank" rel="noreferrer" className="axon-button text-[10px] px-3 py-1.5 gap-1.5 bg-axon-bg border-axon-border hover:border-axon-purple hover:text-white transition-colors">
+                       🌐 Official Website
+                     </a>
+                   )}
+                 </div>
+              )}
+              {chainData && chainData.chain === 'Unknown' && (
+                <div className="mt-2">
+                  <button onClick={handleAiChainAnalyze} disabled={isAiAnalyzingChain} className="axon-button text-xs px-4 py-2 gap-1.5 bg-blue-600/20 border-blue-500/50 text-blue-400 hover:bg-blue-600 hover:text-white transition-colors">
+                    {isAiAnalyzingChain ? (
+                      <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    ) : (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                    )}
+                    {isAiAnalyzingChain ? 'Analyzing...' : 'AI Analyze Unknown Chain'}
+                  </button>
+                  <p className="text-[10px] text-axon-text-dim mt-1.5">Run a small AI analysis to tell what crypto is most likely and find the official website.</p>
+                </div>
               )}
             </div>
             <div className="text-axon-text-muted text-sm font-semibold mb-4">{result.identity.label}</div>
@@ -593,15 +712,32 @@ export default function WalletInvestigation({ caseId }) {
             )}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="bg-axon-bg rounded-lg border border-axon-border p-3 text-center col-span-2">
-                <div className="text-lg font-bold font-mono text-axon-cyan">
-                  {result.identity.ethBalance + (String(result.identity.ethBalance).includes('ETH') ? '' : ' ETH')}
-                </div>
-                <div className="text-[11px] text-axon-text-dim mt-0.5 font-mono">
-                  ≈ ${(parseFloat(String(result.identity.ethBalance).replace(/,/g, '').replace(' ETH','')) * ethPrice.usd).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})} USD
-                  <span className="mx-2">|</span>
-                  ≈ {formatINR(parseFloat(String(result.identity.ethBalance).replace(/,/g, '').replace(' ETH','')) * ethPrice.inr)} INR
-                </div>
-                <div className="text-[10px] text-axon-text-dim uppercase tracking-wider mt-1.5">ETH Balance (Live Value)</div>
+                {(() => {
+                  const isEVM = chainData?.type === 'EVM';
+                  const sym = chainData?.chain === 'Bitcoin' ? 'BTC' : chainData?.chain === 'Solana' ? 'SOL' : chainData?.chain === 'Tron' ? 'TRX' : 'ETH';
+                  const rawBalance = String(result.identity.ethBalance).replace(/,/g, '').replace(/ ETH| BTC| SOL| TRX/g, '');
+                  const balNum = parseFloat(rawBalance);
+                  
+                  return (
+                    <>
+                      <div className="text-lg font-bold font-mono text-axon-cyan">
+                        {result.identity.ethBalance === 'N/A' ? 'N/A' : `${rawBalance} ${sym}`}
+                      </div>
+                      <div className="text-[11px] text-axon-text-dim mt-0.5 font-mono">
+                        {isEVM && !isNaN(balNum) && ethPrice ? (
+                          <>
+                            ≈ ${(balNum * ethPrice.usd).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})} USD
+                            <span className="mx-2">|</span>
+                            ≈ {formatINR(balNum * ethPrice.inr)} INR
+                          </>
+                        ) : (
+                          <>Value Calculation N/A for {sym}</>
+                        )}
+                      </div>
+                      <div className="text-[10px] text-axon-text-dim uppercase tracking-wider mt-1.5">{sym} Balance (Live Value)</div>
+                    </>
+                  );
+                })()}
               </div>
               <div className="bg-axon-bg rounded-lg border border-axon-border p-3 text-center col-span-2">
                 <div className="text-xl font-bold font-mono text-axon-orange mt-1">
@@ -701,7 +837,7 @@ export default function WalletInvestigation({ caseId }) {
 
                 <div className="text-sm font-bold text-axon-text-dim uppercase tracking-wider mb-3">Risk Factors</div>
                 <div className="space-y-3">
-                  {result.risk.factors.map((f, i) => (
+                  {result.risk?.factors?.map((f, i) => (
                     <div key={i} className="flex items-start gap-3 p-3 bg-axon-bg rounded-lg border border-axon-border">
                       <span className="text-base shrink-0">{f.icon}</span>
                       <div className="flex-1 min-w-0 text-sm text-white">{f.reason}</div>
@@ -958,7 +1094,7 @@ export default function WalletInvestigation({ caseId }) {
               <div>
                 <div className="text-xs font-bold text-axon-text-dim uppercase tracking-wider mb-3">Discovered Aliases</div>
                 <div className="flex flex-wrap gap-2">
-                  {result.osint.aliases.map(a => (
+                  {result.osint?.aliases?.map(a => (
                     <span key={a} className="px-2.5 py-1 text-xs font-mono bg-axon-purple/10 border border-axon-purple/30 text-axon-purple rounded">{a}</span>
                   ))}
                 </div>
@@ -980,24 +1116,26 @@ export default function WalletInvestigation({ caseId }) {
 
           {/* ── 5. Exchange Detection ────────────────────────────────── */}
           <CollapsibleSection color="green" icon="🏦" title="Exchange Detection" badge="ATTRIBUTION ENGINE" defaultOpen={false}>
-            <div className="mb-4 p-3 bg-axon-green/5 border border-axon-green/20 rounded-lg text-sm text-axon-text-muted">
-              {result.exchange.summary}
-            </div>
+            {result.exchange?.summary && (
+              <div className="mb-4 p-3 bg-axon-green/5 border border-axon-green/20 rounded-lg text-sm text-axon-text-muted">
+                {result.exchange.summary}
+              </div>
+            )}
             <div className="grid grid-cols-3 gap-4 mb-6">
               <div className="bg-axon-bg rounded border border-axon-border p-4 text-center">
-                <div className="text-2xl font-bold font-mono text-axon-orange">{result.exchange.findings.length}</div>
-                <div className="text-xs text-axon-text-dim mt-1 uppercase tracking-wider">Exchanges Matched</div>
+                <div className="text-2xl font-bold font-mono text-axon-cyan">{result.exchange?.exchangeCounterparties ?? 'N/A'}</div>
+                <div className="text-xs text-axon-text-dim mt-1 uppercase tracking-wider">Exchange Nodes</div>
               </div>
               <div className="bg-axon-bg rounded border border-axon-border p-4 text-center">
-                <div className="text-2xl font-bold font-mono text-axon-green">{result.exchange.cashOutEvents}</div>
-                <div className="text-xs text-axon-text-dim mt-1 uppercase tracking-wider">Cash-Out Events</div>
+                <div className="text-2xl font-bold font-mono text-axon-cyan">{result.exchange?.cashOutEvents ?? 'N/A'}</div>
+                <div className="text-xs text-axon-text-dim mt-1 uppercase tracking-wider">Cash Out Events</div>
               </div>
-              <div className="bg-axon-bg rounded border border-axon-border p-4 text-center">
-                <div className="text-xl font-bold font-mono text-red-400">{result.exchange.totalCashOutUSD}</div>
-                <div className="text-xs text-axon-text-dim mt-1 uppercase tracking-wider">Total Cashed Out</div>
+              <div className="bg-axon-bg rounded border border-axon-cyan/30 p-4 col-span-2 text-center">
+                <div className="text-2xl font-bold font-mono text-white">{result.exchange?.totalCashOutUSD ?? 'N/A'}</div>
+                <div className="text-xs text-axon-cyan mt-1 uppercase tracking-wider">Total Value Cashed Out</div>
               </div>
             </div>
-            {result.exchange.findings.length > 0 && (
+            {result.exchange?.findings?.length > 0 && (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm font-mono">
                   <thead>
@@ -1008,7 +1146,7 @@ export default function WalletInvestigation({ caseId }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {result.exchange.findings.map((f, i) => (
+                    {result.exchange?.findings?.map((f, i) => (
                       <tr key={i} className="border-b border-axon-border/50 hover:bg-axon-card/30 transition-colors">
                         <td className="py-3 pr-4 font-bold text-white">{f.exchange}</td>
                         <td className="py-3 pr-4 text-axon-cyan text-xs">{f.address}</td>
@@ -1042,15 +1180,15 @@ export default function WalletInvestigation({ caseId }) {
           <CollapsibleSection color="orange" icon="🌪️" title="Mixer Detection" badge="LAUNDERING ANALYSIS" defaultOpen={false}>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
               <div className="bg-axon-bg rounded border border-red-500/30 p-4 text-center">
-                <div className="text-2xl font-bold font-mono text-red-400">{result.mixer.findings.length}</div>
-                <div className="text-xs text-axon-text-dim mt-1 uppercase tracking-wider">Mixers Detected</div>
+                <div className="text-2xl font-bold font-mono text-axon-orange">{result.mixer?.mixerCounterparties ?? 'N/A'}</div>
+                <div className="text-xs text-axon-text-dim mt-1 uppercase tracking-wider">Mixer Nodes</div>
               </div>
               <div className="bg-axon-bg rounded border border-axon-border p-4 text-center">
-                <div className="text-2xl font-bold font-mono text-axon-orange">{result.mixer.bridgeActivity.length}</div>
+                <div className="text-2xl font-bold font-mono text-axon-orange">{result.mixer?.bridgeActivity ? result.mixer.bridgeActivity.length : 'N/A'}</div>
                 <div className="text-xs text-axon-text-dim mt-1 uppercase tracking-wider">Bridges Used</div>
               </div>
               <div className="bg-axon-bg rounded border border-red-500/30 p-4 col-span-2 text-center">
-                <div className="text-xl font-bold font-mono text-red-400">{result.mixer.totalMixedETH}</div>
+                <div className="text-xl font-bold font-mono text-red-400">{result.mixer?.totalMixedETH ?? 'N/A'}</div>
                 <div className="text-xs text-axon-text-dim mt-1 uppercase tracking-wider">Total Mixed</div>
               </div>
             </div>
@@ -1066,7 +1204,7 @@ export default function WalletInvestigation({ caseId }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {result.mixer.findings.map((f, i) => (
+                  {result.mixer?.findings?.map((f, i) => (
                     <tr key={i} className="border-b border-axon-border/50 hover:bg-axon-card/30 transition-colors">
                       <td className="py-3 pr-4 text-white">{f.mixer}</td>
                       <td className="py-3 pr-4 text-axon-orange">{f.txCount.toLocaleString()}</td>
@@ -1086,11 +1224,11 @@ export default function WalletInvestigation({ caseId }) {
               </table>
             </div>
 
-            {result.mixer.bridgeActivity.length > 0 && (
+            {result.mixer?.bridgeActivity?.length > 0 && (
               <>
                 <div className="text-xs font-bold text-axon-text-dim uppercase tracking-wider mb-3">Bridge Activity</div>
                 <div className="grid md:grid-cols-2 gap-3 mb-6">
-                  {result.mixer.bridgeActivity.map((b, i) => (
+                  {result.mixer?.bridgeActivity?.map((b, i) => (
                     <div key={i} className="flex items-center justify-between p-3 bg-axon-bg rounded border border-axon-border">
                       <span className="text-sm text-white">{b.bridge}</span>
                       <div className="text-right">
@@ -1105,7 +1243,7 @@ export default function WalletInvestigation({ caseId }) {
 
             <div className="text-xs font-bold text-axon-text-dim uppercase tracking-wider mb-3">Laundering Indicators</div>
             <div className="space-y-2">
-              {result.mixer.launderingIndicators.map((ind, i) => (
+              {result.mixer?.launderingIndicators?.map((ind, i) => (
                 <div key={i} className="flex items-start gap-3 p-3 bg-red-500/5 rounded border border-red-500/20">
                   <span className="text-red-400 text-xs mt-0.5 shrink-0">▸</span>
                   <span className="text-xs text-axon-text-muted">{ind}</span>

@@ -43,7 +43,12 @@ export default function GraphView({ data }) {
 
     // Deep-clone nodes/edges so D3 mutation doesn't affect React state
     let nodes = data.nodes.map(n => ({ ...n }));
-    let edges = data.edges.map(e => ({ ...e }));
+    
+    // SAFEGUARD: Remove dangling edges (where source or target node is missing)
+    const validNodeIds = new Set(nodes.map(n => n.id));
+    let edges = data.edges
+      .filter(e => validNodeIds.has(e.source) && validNodeIds.has(e.target))
+      .map(e => ({ ...e }));
 
     if (viewMode === 'sankey') {
       // ─── SANKEY FLOW DIAGRAM ──────────────────────────────────────────
