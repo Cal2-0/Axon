@@ -6,9 +6,10 @@ import time
 import httpx
 import asyncio
 from sqlalchemy.orm import Session
-from database.models import InvestigationLog
+from database.models import InvestigationLog, MaliciousWallet
 from modules.osint_scraper import run_osint_scan
 from modules.ai_analyst import generate_dual_quick_ratings
+from modules.wallet_scorer import _compute_l5_deterministic, _compute_dormancy_persistence
 
 import os
 
@@ -163,8 +164,41 @@ async def scan_sol_wallet(address: str, db: Session, depth: str = "quick", case_
             signals.append(("Hyper-frequency trading: 50+ txs in <1 hour", "⚡", "L1"))
             entity_class = "High Frequency Bot"
 
-    raw_score = (l1*0.4) + (l2*0.2) + (l3*0.2)
-    final_score = min(int(raw_score * class_modifier), 100)
+    # Database attribution lookup
+    wallet_db = db.query(MaliciousWallet).filter(MaliciousWallet.address.ilike(address)).first()
+    if wallet_db:
+        print(f"[SOL_SCORER] DB match: {wallet_db.label if wallet_db else 'None'}")
+        if wallet_db.threat_level == "CRITICAL":
+            entity_class = "Confirmed Threat Actor"
+            class_modifier = 1.5
+        else:
+            entity_class = "Suspect Wallet"
+            class_modifier = 1.3
+        
+        l4 = min(100, wallet_db.risk_score)
+        icon = "💥" if wallet_db.threat_level == "CRITICAL" else "⚠️"
+        signals.append(("THREAT DB: {} — {}".format(wallet_db.label, wallet_db.category), icon, "L4"))
+        if wallet_db.sanctioned:
+            l4 = 100
+            signals.append(("SANCTIONED ENTITY — legally designated threat actor", "🚫", "L4"))
+
+    # Compute Layer 5 and dormancy adjustments
+    l5 = _compute_l5_deterministic(l1, l2, l3, l4, entity_class, 0.0, 0.0)
+
+    date_counts = {}
+    for ts in timestamps:
+        day = time.strftime("%Y-%m-%d", time.gmtime(ts))
+        date_counts[day] = date_counts.get(day, 0) + 1
+
+    persistence_floor, dormancy_modifier = _compute_dormancy_persistence(
+        timestamps, l1, l2, l3, l4, date_counts, 0
+    )
+
+    raw_score = (l1*0.3) + (l2*0.25) + (l3*0.2) + (l4*0.15) + (l5*0.1)
+    final_score = int(raw_score * class_modifier * dormancy_modifier)
+    final_score = max(final_score, persistence_floor)
+    final_score = min(max(final_score, 0), 100)
+
     label = "CRITICAL" if final_score >= 80 else "HIGH" if final_score >= 60 else "MEDIUM" if final_score >= 40 else "LOW"
 
     # AI Analysis

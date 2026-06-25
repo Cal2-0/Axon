@@ -569,20 +569,26 @@ export default function WalletInvestigation({ caseId }) {
               <div className="text-base font-mono text-axon-cyan font-bold">{aiOneCardResult.chain}</div>
               <div className="text-[10px] text-axon-text-dim mt-1">Confidence: {aiOneCardResult.confidence}%</div>
             </div>
-            {aiOneCardResult.official_website && (
+            {aiOneCardResult.official_website && typeof aiOneCardResult.official_website === 'string' && aiOneCardResult.official_website !== 'null' && aiOneCardResult.official_website !== 'None' && (
               <div className="p-3 bg-axon-card rounded-lg border border-axon-border">
                 <div className="text-[10px] uppercase font-bold text-axon-text-dim mb-1">Official Website</div>
                 <a href={aiOneCardResult.official_website} target="_blank" rel="noreferrer" className="text-base font-medium text-axon-purple hover:underline truncate block">
-                  {aiOneCardResult.official_website.replace(/^https?:\/\//, '')}
+                  {String(aiOneCardResult.official_website).replace(/^https?:\/\//, '')}
                 </a>
               </div>
             )}
-            {aiOneCardResult.explorer_url && (
+            {aiOneCardResult.explorer_url && typeof aiOneCardResult.explorer_url === 'string' && aiOneCardResult.explorer_url !== 'null' && aiOneCardResult.explorer_url !== 'None' && (
               <div className="p-3 bg-axon-card rounded-lg border border-axon-border">
                 <div className="text-[10px] uppercase font-bold text-axon-text-dim mb-1">Block Explorer</div>
-                <a href={aiOneCardResult.explorer_url.replace('<address>', address)} target="_blank" rel="noreferrer" className="text-sm font-medium text-blue-400 hover:underline break-all block">
+                <a href={String(aiOneCardResult.explorer_url).replace('<address>', address)} target="_blank" rel="noreferrer" className="text-sm font-medium text-blue-400 hover:underline break-all block">
                   View Address on Explorer ↗
                 </a>
+              </div>
+            )}
+            {aiOneCardResult.description && typeof aiOneCardResult.description === 'string' && (
+              <div className="mt-4 p-4 bg-[#1e293b]/50 border border-axon-cyan/20 rounded-lg text-sm text-gray-300 leading-relaxed font-sans">
+                <div className="text-[10px] font-bold text-axon-cyan/70 uppercase tracking-widest mb-2">Network Intelligence</div>
+                {aiOneCardResult.description}
               </div>
             )}
           </div>
@@ -677,9 +683,9 @@ export default function WalletInvestigation({ caseId }) {
                 )}
               </div>
               
-              {chainData && chainData.explorer_url && (
+              {chainData && chainData.explorer_url && typeof chainData.explorer_url === 'string' && chainData.explorer_url !== 'null' && chainData.explorer_url !== 'None' && (
                  <div className="flex items-center gap-2">
-                   <a href={chainData.explorer_url.replace('<address>', result.identity.address)} target="_blank" rel="noreferrer" className="axon-button text-[10px] px-3 py-1.5 gap-1.5 bg-axon-bg border-axon-border hover:border-axon-cyan hover:text-white transition-colors">
+                   <a href={String(chainData.explorer_url).replace('<address>', result.identity.address)} target="_blank" rel="noreferrer" className="axon-button text-[10px] px-3 py-1.5 gap-1.5 bg-axon-bg border-axon-border hover:border-axon-cyan hover:text-white transition-colors">
                      🔗 View in Block Explorer
                      <svg className="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                    </a>
@@ -1068,7 +1074,18 @@ export default function WalletInvestigation({ caseId }) {
               </div>
             ) : (
               <div className="mb-4 p-3 bg-axon-purple/5 border border-axon-purple/20 rounded-lg text-sm text-axon-text-muted">
-                {result.osint.summary}
+                {typeof result.osint?.summary === 'string' ? result.osint.summary : (
+                  <div>
+                    <p className="font-semibold mb-1 text-white text-xs uppercase tracking-wider text-axon-purple/80">OSINT Sweep Metrics</p>
+                    <ul className="list-disc pl-4 space-y-1 mt-1 text-xs">
+                      {result.osint?.summary?.ens_name && <li>ENS Domain: {result.osint.summary.ens_name}</li>}
+                      <li>Reddit Mentions: <span className="font-mono text-white font-bold">{result.osint?.summary?.reddit_mentions || 0}</span></li>
+                      <li>GitHub Mentions: <span className="font-mono text-white font-bold">{result.osint?.summary?.github_mentions || 0}</span></li>
+                      <li>Twitter Mentions: <span className="font-mono text-white font-bold">{result.osint?.summary?.twitter_mentions || 0}</span></li>
+                      <li>General Web Mentions: <span className="font-mono text-white font-bold">{result.osint?.summary?.web_mentions || 0}</span></li>
+                    </ul>
+                  </div>
+                )}
               </div>
             )}
             

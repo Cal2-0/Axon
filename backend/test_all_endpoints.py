@@ -7,7 +7,7 @@ import io
 # Fix Windows encoding
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
 
-BASE_URL = "http://127.0.0.1:8000"
+BASE_URL = "http://127.0.0.1:8001"
 
 async def test_endpoints():
     print("=" * 60)
@@ -64,6 +64,8 @@ async def test_endpoints():
 
             print(f"\n    OSINT / Groq AI:")
             summary = osint.get("summary", "")
+            if isinstance(summary, dict):
+                summary = str(summary)
             if "Error" in summary:
                 print(f"       [FAIL] Groq Error: {summary[:100]}")
             else:

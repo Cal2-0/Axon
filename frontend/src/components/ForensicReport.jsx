@@ -261,7 +261,20 @@ export default function ForensicReport({ result, onClose }) {
           <div className="sec">
             <h2><span className="bar" style={{ background: '#a78bfa' }}></span>4. OSINT Intelligence</h2>
             <div className="conclusion-box" style={{ background: 'rgba(167,139,250,0.04)', borderColor: 'rgba(167,139,250,0.15)', marginBottom: 16 }}>
-              <p style={{ lineHeight: 1.7 }}>{result.osint.summary}</p>
+              {typeof result.osint?.summary === 'string' ? (
+                <p style={{ lineHeight: 1.7 }}>{result.osint.summary}</p>
+              ) : (
+                <div style={{ lineHeight: 1.7, fontSize: 13 }}>
+                  <strong style={{ display: 'block', marginBottom: 4, color: '#a78bfa' }}>OSINT Sweep Metrics:</strong>
+                  <ul style={{ margin: 0, paddingLeft: 20 }}>
+                    {result.osint?.summary?.ens_name && <li>ENS Domain: {result.osint.summary.ens_name}</li>}
+                    <li>Reddit Mentions: <strong>{result.osint?.summary?.reddit_mentions || 0}</strong></li>
+                    <li>GitHub Mentions: <strong>{result.osint?.summary?.github_mentions || 0}</strong></li>
+                    <li>Twitter Mentions: <strong>{result.osint?.summary?.twitter_mentions || 0}</strong></li>
+                    <li>General Web Mentions: <strong>{result.osint?.summary?.web_mentions || 0}</strong></li>
+                  </ul>
+                </div>
+              )}
             </div>
 
             <h3>4.1 Discovered Aliases</h3>

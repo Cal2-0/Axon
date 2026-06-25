@@ -30,7 +30,7 @@ MODELS = {
     "fast":        "llama-3.1-8b-instant",               # Groq (Bulk / Contracts)
     "smart":       "llama-3.3-70b-versatile",            # Groq (Smarter, used for chain resolution)
     "prosecution": "meta-llama/llama-3.3-70b-instruct:free", # OpenRouter (Deep Scans)
-    "defense":     "qwen/qwen-2.5-72b-instruct:free",        # OpenRouter (Deep Scans)
+    "defense":     "meta-llama/llama-3.3-70b-instruct:free",        # OpenRouter (Deep Scans)
     "judge":       "google/gemini-2.0-flash-exp:free",       # OpenRouter (Deep Scans)
 }
 
@@ -363,16 +363,18 @@ async def resolve_unknown_chain(address: str) -> dict:
     print(f"[AI_ANALYST] Attempting to resolve unknown chain for address: {address}")
     system_prompt = (
         "You are an elite cryptocurrency forensic expert. "
-        "Your task is to identify the blockchain network that uses the provided wallet address format. "
+        "The user will provide either a wallet address OR a coin/blockchain name (e.g. 'solana', 'bitcoin', 'ETH', 'trx'). "
+        "Your task is to identify the blockchain network or coin. "
         "If you are reasonably confident, provide the chain name, the most trusted block explorer URL, "
         "and the official website of the cryptocurrency/blockchain. If it is impossible to determine, say Unknown. "
         "Respond ONLY in valid JSON with exactly these keys: "
-        "'chain' (string, e.g., 'Monero', 'Cardano', 'Ripple', 'Unknown'), "
+        "'chain' (string, e.g., 'Monero', 'Cardano', 'Solana', 'Ripple', 'Unknown'), "
         "'explorer_url' (string, e.g., 'https://xmrchain.net/search?value=<address>', or null), "
         "'official_website' (string, e.g., 'https://getmonero.org', or null), "
+        "'description' (string, a 2-3 sentence overview of the coin, its consensus mechanism, and market purpose, or null if unknown), "
         "'confidence' (integer 0-100)."
     )
-    user_prompt = f"Identify the blockchain network for this address: {address}\nRemember to replace <address> in the explorer URL with the actual address if possible, or leave it as a template."
+    user_prompt = f"Identify the blockchain network or coin for this input: {address}\nRemember to replace <address> in the explorer URL with the actual address if possible, or leave it as a template."
     
     result = await _call_api(
         model=MODELS["smart"],

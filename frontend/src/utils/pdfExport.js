@@ -354,7 +354,15 @@ export async function downloadWalletPDF(result) {
   <!-- ═══ 4. OSINT INTELLIGENCE ═══ -->
   <h2 class="page-break"><span class="bar" style="background:#7c3aed"></span>4. OSINT Intelligence</h2>
   <div class="verdict-box" style="border-left-color:#7c3aed;margin-bottom:12px">
-    <p style="line-height:1.7">${_esc(result.osint?.summary || hypothesis)}</p>
+    <p style="line-height:1.7">
+      ${_esc(
+        typeof result.osint?.summary === 'string'
+          ? result.osint.summary
+          : (result.osint?.summary && typeof result.osint.summary === 'object'
+            ? `OSINT Sweep completed. Reddit Mentions: ${result.osint.summary.reddit_mentions || 0}, GitHub Mentions: ${result.osint.summary.github_mentions || 0}, Twitter Mentions: ${result.osint.summary.twitter_mentions || 0}, Web Mentions: ${result.osint.summary.web_mentions || 0}.`
+            : hypothesis)
+      )}
+    </p>
   </div>
 
   ${aliases ? `<h3>4.1 Discovered Aliases</h3><div style="margin-bottom:12px">${aliases}</div>` : ''}
