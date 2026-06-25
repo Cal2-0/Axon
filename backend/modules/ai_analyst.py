@@ -29,9 +29,9 @@ import random
 MODELS = {
     "fast":        "llama-3.1-8b-instant",               # Groq (Bulk / Contracts)
     "smart":       "llama-3.3-70b-versatile",            # Groq (Smarter, used for chain resolution)
-    "prosecution": "meta-llama/llama-3.3-70b-instruct:free", # OpenRouter (Deep Scans)
-    "defense":     "meta-llama/llama-3.3-70b-instruct:free",        # OpenRouter (Deep Scans)
-    "judge":       "google/gemini-2.0-flash-exp:free",       # OpenRouter (Deep Scans)
+    "prosecution": "llama-3.3-70b-versatile",            # Groq (Deep Scans)
+    "defense":     "llama-3.3-70b-versatile",            # Groq (Deep Scans)
+    "judge":       "llama-3.3-70b-versatile",            # Groq (Deep Scans)
 }
 
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"

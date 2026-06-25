@@ -111,6 +111,7 @@ async def get_chain_resolution_ai(address: str):
         "type": "UNKNOWN_AI_RESOLVED",
         "explorer_url": ai_info.get("explorer_url"),
         "official_website": ai_info.get("official_website"),
+        "description": ai_info.get("description"),
         "method": "ai",
         "confidence": ai_info.get("confidence", 0)
     }
