@@ -2,6 +2,9 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const SAMPLES = [
+  { "address": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa", "name": "Bitcoin Genesis Block", "type": "Wallet", "expectedRisk": "LOW", "description": "Satoshi Nakamoto's original Genesis block address." },
+  { "address": "TE2RzoSV3wFK99w6J9UnnZ4vLfXYoxvRwP", "name": "Justin Sun (TRON)", "type": "Wallet", "expectedRisk": "LOW", "description": "Justin Sun's public TRON wallet." },
+  { "address": "DFndh9WcBjjTG5hZzXW9v4n3jA2U6vFf3K", "name": "Dogecoin Party Wallet", "type": "Wallet", "expectedRisk": "UNSUPPORTED", "description": "Used to test the identification engine's circuit breakers for unsupported chains." },
   { "address": "0x56D8B635A7C88Fd1104D23d632AF40c1C3Aac4e3", "name": "Nomad Bridge Exploiter", "type": "Wallet", "expectedRisk": "CRITICAL", "description": "Wallet tied to the Nomad bridge free-for-all exploit." },
   { "address": "0x75A77dbDEab6E384D0E5cae2B70072D56EE140e6", "name": "Lazarus Group Sub-wallet", "type": "Wallet", "expectedRisk": "CRITICAL", "description": "Lazarus group wallet used to wash funds." },
   { "address": "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296", "name": "Justin Sun", "type": "Wallet", "expectedRisk": "LOW", "description": "Tron founder public wallet. High volume interactions." },
@@ -57,18 +60,18 @@ Targets:
 0x47CE0C6eD5B0Ce3d3A51f161bE5E26E51DdDbcE8
 0x12D66f87A04A9E220743712cE6d9bB1B5616B8Fc`;
 
-const STORY_2 = `WHALE WATCHING: ROUTINE CHECK
-=============================
+const STORY_2 = `MULTI-CHAIN WHALE WATCHING: ROUTINE CHECK
+=========================================
 
-During routine intelligence gathering, we identified massive addresses shifting liquidity across exchange infrastructure and decentralized aggregators. 
+During routine intelligence gathering, we identified massive addresses shifting liquidity across exchange infrastructure and decentralized aggregators, spanning Ethereum, Bitcoin, TRON, and even some unsupported meme chains. 
 
-We need to verify if these are simply legitimate whale/exchange movements or if there is malicious intent hidden in the transaction topology. Process these through the Bulk Scanner to generate a forensic consensus.
+We need to verify if these are simply legitimate whale movements or if there is malicious intent hidden in the transaction topology. Process these through the Bulk Scanner to test the engine's chain-agnostic capabilities.
 
 Targets:
 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045
-0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296
-0x28C6c06298d514Db089934071355E5743bf21d60
-0x71660c4005BA85c37ccec55d0C4493E66Fe775d3`;
+1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa
+TE2RzoSV3wFK99w6J9UnnZ4vLfXYoxvRwP
+DFndh9WcBjjTG5hZzXW9v4n3jA2U6vFf3K`;
 
 const STORY_3 = `EXPLOIT INVESTIGATION: MAJOR BREACHES
 =====================================

@@ -8,6 +8,10 @@ import time
 from sqlalchemy.orm import Session
 from modules.wallet_scorer import scan_wallet, _get_etherscan_key, _etherscan_get
 from modules.contract_scanner import scan_contract
+from modules.btc_scorer import scan_btc_wallet
+from modules.sol_scorer import scan_sol_wallet
+from modules.tron_scorer import scan_tron_wallet
+from modules.coin_identifier import resolve_chain_identity
 from database.models import InvestigationLog, VerificationReport
 import httpx
 import hashlib
@@ -27,10 +31,31 @@ async def _is_contract(address: str) -> bool:
 async def _process_address(address: str, db: Session, semaphore: asyncio.Semaphore, batch_id: str, case_id: int = None):
     async with semaphore:
         try:
-            if await _is_contract(address):
-                result = await scan_contract(address, db, depth="quick")
+            # Detect chain
+            identity = await resolve_chain_identity(address)
+            resolution = identity.get("resolution", "")
+            
+            result = None
+            if resolution in ("single_deterministic", "single_existence_confirmed", "multi_chain_active"):
+                # Use the primary/first candidate chain
+                chain = identity["candidates"][0]["chain"].lower()
+                
+                if chain == "bitcoin":
+                    result = await scan_btc_wallet(address, db, depth="quick", case_id=case_id)
+                elif chain == "solana":
+                    result = await scan_sol_wallet(address, db, depth="quick", case_id=case_id)
+                elif chain == "tron":
+                    result = await scan_tron_wallet(address, db, depth="quick", case_id=case_id)
+                elif chain.lower() in ["dogecoin", "litecoin", "unknown"]:
+                    return {"address": address, "status": "error", "error": f"Unsupported Chain ({chain})"}
+                else:
+                    # Treat as EVM compatible
+                    if await _is_contract(address):
+                        result = await scan_contract(address, db, depth="quick")
+                    else:
+                        result = await scan_wallet(address, db, depth="quick")
             else:
-                result = await scan_wallet(address, db, depth="quick")
+                return {"address": address, "status": "error", "error": "Unrecognized or unresolved address format"}
 
             
             # The scan_wallet function automatically writes to InvestigationLog.

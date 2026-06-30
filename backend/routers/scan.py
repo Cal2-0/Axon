@@ -9,7 +9,7 @@ from modules.wallet_scorer import scan_wallet
 from modules.contract_scanner import scan_contract
 from modules.cross_chain import get_cross_chain_holdings, detect_address_type
 from modules.bulk_scanner import run_bulk_scan
-from modules.ai_analyst import generate_dual_analysis, resolve_unknown_chain
+from modules.ai_analyst import generate_dual_analysis
 import asyncio
 
 router = APIRouter()
@@ -41,11 +41,13 @@ async def post_scan_wallet(req: ScanRequest, db: Session = Depends(get_db)):
     elif chain_type == "TRON":
         from modules.tron_scorer import scan_tron_wallet
         return await scan_tron_wallet(req.address, db, depth=req.depth, case_id=req.case_id)
-    else:
-        # Default to EVM
+    elif chain_type == "EVM":
         if req.depth == "deep":
             return await scan_wallet(req.address, db, depth="deep", case_id=req.case_id)
         return await scan_wallet(req.address, db, depth="quick", case_id=req.case_id)
+    else:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="Unsupported Chain. Only EVM, BTC, SOLANA, and TRON are currently supported for deep investigations.")
 
 @router.post("/contract")
 async def post_scan_contract(req: ScanRequest, db: Session = Depends(get_db)):
@@ -77,41 +79,31 @@ async def post_scan_bulk(req: BulkScanRequest, db: Session = Depends(get_db)):
 @router.get("/chain-resolution/{address}")
 async def get_chain_resolution(address: str):
     """
-    Determines the blockchain for a given wallet address.
-    If native detection fails, utilizes AI to suggest the chain and explorer.
+    Determines the blockchain for a given wallet address using deterministic regex,
+    cryptographic checksums, live EVM RPC probes, and AI tie-breakers for multi-chain ambiguity.
     """
-    native_info = detect_address_type(address)
-    chain_type = native_info["type"]
-    chain_name = native_info["chain"]
-    
-    if chain_type == "EVM":
-        return {"chain": chain_name, "type": chain_type, "explorer_url": f"https://etherscan.io/address/{address}", "method": "native"}
-    elif chain_type == "BTC":
-        return {"chain": chain_name, "type": chain_type, "explorer_url": f"https://blockchair.com/bitcoin/address/{address}", "method": "native"}
-    elif chain_type == "SOLANA":
-        return {"chain": chain_name, "type": chain_type, "explorer_url": f"https://solscan.io/account/{address}", "method": "native"}
-    elif chain_type == "TRON":
-        return {"chain": chain_name, "type": chain_type, "explorer_url": f"https://tronscan.org/#/address/{address}", "method": "native"}
-    else:
-        return {
-            "chain": "Unknown",
-            "type": "UNKNOWN",
-            "explorer_url": None,
-            "method": "native",
-            "confidence": 0
-        }
-@router.get("/chain-resolution-ai/{address}")
-async def get_chain_resolution_ai(address: str):
+    from modules.coin_identifier import resolve_chain_identity
+    return await resolve_chain_identity(address)
+
+@router.get("/trace/{address}")
+async def get_fund_trace(address: str, max_hops: int = 3, db: Session = Depends(get_db)):
     """
-    Explicitly triggers the AI Analyst to determine the blockchain for a given wallet address.
+    Traces outgoing funds from an address using a bounded BFS search.
+    Stops tracing a branch if it hits a known entity in the Attribution DB.
     """
-    ai_info = await resolve_unknown_chain(address)
-    return {
-        "chain": ai_info.get("chain", "Unknown"),
-        "type": "UNKNOWN_AI_RESOLVED",
-        "explorer_url": ai_info.get("explorer_url"),
-        "official_website": ai_info.get("official_website"),
-        "description": ai_info.get("description"),
-        "method": "ai",
-        "confidence": ai_info.get("confidence", 0)
-    }
+    from modules.fund_tracer import run_trace
+    return await run_trace(address, db, max_hops=max_hops)
+
+@router.get("/report/{report_id}/pdf")
+async def get_report_pdf(report_id: str, db: Session = Depends(get_db)):
+    """
+    Downloads a Verifiable Chain of Custody PDF for a given VerificationReport ID.
+    """
+    from fastapi.responses import Response
+    from modules.report_generator import generate_pdf_report
+    try:
+        pdf_bytes = generate_pdf_report(report_id, db)
+        return Response(content=pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=AXON_Report_{report_id}.pdf"})
+    except ValueError as e:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail=str(e))
