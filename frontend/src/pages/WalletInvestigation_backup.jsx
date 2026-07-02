@@ -165,12 +165,12 @@ export default function WalletInvestigation({ caseId }) {
       const { scanDeepDive } = await import('../api/axon');
       const aiResult = await scanDeepDive('wallet', result.evidence_context);
       
-      // Update result state with the new AI verdict
+      // Update result state with the new Analytical Engine verdict
       setResult(prev => ({
         ...prev,
         risk: {
           ...prev.risk,
-          aiAnalysis: aiResult
+          analyticalSynthesis: aiResult
         }
       }));
     } catch (err) {
@@ -388,7 +388,7 @@ export default function WalletInvestigation({ caseId }) {
                     { l: 'L2: Graph', v: result.risk.layers?.L2 },
                     { l: 'L3: Economic', v: result.risk.layers?.L3 },
                     { l: 'L4: Attribution', v: result.risk.layers?.L4 },
-                    { l: 'L5: AI Delta', v: result.risk.layers?.L5 }
+                    { l: 'L5: Analytical Engine Delta', v: result.risk.layers?.L5 }
                   ].map(a => (
                      <div key={a.l} className="flex justify-between items-center text-[11px] mb-1">
                         <span className="text-axon-text-muted">{a.l}</span>
@@ -411,26 +411,26 @@ export default function WalletInvestigation({ caseId }) {
               </div>
               <div className="flex-1 min-w-0">
                 
-                {/* AI Forensic Analysis */}
-                {result.risk.aiAnalysis && result.risk.aiAnalysis.engine_type === 'dual_adversarial' ? (
+                {/* Analytical Engine Forensic Analysis */}
+                {result.risk.analyticalSynthesis && result.risk.analyticalSynthesis.engine_type === 'dual_adversarial' ? (
                   <div className="mb-6 font-sans text-sm leading-relaxed">
                     <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4">
                       {/* Prosecution Panel */}
                       <div className="bg-red-950/20 rounded-xl border border-red-500/30 p-4">
                         <div className="flex items-center justify-between mb-3 border-b border-red-500/20 pb-2">
                           <span className="px-2 py-0.5 text-[10px] font-mono font-bold tracking-widest text-white bg-red-600 rounded">PROSECUTION AI</span>
-                          <span className="text-xs font-mono font-bold text-red-400">{result.risk.aiAnalysis.prosecution_risk} RISK</span>
+                          <span className="text-xs font-mono font-bold text-red-400">{result.risk.analyticalSynthesis.prosecution_risk} RISK</span>
                         </div>
-                        <p className="text-gray-300 font-mono text-xs break-words">{result.risk.aiAnalysis.prosecution_summary}</p>
+                        <p className="text-gray-300 font-mono text-xs break-words">{result.risk.analyticalSynthesis.prosecution_summary}</p>
                       </div>
 
                       {/* Defense Panel */}
                       <div className="bg-[#064e3b]/40 rounded-xl border border-emerald-500/30 p-4">
                         <div className="flex items-center justify-between mb-3 border-b border-emerald-500/20 pb-2">
                           <span className="px-2 py-0.5 text-[10px] font-mono font-bold tracking-widest text-white bg-emerald-600 rounded">DEFENSE AI</span>
-                          <span className="text-xs font-mono font-bold text-emerald-400">{result.risk.aiAnalysis.defense_risk} RISK</span>
+                          <span className="text-xs font-mono font-bold text-emerald-400">{result.risk.analyticalSynthesis.defense_risk} RISK</span>
                         </div>
-                        <p className="text-gray-300 font-mono text-xs break-words">{result.risk.aiAnalysis.defense_summary}</p>
+                        <p className="text-gray-300 font-mono text-xs break-words">{result.risk.analyticalSynthesis.defense_summary}</p>
                       </div>
                     </div>
 
@@ -440,53 +440,53 @@ export default function WalletInvestigation({ caseId }) {
                       <div className="flex items-center justify-between mb-4 border-b border-blue-500/20 pb-2 relative z-10">
                         <div className="flex items-center gap-2">
                           <span className="px-2 py-0.5 text-[10px] font-mono font-bold tracking-widest text-white bg-blue-600 rounded">CHIEF JUDGE VERDICT</span>
-                          <span className="text-xs font-mono font-bold text-blue-400">{result.risk.aiAnalysis.mitre_tag || "N/A"}</span>
+                          <span className="text-xs font-mono font-bold text-blue-400">{result.risk.analyticalSynthesis.mitre_tag || "N/A"}</span>
                         </div>
                         <div className="flex items-center gap-3">
                           <span className="text-[10px] font-bold text-blue-400/70 uppercase tracking-widest">Confidence</span>
-                          <span className="text-xs font-mono font-bold text-white bg-blue-500/20 px-2 py-0.5 rounded">{result.risk.aiAnalysis.confidence}%</span>
+                          <span className="text-xs font-mono font-bold text-white bg-blue-500/20 px-2 py-0.5 rounded">{result.risk.analyticalSynthesis.confidence}%</span>
                         </div>
                       </div>
                       
                       <div className="mb-4 relative z-10">
                         <div className="text-[10px] font-bold text-blue-400/70 uppercase tracking-widest mb-1">Synthesized Hypothesis</div>
-                        <p className="text-gray-300 font-mono text-xs break-words">{result.risk.aiAnalysis.hypothesis}</p>
+                        <p className="text-gray-300 font-mono text-xs break-words">{result.risk.analyticalSynthesis.hypothesis}</p>
                       </div>
 
                       <div className="mb-4 relative z-10">
                         <div className="text-[10px] font-bold text-blue-400/70 uppercase tracking-widest mb-1">Judge Reasoning</div>
-                        <p className="text-gray-400 italic text-xs break-words border-l-2 border-blue-500/30 pl-3">{result.risk.aiAnalysis.judge_reasoning}</p>
+                        <p className="text-gray-400 italic text-xs break-words border-l-2 border-blue-500/30 pl-3">{result.risk.analyticalSynthesis.judge_reasoning}</p>
                       </div>
 
                       <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 relative z-10">
                         <div className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-1 flex justify-between">
                           <span>Final Executive Verdict</span>
-                          <span className="opacity-70">Consensus: {result.risk.aiAnalysis.consensus_level}</span>
+                          <span className="opacity-70">Consensus: {result.risk.analyticalSynthesis.consensus_level}</span>
                         </div>
-                        <p className="text-white font-bold break-words">{result.risk.aiAnalysis.verdict}</p>
+                        <p className="text-white font-bold break-words">{result.risk.analyticalSynthesis.verdict}</p>
                       </div>
                     </div>
                   </div>
-                ) : result.risk.aiAnalysis && result.risk.aiAnalysis.verdict ? (
+                ) : result.risk.analyticalSynthesis && result.risk.analyticalSynthesis.verdict ? (
                   <div className="mb-6 bg-[#1e293b]/50 rounded-xl border border-blue-500/30 p-5 font-sans text-sm leading-relaxed text-gray-200">
                     <div className="flex items-center gap-2 mb-4 border-b border-blue-500/20 pb-2">
                       <span className="px-2 py-0.5 text-[10px] font-mono font-bold tracking-widest text-white bg-blue-600 rounded">FORENSIC VERDICT</span>
-                      <span className="text-xs font-mono font-bold text-blue-400">{result.risk.aiAnalysis.mitre_tag || "N/A"}</span>
+                      <span className="text-xs font-mono font-bold text-blue-400">{result.risk.analyticalSynthesis.mitre_tag || "N/A"}</span>
                     </div>
                     
                     <div className="mb-4">
                       <div className="text-[10px] font-bold text-blue-400/70 uppercase tracking-widest mb-1">Plausible Hypothesis</div>
-                      <p className="text-gray-300 font-mono text-xs break-words">{result.risk.aiAnalysis.hypothesis}</p>
+                      <p className="text-gray-300 font-mono text-xs break-words">{result.risk.analyticalSynthesis.hypothesis}</p>
                     </div>
 
                     <div>
                       <div className="text-[10px] font-bold text-blue-400/70 uppercase tracking-widest mb-1">Executive Verdict</div>
-                      <p className="text-white font-bold break-words">{result.risk.aiAnalysis.verdict}</p>
+                      <p className="text-white font-bold break-words">{result.risk.analyticalSynthesis.verdict}</p>
                     </div>
 
                     <div className="mt-6 border-t border-blue-500/20 pt-4 flex flex-col sm:flex-row items-center justify-between gap-4">
                       <div className="text-xs text-blue-300/70 max-w-sm">
-                        This is a quick summary. For a comprehensive forensic analysis, run the Dual Adversarial AI Engine.
+                        This is a quick summary. For a comprehensive forensic analysis, run the Dual Adversarial Analytical Engine Engine.
                       </div>
                       <button
                         onClick={handleDeepDive}
@@ -517,16 +517,16 @@ export default function WalletInvestigation({ caseId }) {
           <div className="block">
             {/* ── 4. OSINT & Threat Alerts ──────────────────────────────────────── */}
             <CollapsibleSection color="purple" icon="🛰️" title="OSINT & Threat Alerts" badge="LIVE" defaultOpen={true}>
-            {result.osint.aiAnalysis && result.osint.aiAnalysis.verdict ? (
+            {result.osint.analyticalSynthesis && result.osint.analyticalSynthesis.verdict ? (
               <div className="mb-6 p-4 bg-axon-purple/5 border border-axon-purple/20 rounded-lg">
                 <div className="flex items-center gap-2 mb-3 border-b border-axon-purple/20 pb-2">
                   <span className="px-2 py-0.5 text-[10px] font-bold font-mono bg-axon-purple/20 text-axon-purple rounded">THREAT SUMMARY</span>
-                  <span className="text-xs font-bold text-white">{result.osint.aiAnalysis.mitre_tag || "N/A"}</span>
+                  <span className="text-xs font-bold text-white">{result.osint.analyticalSynthesis.mitre_tag || "N/A"}</span>
                 </div>
                 <div className="text-xs text-axon-text-dim uppercase tracking-widest mb-1 font-bold">Hypothesis</div>
-                <p className="text-sm text-axon-text-muted leading-relaxed mb-3">{result.osint.aiAnalysis.hypothesis}</p>
+                <p className="text-sm text-axon-text-muted leading-relaxed mb-3">{result.osint.analyticalSynthesis.hypothesis}</p>
                 <div className="text-xs text-axon-text-dim uppercase tracking-widest mb-1 font-bold">Verdict</div>
-                <p className="text-sm text-axon-purple font-bold leading-relaxed">{result.osint.aiAnalysis.verdict}</p>
+                <p className="text-sm text-axon-purple font-bold leading-relaxed">{result.osint.analyticalSynthesis.verdict}</p>
               </div>
             ) : (
               <div className="mb-4 p-3 bg-axon-purple/5 border border-axon-purple/20 rounded-lg text-sm text-axon-text-muted">

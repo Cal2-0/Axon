@@ -18,7 +18,7 @@ function buildMicroSummary(log) {
     ? ` Key signal: ${topSignal.reason.slice(0, 90)}${topSignal.reason.length > 90 ? '…' : ''}.`
     : '';
 
-  const classText = entity_class && entity_class !== 'Unknown EOA'
+  const classText = entity_class && entity_class !== 'Not Determined'
     ? ` Classified as ${entity_class}.`
     : '';
 
@@ -50,7 +50,7 @@ function ExpandedRow({ log }) {
       <td colSpan={7} className="px-6 py-4 border-b border-[#1e293b]">
         <div className="flex flex-col md:flex-row gap-6">
 
-          {/* AI micro-summary */}
+          {/* Analytical Engine micro-summary */}
           {summary && (
             <div className="flex-1 bg-blue-500/5 border border-blue-500/20 rounded-lg p-4">
               <div className="flex items-center gap-2 mb-2">

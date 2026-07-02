@@ -162,6 +162,8 @@ export default function ForensicReport({ result, onClose }) {
                 <div style={{ fontSize: 10, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>Threat Level</div>
                 <div className="mono" style={{ fontSize: 48, fontWeight: 800, color: riskColor, lineHeight: 1 }}>{result.risk.score}</div>
                 <div style={{ fontSize: 10, color: '#64748b', marginTop: 4 }}>/100</div>
+                <div style={{ fontSize: 9, color: '#a78bfa', marginTop: 8, textTransform: 'uppercase' }}>Behaviour: {result.risk.label}</div>
+                <div style={{ fontSize: 9, color: '#a78bfa', marginTop: 2, textTransform: 'uppercase' }}>Confidence: Medium</div>
                 <div style={{ width: '100%', height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 3, marginTop: 12, overflow: 'hidden' }}>
                   <div className="risk-fill" style={{ width: `${result.risk.score}%`, height: '100%', borderRadius: 3, background: riskColor }}></div>
                 </div>
@@ -218,10 +220,10 @@ export default function ForensicReport({ result, onClose }) {
           {/* ── 3. RISK ASSESSMENT ── */}
           <div className="sec">
             <h2><span className="bar" style={{ background: '#ef4444' }}></span>3. Risk Assessment</h2>
-            <p style={{ marginBottom: 16 }}>
-              The following table enumerates all identified risk indicators. Each factor is assigned a severity weight (penalty points) contributing
-              to the aggregate risk score. Factors are ordered by severity descending.
-            </p>
+            <div className="section-desc" style={{ marginBottom: 16 }}>
+              The following signals were detected and applied as penalties 
+              to the aggregate threat level. Factors are ordered by severity descending.
+            </div>
             <table>
               <thead>
                 <tr>
@@ -279,14 +281,14 @@ export default function ForensicReport({ result, onClose }) {
 
             <h3>4.1 Discovered Aliases</h3>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 16 }}>
-              {result.osint.aliases.map(a => <span key={a} className="tag tag-purple">{a}</span>)}
+              {(result.osint?.aliases || []).map(a => <span key={a} className="tag tag-purple">{a}</span>)}
             </div>
 
             <h3>4.2 Platform Verification</h3>
             <table>
               <thead><tr><th>Platform</th><th>Label</th><th>Verified</th></tr></thead>
               <tbody>
-                {result.osint.walletMentions.map((m, i) => (
+                {(result.osint?.walletMentions || []).map((m, i) => (
                   <tr key={i}>
                     <td className="mono" style={{ fontSize: 11 }}>{m.platform}</td>
                     <td>{m.label}</td>
@@ -298,7 +300,7 @@ export default function ForensicReport({ result, onClose }) {
 
             <div className="sec-bar"></div>
             <h3>4.3 GitHub Mentions</h3>
-            {result.osint.githubMentions.map((m, i) => (
+            {(result.osint?.githubMentions || []).map((m, i) => (
               <div key={i} className="finding">
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                   <span className="mono" style={{ fontSize: 11, color: '#22d3ee' }}>@{m.username}</span>
@@ -310,7 +312,7 @@ export default function ForensicReport({ result, onClose }) {
             ))}
 
             <h3 style={{ marginTop: 16 }}>4.4 Reddit Mentions</h3>
-            {result.osint.redditMentions.map((m, i) => (
+            {(result.osint?.redditMentions || []).map((m, i) => (
               <div key={i} className="finding">
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                   <span className="mono" style={{ fontSize: 11, color: '#f97316' }}>{m.subreddit}</span>
@@ -328,15 +330,15 @@ export default function ForensicReport({ result, onClose }) {
               <p style={{ lineHeight: 1.7 }}>{result.exchange.summary}</p>
             </div>
             <div className="grid3" style={{ marginBottom: 16 }}>
-              <div className="cell"><div className="label">Exchanges Identified</div><div className="val" style={{ fontSize: 22, color: '#f97316' }}>{result.exchange.findings.length}</div></div>
-              <div className="cell"><div className="label">Cash-Out Events</div><div className="val" style={{ fontSize: 22, color: '#22c55e' }}>{result.exchange.cashOutEvents}</div></div>
-              <div className="cell"><div className="label">Total Cashed Out</div><div className="val" style={{ fontSize: 18, color: '#ef4444' }}>{result.exchange.totalCashOutUSD}</div></div>
+              <div className="cell"><div className="label">Exchanges Identified</div><div className="val" style={{ fontSize: 22, color: '#f97316' }}>{(result.exchange?.findings || []).length}</div></div>
+              <div className="cell"><div className="label">Cash-Out Events</div><div className="val" style={{ fontSize: 22, color: '#22c55e' }}>{result.exchange?.cashOutEvents || 0}</div></div>
+              <div className="cell"><div className="label">Total Cashed Out</div><div className="val" style={{ fontSize: 18, color: '#ef4444' }}>{result.exchange?.totalCashOutUSD || '$0'}</div></div>
             </div>
-            {result.exchange.findings.length > 0 && (
+            {(result.exchange?.findings || []).length > 0 && (
               <table>
                 <thead><tr><th>Exchange</th><th>Address</th><th>Confidence</th><th>Type</th><th>Volume</th><th>Date</th><th>Status</th></tr></thead>
                 <tbody>
-                  {result.exchange.findings.map((f, i) => (
+                  {(result.exchange?.findings || []).map((f, i) => (
                     <tr key={i}>
                       <td style={{ fontWeight: 600, color: '#fff' }}>{f.exchange}</td>
                       <td className="mono" style={{ fontSize: 10, color: '#22d3ee' }}>{f.address}</td>
@@ -356,17 +358,17 @@ export default function ForensicReport({ result, onClose }) {
           <div className="sec">
             <h2><span className="bar" style={{ background: '#f97316' }}></span>6. Mixer & Laundering Analysis</h2>
             <div className="grid4" style={{ marginBottom: 16 }}>
-              <div className="cell"><div className="label">Mixers Detected</div><div className="val" style={{ fontSize: 22, color: '#ef4444' }}>{result.mixer.findings.length}</div></div>
-              <div className="cell"><div className="label">Bridges Used</div><div className="val" style={{ fontSize: 22, color: '#f97316' }}>{result.mixer.bridgeActivity.length}</div></div>
-              <div className="cell" style={{ gridColumn: 'span 2' }}><div className="label">Total Mixed Volume</div><div className="val" style={{ fontSize: 18, color: '#ef4444' }}>{result.mixer.totalMixedETH}</div></div>
+              <div className="cell"><div className="label">Mixers Detected</div><div className="val" style={{ fontSize: 22, color: '#ef4444' }}>{(result.mixer?.findings || []).length}</div></div>
+              <div className="cell"><div className="label">Bridges Used</div><div className="val" style={{ fontSize: 22, color: '#f97316' }}>{(result.mixer?.bridgeActivity || []).length}</div></div>
+              <div className="cell" style={{ gridColumn: 'span 2' }}><div className="label">Total Mixed Volume</div><div className="val" style={{ fontSize: 18, color: '#ef4444' }}>{result.mixer?.totalMixedETH || '0 ETH'}</div></div>
             </div>
 
-            {result.mixer.findings.length > 0 && (<>
+            {(result.mixer?.findings || []).length > 0 && (<>
               <h3>6.1 Mixer Usage Detail</h3>
               <table style={{ marginBottom: 16 }}>
                 <thead><tr><th>Pool</th><th>Transactions</th><th>Total ETH</th><th>First Use</th><th>Last Use</th><th>Risk</th></tr></thead>
                 <tbody>
-                  {result.mixer.findings.map((f, i) => (
+                  {(result.mixer?.findings || []).map((f, i) => (
                     <tr key={i}>
                       <td style={{ fontWeight: 600, color: '#fff' }}>{f.mixer}</td>
                       <td className="mono">{f.txCount.toLocaleString()}</td>
@@ -380,10 +382,10 @@ export default function ForensicReport({ result, onClose }) {
               </table>
             </>)}
 
-            {result.mixer.bridgeActivity.length > 0 && (<>
+            {(result.mixer?.bridgeActivity || []).length > 0 && (<>
               <h3>6.2 Cross-Chain Bridge Activity</h3>
               <div className="grid2" style={{ marginBottom: 16 }}>
-                {result.mixer.bridgeActivity.map((b, i) => (
+                {(result.mixer?.bridgeActivity || []).map((b, i) => (
                   <div key={i} className="cell" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span style={{ fontWeight: 600, color: '#fff' }}>{b.bridge}</span>
                     <div style={{ textAlign: 'right' }}>
@@ -396,7 +398,7 @@ export default function ForensicReport({ result, onClose }) {
             </>)}
 
             <h3>6.3 Laundering Pattern Indicators</h3>
-            {result.mixer.launderingIndicators.map((ind, i) => (
+            {(result.mixer?.launderingIndicators || []).map((ind, i) => (
               <div key={i} className="finding" style={{ background: 'rgba(239,68,68,0.03)', borderColor: 'rgba(239,68,68,0.12)' }}>
                 <span style={{ color: '#ef4444', marginRight: 8, fontWeight: 700 }}>▸</span>
                 {ind}
@@ -408,14 +410,14 @@ export default function ForensicReport({ result, onClose }) {
           <div className="sec">
             <h2><span className="bar" style={{ background: '#22d3ee' }}></span>7. Transaction Graph Topology</h2>
             <div className="grid2" style={{ marginBottom: 16 }}>
-              <div className="cell"><div className="label">Nodes Identified</div><div className="val" style={{ fontSize: 22, color: '#22d3ee' }}>{result.graph.nodes.length}</div></div>
-              <div className="cell"><div className="label">Edges / Links</div><div className="val" style={{ fontSize: 22, color: '#a78bfa' }}>{result.graph.edges.length}</div></div>
+              <div className="cell"><div className="label">Nodes Identified</div><div className="val" style={{ fontSize: 22, color: '#22d3ee' }}>{(result.graph?.nodes || []).length}</div></div>
+              <div className="cell"><div className="label">Edges / Links</div><div className="val" style={{ fontSize: 22, color: '#a78bfa' }}>{(result.graph?.edges || []).length}</div></div>
             </div>
             <h3>7.1 Node Classification Matrix</h3>
             <table>
-              <thead><tr><th>Node</th><th>Type</th><th>Risk Score</th><th>Classification</th></tr></thead>
+              <thead><tr><th>Node</th><th>Type</th><th>Threat Level</th><th>Classification</th></tr></thead>
               <tbody>
-                {result.graph.nodes.map((n, i) => (
+                {(result.graph?.nodes || []).map((n, i) => (
                   <tr key={i}>
                     <td style={{ fontWeight: 600, color: '#fff' }}>{n.label}</td>
                     <td className="mono" style={{ fontSize: 10, textTransform: 'uppercase', color: '#94a3b8' }}>{n.type}</td>
@@ -440,10 +442,10 @@ export default function ForensicReport({ result, onClose }) {
               </p>
               <p style={{ lineHeight: 1.8, marginBottom: 12 }}>
                 {result.risk.score >= 80
-                  ? `This address exhibits critical threat indicators requiring immediate action. ${result.risk.factors.length} high-severity risk factors were identified, including interactions with sanctioned entities, anomalous transaction patterns flagged by ML classification (${result.risk.mlClassification}, ${result.risk.anomalyScore}% confidence), and ${result.mixer.findings.length > 0 ? `confirmed usage of ${result.mixer.findings.length} mixing service(s) processing ${result.mixer.totalMixedETH}` : 'suspicious financial flow patterns'}.`
+                  ? `This address exhibits critical threat indicators requiring immediate action. ${(result.risk.factors || []).length} high-severity risk factors were identified, including interactions with sanctioned entities, anomalous transaction patterns flagged by ML classification (${result.risk.mlClassification}, ${result.risk.anomalyScore}% confidence), and ${(result.mixer?.findings || []).length > 0 ? `confirmed usage of ${(result.mixer?.findings || []).length} mixing service(s) processing ${result.mixer?.totalMixedETH}` : 'suspicious financial flow patterns'}.`
                   : result.risk.score >= 40
-                  ? `This address shows moderate risk indicators warranting ongoing monitoring. ${result.risk.factors.length} risk factors were identified. No immediate enforcement action is recommended at this time, but continued surveillance is advised.`
-                  : `This address presents low risk indicators consistent with normal blockchain usage. ${result.risk.factors.length} minor factors were noted but do not indicate malicious activity. No action required.`
+                  ? `This address shows moderate risk indicators warranting ongoing monitoring. ${(result.risk.factors || []).length} risk factors were identified. No immediate enforcement action is recommended at this time, but continued surveillance is advised.`
+                  : `This address presents low risk indicators consistent with normal blockchain usage. ${(result.risk.factors || []).length} minor factors were noted but do not indicate malicious activity. No action required.`
                 }
               </p>
             </div>

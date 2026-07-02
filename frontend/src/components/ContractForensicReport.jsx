@@ -163,9 +163,11 @@ export default function ContractForensicReport({ result, onClose }) {
             <div style={{ display: 'flex', gap: 24 }}>
               {/* Threat Level */}
               <div style={{ flexShrink: 0, width: 160, textAlign: 'center', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 10, padding: '20px 16px' }}>
-                <div style={{ fontSize: 10, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>Risk Score</div>
+                <div style={{ fontSize: 10, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: 8 }}>Threat Level</div>
                 <div className="mono" style={{ fontSize: 48, fontWeight: 800, color: riskColor, lineHeight: 1 }}>{result.risk.score}</div>
                 <div style={{ fontSize: 10, color: '#64748b', marginTop: 4 }}>/100</div>
+                <div style={{ fontSize: 9, color: '#a78bfa', marginTop: 8, textTransform: 'uppercase' }}>Behaviour: {result.risk.label}</div>
+                <div style={{ fontSize: 9, color: '#a78bfa', marginTop: 2, textTransform: 'uppercase' }}>Confidence: Medium</div>
                 <div style={{ width: '100%', height: 6, background: 'rgba(255,255,255,0.06)', borderRadius: 3, marginTop: 12, overflow: 'hidden' }}>
                   <div className="risk-fill" style={{ width: `${result.risk.score}%`, height: '100%', borderRadius: 3, background: riskColor }}></div>
                 </div>
@@ -411,7 +413,7 @@ export default function ContractForensicReport({ result, onClose }) {
               <p style={{ lineHeight: 1.8, marginBottom: 12 }}>
                 The automated security audit of <strong style={{ color: '#fff' }}>{result.identity.name}</strong> at
                 <span className="mono" style={{ color: '#a78bfa', fontSize: 11 }}> {result.identity.address.slice(0, 14)}...{result.identity.address.slice(-6)}</span> has been completed.
-                The contract received a risk score of <strong style={{ color: riskColor }}>{result.risk.score}/100 ({result.risk.label})</strong>.
+                The contract received a threat indicator level of <strong style={{ color: riskColor }}>{result.risk.score}/100 ({result.risk.label})</strong>.
               </p>
               <p style={{ lineHeight: 1.8, marginBottom: 12 }}>
                 {result.risk.score >= 80

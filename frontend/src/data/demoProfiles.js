@@ -131,7 +131,7 @@ export const DEMO_PROFILES = {
           "reason": "High volume of anonymous transactions"
         }
       ],
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "AI has classified this as CRITICAL risk. Tagged as MONEY MULE.",
         "hypothesis": "Based on transaction timing and volume.",
         "mitre_tag": "T1566"
@@ -156,7 +156,7 @@ export const DEMO_PROFILES = {
         "alias_291"
       ],
       "walletMentions": 1,
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "OSINT confirms pattern.",
         "hypothesis": "Actor active on forums.",
         "mitre_tag": "OSINT"
@@ -264,7 +264,7 @@ export const DEMO_PROFILES = {
           "reason": "Normal holding pattern"
         }
       ],
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "AI has classified this as SAFE risk. Tagged as PUBLIC FIGURE.",
         "hypothesis": "Based on transaction timing and volume.",
         "mitre_tag": "N/A"
@@ -289,7 +289,7 @@ export const DEMO_PROFILES = {
         "alias_491"
       ],
       "walletMentions": 8,
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "OSINT confirms pattern.",
         "hypothesis": "Actor active on forums.",
         "mitre_tag": "OSINT"
@@ -380,7 +380,7 @@ export const DEMO_PROFILES = {
           "reason": "High volume of anonymous transactions"
         }
       ],
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "AI has classified this as HIGH risk. Tagged as HACKER.",
         "hypothesis": "Based on transaction timing and volume.",
         "mitre_tag": "T1566"
@@ -405,7 +405,7 @@ export const DEMO_PROFILES = {
         "alias_738"
       ],
       "walletMentions": 28,
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "OSINT confirms pattern.",
         "hypothesis": "Actor active on forums.",
         "mitre_tag": "OSINT"
@@ -483,7 +483,7 @@ export const DEMO_PROFILES = {
           "reason": "Normal holding pattern"
         }
       ],
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "AI has classified this as SAFE risk. Tagged as EXCHANGE.",
         "hypothesis": "Based on transaction timing and volume.",
         "mitre_tag": "N/A"
@@ -508,7 +508,7 @@ export const DEMO_PROFILES = {
         "alias_158"
       ],
       "walletMentions": 46,
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "OSINT confirms pattern.",
         "hypothesis": "Actor active on forums.",
         "mitre_tag": "OSINT"
@@ -609,7 +609,7 @@ export const DEMO_PROFILES = {
           "reason": "Normal holding pattern"
         }
       ],
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "AI has classified this as SAFE risk. Tagged as SAFE.",
         "hypothesis": "Based on transaction timing and volume.",
         "mitre_tag": "N/A"
@@ -634,7 +634,7 @@ export const DEMO_PROFILES = {
         "alias_971"
       ],
       "walletMentions": 47,
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "OSINT confirms pattern.",
         "hypothesis": "Actor active on forums.",
         "mitre_tag": "OSINT"
@@ -760,7 +760,7 @@ export const DEMO_PROFILES = {
           "reason": "High volume of anonymous transactions"
         }
       ],
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "AI has classified this as CRITICAL risk. Tagged as PHISHING.",
         "hypothesis": "Based on transaction timing and volume.",
         "mitre_tag": "T1566"
@@ -785,7 +785,7 @@ export const DEMO_PROFILES = {
         "alias_726"
       ],
       "walletMentions": 39,
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "OSINT confirms pattern.",
         "hypothesis": "Actor active on forums.",
         "mitre_tag": "OSINT"
@@ -898,7 +898,7 @@ export const DEMO_PROFILES = {
           "reason": "Normal holding pattern"
         }
       ],
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "AI has classified this as SAFE risk. Tagged as PUBLIC FIGURE.",
         "hypothesis": "Based on transaction timing and volume.",
         "mitre_tag": "N/A"
@@ -923,7 +923,7 @@ export const DEMO_PROFILES = {
         "alias_665"
       ],
       "walletMentions": 11,
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "OSINT confirms pattern.",
         "hypothesis": "Actor active on forums.",
         "mitre_tag": "OSINT"
@@ -1004,7 +1004,7 @@ export const DEMO_PROFILES = {
           "reason": "Normal holding pattern"
         }
       ],
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "AI has classified this as SAFE risk. Tagged as SAFE.",
         "hypothesis": "Based on transaction timing and volume.",
         "mitre_tag": "N/A"
@@ -1029,7 +1029,7 @@ export const DEMO_PROFILES = {
         "alias_465"
       ],
       "walletMentions": 45,
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "OSINT confirms pattern.",
         "hypothesis": "Actor active on forums.",
         "mitre_tag": "OSINT"
@@ -1140,7 +1140,7 @@ export const DEMO_PROFILES = {
           "reason": "Normal holding pattern"
         }
       ],
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "AI has classified this as SAFE risk. Tagged as PUBLIC FIGURE.",
         "hypothesis": "Based on transaction timing and volume.",
         "mitre_tag": "N/A"
@@ -1165,7 +1165,7 @@ export const DEMO_PROFILES = {
         "alias_681"
       ],
       "walletMentions": 35,
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "OSINT confirms pattern.",
         "hypothesis": "Actor active on forums.",
         "mitre_tag": "OSINT"
@@ -1246,7 +1246,7 @@ export const DEMO_PROFILES = {
           "reason": "High volume of anonymous transactions"
         }
       ],
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "AI has classified this as CRITICAL risk. Tagged as MONEY MULE.",
         "hypothesis": "Based on transaction timing and volume.",
         "mitre_tag": "T1566"
@@ -1271,7 +1271,7 @@ export const DEMO_PROFILES = {
         "alias_717"
       ],
       "walletMentions": 35,
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "OSINT confirms pattern.",
         "hypothesis": "Actor active on forums.",
         "mitre_tag": "OSINT"
@@ -1409,7 +1409,7 @@ export const DEMO_PROFILES = {
           "reason": "Normal holding pattern"
         }
       ],
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "AI has classified this as SAFE risk. Tagged as PUBLIC FIGURE.",
         "hypothesis": "Based on transaction timing and volume.",
         "mitre_tag": "N/A"
@@ -1434,7 +1434,7 @@ export const DEMO_PROFILES = {
         "alias_787"
       ],
       "walletMentions": 39,
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "OSINT confirms pattern.",
         "hypothesis": "Actor active on forums.",
         "mitre_tag": "OSINT"
@@ -1530,7 +1530,7 @@ export const DEMO_PROFILES = {
           "reason": "High volume of anonymous transactions"
         }
       ],
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "AI has classified this as MEDIUM risk. Tagged as RANSOMWARE.",
         "hypothesis": "Based on transaction timing and volume.",
         "mitre_tag": "T1566"
@@ -1555,7 +1555,7 @@ export const DEMO_PROFILES = {
         "alias_175"
       ],
       "walletMentions": 22,
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "OSINT confirms pattern.",
         "hypothesis": "Actor active on forums.",
         "mitre_tag": "OSINT"
@@ -1673,7 +1673,7 @@ export const DEMO_PROFILES = {
           "reason": "High volume of anonymous transactions"
         }
       ],
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "AI has classified this as MEDIUM risk. Tagged as MIXER.",
         "hypothesis": "Based on transaction timing and volume.",
         "mitre_tag": "T1566"
@@ -1698,7 +1698,7 @@ export const DEMO_PROFILES = {
         "alias_798"
       ],
       "walletMentions": 28,
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "OSINT confirms pattern.",
         "hypothesis": "Actor active on forums.",
         "mitre_tag": "OSINT"
@@ -1801,7 +1801,7 @@ export const DEMO_PROFILES = {
           "reason": "Normal holding pattern"
         }
       ],
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "AI has classified this as SAFE risk. Tagged as EXCHANGE.",
         "hypothesis": "Based on transaction timing and volume.",
         "mitre_tag": "N/A"
@@ -1826,7 +1826,7 @@ export const DEMO_PROFILES = {
         "alias_347"
       ],
       "walletMentions": 0,
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "OSINT confirms pattern.",
         "hypothesis": "Actor active on forums.",
         "mitre_tag": "OSINT"
@@ -1957,7 +1957,7 @@ export const DEMO_PROFILES = {
           "reason": "Normal holding pattern"
         }
       ],
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "AI has classified this as SAFE risk. Tagged as EXCHANGE.",
         "hypothesis": "Based on transaction timing and volume.",
         "mitre_tag": "N/A"
@@ -1982,7 +1982,7 @@ export const DEMO_PROFILES = {
         "alias_783"
       ],
       "walletMentions": 44,
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "OSINT confirms pattern.",
         "hypothesis": "Actor active on forums.",
         "mitre_tag": "OSINT"
@@ -2118,7 +2118,7 @@ export const DEMO_PROFILES = {
           "reason": "High volume of anonymous transactions"
         }
       ],
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "AI has classified this as HIGH risk. Tagged as RANSOMWARE.",
         "hypothesis": "Based on transaction timing and volume.",
         "mitre_tag": "T1566"
@@ -2143,7 +2143,7 @@ export const DEMO_PROFILES = {
         "alias_216"
       ],
       "walletMentions": 11,
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "OSINT confirms pattern.",
         "hypothesis": "Actor active on forums.",
         "mitre_tag": "OSINT"
@@ -2256,7 +2256,7 @@ export const DEMO_PROFILES = {
           "reason": "High volume of anonymous transactions"
         }
       ],
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "AI has classified this as HIGH risk. Tagged as MIXER.",
         "hypothesis": "Based on transaction timing and volume.",
         "mitre_tag": "T1566"
@@ -2281,7 +2281,7 @@ export const DEMO_PROFILES = {
         "alias_626"
       ],
       "walletMentions": 11,
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "OSINT confirms pattern.",
         "hypothesis": "Actor active on forums.",
         "mitre_tag": "OSINT"
@@ -2359,7 +2359,7 @@ export const DEMO_PROFILES = {
           "reason": "Normal holding pattern"
         }
       ],
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "AI has classified this as SAFE risk. Tagged as EXCHANGE.",
         "hypothesis": "Based on transaction timing and volume.",
         "mitre_tag": "N/A"
@@ -2384,7 +2384,7 @@ export const DEMO_PROFILES = {
         "alias_795"
       ],
       "walletMentions": 23,
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "OSINT confirms pattern.",
         "hypothesis": "Actor active on forums.",
         "mitre_tag": "OSINT"
@@ -2500,7 +2500,7 @@ export const DEMO_PROFILES = {
           "reason": "High volume of anonymous transactions"
         }
       ],
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "AI has classified this as HIGH risk. Tagged as HACKER.",
         "hypothesis": "Based on transaction timing and volume.",
         "mitre_tag": "T1566"
@@ -2525,7 +2525,7 @@ export const DEMO_PROFILES = {
         "alias_201"
       ],
       "walletMentions": 23,
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "OSINT confirms pattern.",
         "hypothesis": "Actor active on forums.",
         "mitre_tag": "OSINT"
@@ -2613,7 +2613,7 @@ export const DEMO_PROFILES = {
           "reason": "Normal holding pattern"
         }
       ],
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "AI has classified this as SAFE risk. Tagged as SAFE.",
         "hypothesis": "Based on transaction timing and volume.",
         "mitre_tag": "N/A"
@@ -2638,7 +2638,7 @@ export const DEMO_PROFILES = {
         "alias_391"
       ],
       "walletMentions": 38,
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "OSINT confirms pattern.",
         "hypothesis": "Actor active on forums.",
         "mitre_tag": "OSINT"
@@ -2729,7 +2729,7 @@ export const DEMO_PROFILES = {
           "reason": "Normal holding pattern"
         }
       ],
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "AI has classified this as SAFE risk. Tagged as PUBLIC FIGURE.",
         "hypothesis": "Based on transaction timing and volume.",
         "mitre_tag": "N/A"
@@ -2754,7 +2754,7 @@ export const DEMO_PROFILES = {
         "alias_400"
       ],
       "walletMentions": 28,
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "OSINT confirms pattern.",
         "hypothesis": "Actor active on forums.",
         "mitre_tag": "OSINT"
@@ -2830,7 +2830,7 @@ export const DEMO_PROFILES = {
           "reason": "High volume of anonymous transactions"
         }
       ],
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "AI has classified this as CRITICAL risk. Tagged as RANSOMWARE.",
         "hypothesis": "Based on transaction timing and volume.",
         "mitre_tag": "T1566"
@@ -2855,7 +2855,7 @@ export const DEMO_PROFILES = {
         "alias_357"
       ],
       "walletMentions": 33,
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "OSINT confirms pattern.",
         "hypothesis": "Actor active on forums.",
         "mitre_tag": "OSINT"
@@ -2993,7 +2993,7 @@ export const DEMO_PROFILES = {
           "reason": "Normal holding pattern"
         }
       ],
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "AI has classified this as SAFE risk. Tagged as PUBLIC FIGURE.",
         "hypothesis": "Based on transaction timing and volume.",
         "mitre_tag": "N/A"
@@ -3018,7 +3018,7 @@ export const DEMO_PROFILES = {
         "alias_568"
       ],
       "walletMentions": 34,
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "OSINT confirms pattern.",
         "hypothesis": "Actor active on forums.",
         "mitre_tag": "OSINT"
@@ -3104,7 +3104,7 @@ export const DEMO_PROFILES = {
           "reason": "High volume of anonymous transactions"
         }
       ],
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "AI has classified this as MEDIUM risk. Tagged as HACKER.",
         "hypothesis": "Based on transaction timing and volume.",
         "mitre_tag": "T1566"
@@ -3129,7 +3129,7 @@ export const DEMO_PROFILES = {
         "alias_812"
       ],
       "walletMentions": 11,
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "OSINT confirms pattern.",
         "hypothesis": "Actor active on forums.",
         "mitre_tag": "OSINT"
@@ -3277,7 +3277,7 @@ export const DEMO_PROFILES = {
           "reason": "High volume of anonymous transactions"
         }
       ],
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "AI has classified this as CRITICAL risk. Tagged as HACKER.",
         "hypothesis": "Based on transaction timing and volume.",
         "mitre_tag": "T1566"
@@ -3302,7 +3302,7 @@ export const DEMO_PROFILES = {
         "alias_328"
       ],
       "walletMentions": 17,
-      "aiAnalysis": {
+      "analyticalSynthesis": {
         "verdict": "OSINT confirms pattern.",
         "hypothesis": "Actor active on forums.",
         "mitre_tag": "OSINT"

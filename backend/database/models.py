@@ -95,6 +95,17 @@ class InvestigationLog(Base):
     bulk_batch_id = Column(String(50), index=True, nullable=True)
     raw_data = Column(JSON, default=dict)
 
+class AttributionRecord(Base):
+    """Mapping of raw addresses to known entities (e.g., Binance Hot Wallet 2)."""
+    __tablename__ = "attribution_records"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    address = Column(String(100), unique=True, index=True, nullable=False)
+    chain = Column(String(30), default="ETH", index=True)
+    entity_name = Column(String(100), nullable=False)
+    entity_type = Column(String(50), default="Exchange") # Exchange, Mixer, Phishing, etc.
+    risk_level = Column(String(20), default="MEDIUM")
+
 class VerificationReport(Base):
     """Tamper-proof verifiable reports stored independently."""
     __tablename__ = "verification_reports"
@@ -130,6 +141,7 @@ class CaseEntity(Base):
     case_id = Column(Integer, index=True, nullable=False)
     investigation_log_id = Column(Integer, index=True, nullable=False)
     notes = Column(Text, default="")
+    internal_tag = Column(String(100), nullable=True)  # e.g., "Target", "Victim", "Suspect"
 
 class CaseNote(Base):
     __tablename__ = "case_notes"

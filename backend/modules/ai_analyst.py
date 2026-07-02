@@ -1,5 +1,5 @@
 """
-Axon Backend — AI Analyst Module (v2.0 — Dual-Model + Judge Architecture)
+Axon Backend — Analytical Engine Analyst Module (v2.0 — Dual-Model + Judge Architecture)
 
 ARCHITECTURE:
   QUICK SCAN (bulk / quick depth):
@@ -7,7 +7,7 @@ ARCHITECTURE:
     → 1 API call
 
   DEEP SCAN (deep depth):
-    → Phase 1: Two independent AI models analyze the SAME L1-L5 data
+    → Phase 1: Two independent Analytical Engine models analyze the SAME L1-L5 data
         Model A (llama-3.3-70b-versatile): Prosecution — find every red flag
         Model B (gemma2-9b-it): Defense — find every legitimate explanation
     → Phase 2: Judge model synthesizes both perspectives
@@ -15,7 +15,7 @@ ARCHITECTURE:
     → 3 API calls total
 
   The mathematical scoring engine (L1-L5 / A1-A5) is UNCHANGED.
-  AI does NOT modify the score — it only generates the narrative.
+  Analytical Engine does NOT modify the score — it only generates the narrative.
 
 All models are FREE via Groq API.
 """
@@ -148,7 +148,7 @@ async def generate_summary(prompt: str) -> dict:
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
-# DUAL QUICK RATINGS — Two AI agents give independent ratings on every scan
+# DUAL QUICK RATINGS — Two Analytical Engine agents give independent ratings on every scan
 # ═══════════════════════════════════════════════════════════════════════════════
 
 async def generate_dual_quick_ratings(evidence_context: str, entity_type: str = "wallet") -> dict:
@@ -358,37 +358,33 @@ Respond with ONLY valid JSON with exactly these keys:
 # UNKNOWN CHAIN RESOLUTION (AI Fallback)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-async def resolve_unknown_chain(address: str) -> dict:
-    """Uses a fast AI model to attempt to identify the chain format of an unknown address."""
-    print(f"[AI_ANALYST] Attempting to resolve unknown chain for address: {address}")
+async def generate_coin_tiebreak_summary(candidates: list) -> str:
+    """Uses a fast Analytical Engine model to write a 1-sentence factual summary of multi-chain activity."""
+    print(f"[AI_ANALYST] Generating tie-break summary for {len(candidates)} active chains.")
     system_prompt = (
-        "You are an elite cryptocurrency forensic expert. "
-        "The user will provide either a wallet address OR a coin/blockchain name (e.g. 'solana', 'bitcoin', 'ETH', 'trx'). "
-        "Your task is to identify the blockchain network or coin. "
-        "If you are reasonably confident, provide the chain name, the most trusted block explorer URL, "
-        "and the official website of the cryptocurrency/blockchain. If it is impossible to determine, say Unknown. "
-        "Respond ONLY in valid JSON with exactly these keys: "
-        "'chain' (string, e.g., 'Monero', 'Cardano', 'Solana', 'Ripple', 'Unknown'), "
-        "'explorer_url' (string, e.g., 'https://xmrchain.net/search?value=<address>', or null), "
-        "'official_website' (string, e.g., 'https://getmonero.org', or null), "
-        "'description' (string, a 2-3 sentence overview of the coin, its consensus mechanism, and market purpose, or null if unknown), "
-        "'confidence' (integer 0-100)."
+        "You are writing one short forensic-report sentence about an address whose "
+        "chain identity has ALREADY been determined by deterministic checksum "
+        "validation and live on-chain probing — you are not deciding the chain.\n\n"
+        "Write 1-2 sentences summarizing this for a forensic report. Do not invent "
+        "any chain, balance, or activity not present in the evidence. Do not "
+        "hedge below the given confidence tier, and do not state higher certainty "
+        "than the given tier.\n\n"
+        "Output ONLY JSON: { \"summary\": \"...\" }"
     )
-    user_prompt = f"Identify the blockchain network or coin for this input: {address}\nRemember to replace <address> in the explorer URL with the actual address if possible, or leave it as a template."
+    user_prompt = f"Evidence (already computed, do not contradict it):\n- candidates: {json.dumps(candidates)}"
     
     result = await _call_api(
         model=MODELS["smart"],
         system_prompt=system_prompt,
         user_prompt=user_prompt,
         temperature=0.1,
-        max_tokens=200
+        max_tokens=150
     )
     
-    # Fallback structure if the AI fails
-    if not isinstance(result, dict) or "chain" not in result:
-        return {"chain": "Unknown", "explorer_url": None, "official_website": None, "confidence": 0}
+    if not isinstance(result, dict) or "summary" not in result:
+        return "Multiple active chains detected, but Analytical Engine summary generation failed."
         
-    return result
+    return result["summary"]
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # SMART ROUTER — Picks quick or dual analysis based on scan depth
@@ -396,7 +392,7 @@ async def resolve_unknown_chain(address: str) -> dict:
 
 async def analyze_entity(prompt: str, depth: str = "quick", entity_type: str = "wallet") -> dict:
     """
-    Smart router for AI analysis.
+    Smart router for Analytical Engine analysis.
     - depth="quick" → single fast model (1 API call)
     - depth="deep"  → dual-model + judge (3 API calls)
     """

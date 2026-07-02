@@ -108,6 +108,20 @@ async def run_bulk_scan(addresses: list, db: Session, case_id: int = None) -> di
         if label in summary:
             summary[label] += 1
             
+        mixer_exposure = False
+        exchange_exposure = False
+        
+        signals = r["data"].get("signals", [])
+        for s in signals:
+            reason = s[0].lower() if isinstance(s, (list, tuple)) else s.get("reason", "").lower()
+            if "mixer" in reason or "sanctioned" in reason:
+                mixer_exposure = True
+            if "exchange" in reason or "legitimate" in reason:
+                exchange_exposure = True
+                
+        r["data"]["mixer_exposure"] = mixer_exposure
+        r["data"]["exchange_exposure"] = exchange_exposure
+            
     print(f"[BULK SCAN] Batch {batch_id} complete. Success: {len(successful)}, Failed: {len(failed)}")
             
     response_data = {

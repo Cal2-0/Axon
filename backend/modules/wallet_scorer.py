@@ -113,6 +113,25 @@ async def fetch_all_etherscan_data(client: httpx.AsyncClient, address: str, dept
             else:
                 break
         
+        import binascii
+        def _extract_message(hex_input: str) -> str:
+            if not hex_input or hex_input == "0x" or len(hex_input) < 10:
+                return ""
+            try:
+                raw_hex = hex_input[2:]
+                text = binascii.unhexlify(raw_hex).decode('utf-8', errors='ignore').replace('\x00', '').strip()
+                printable = sum(1 for c in text if c.isprintable())
+                if len(text) > 3 and printable / max(len(text), 1) > 0.7:
+                    return text
+            except:
+                pass
+            return ""
+
+        for tx in all_txs:
+            msg = _extract_message(tx.get("input", ""))
+            if msg:
+                tx["extracted_message"] = msg
+
         result["transactions"] = all_txs
         print(f"[ETHERSCAN] Fetched {len(result['transactions'])} transactions")
 
@@ -242,7 +261,7 @@ def classify_entity(tx_history: list, address: str, eth_balance: float,
     Now also checks against the exchange address database for accurate classification.
     """
     if not tx_history:
-        return ("Unknown EOA", 1.0)
+        return ("Not Determined", 1.0)
 
     addr_lower = address.lower()
 
@@ -680,10 +699,10 @@ async def scan_wallet(address: str, db: Session, depth: str = "quick", case_id: 
         round_ratio = round_amounts / len(in_values)
         if round_ratio > 0.7:
             l1 = max(l1, 80)
-            signals.append(("MIXER: Round-denomination deposits ({:.0%} of inflows at 0.1/1/10/100 ETH)".format(round_ratio), "🌀", "L1"))
+            signals.append(("MIXER: Round-denomination deposits ({:.0%} of inflows at 0.1/1/10/100 ETH)".format(round_ratio), "🌀", "L1", "Medium", "On-chain Heuristic"))
         elif round_ratio > 0.4:
             l1 = max(l1, 45)
-            signals.append(("Semi-structured deposit pattern ({:.0%} round denominations)".format(round_ratio), "⚠️", "L1"))
+            signals.append(("Semi-structured deposit pattern ({:.0%} round denominations)".format(round_ratio), "⚠️", "L1", "Low", "On-chain Heuristic"))
 
     # Signal: Equal-amount top denomination
     if len(in_values) >= 10:
@@ -692,7 +711,7 @@ async def scan_wallet(address: str, db: Session, depth: str = "quick", case_id: 
         top_pct = top_count / len(in_values)
         if top_pct > 0.8:
             l1 = max(l1, 90)
-            signals.append(("MIXER: {:.0%} of deposits are exactly {:.1f} ETH — definitive mixer fingerprint".format(top_pct, top_denom), "🚨", "L1"))
+            signals.append(("MIXER: {:.0%} of deposits are exactly {:.1f} ETH — definitive mixer fingerprint".format(top_pct, top_denom), "🚨", "L1", "High", "On-chain Heuristic"))
         elif top_pct > 0.5:
             l1 = max(l1, 55)
 
@@ -704,7 +723,7 @@ async def scan_wallet(address: str, db: Session, depth: str = "quick", case_id: 
             drain_ratio = total_out / total_in
             if drain_ratio > 0.9 and total_in > 5:
                 l1 = max(l1, 70)
-                signals.append(("Accumulate-then-drain: {:.0%} of inflows forwarded out".format(drain_ratio), "🔻", "L1"))
+                signals.append(("Accumulate-then-drain: {:.0%} of inflows forwarded out".format(drain_ratio), "🔻", "L1", "Medium", "On-chain Heuristic"))
 
     # Signal: Transaction rhythm regularity (bot/automated)
     if len(timestamps) >= 10:
@@ -717,7 +736,7 @@ async def scan_wallet(address: str, db: Session, depth: str = "quick", case_id: 
                 cv = std_delta / mean_delta if mean_delta > 0 else 1
                 if cv < 0.15:
                     l1 = max(l1, 65)
-                    signals.append(("Automated bot: transaction intervals are highly regular (CV={:.2f})".format(cv), "🤖", "L1"))
+                    signals.append(("Automated bot: transaction intervals are highly regular (CV={:.2f})".format(cv), "🤖", "L1", "Medium", "On-chain Heuristic"))
                 elif cv < 0.3:
                     l1 = max(l1, 35)
             except:
@@ -728,10 +747,10 @@ async def scan_wallet(address: str, db: Session, depth: str = "quick", case_id: 
         wallet_age_days = (time.time() - min(timestamps)) / 86400
         if wallet_age_days < 7 and eth_balance > 10:
             l1 = max(l1, 85)
-            signals.append(("HIGH VALUE + NEW WALLET: {:.1f} ETH in wallet aged {:.0f} days".format(eth_balance, wallet_age_days), "🚨", "L1"))
+            signals.append(("HIGH VALUE + NEW WALLET: {:.1f} ETH in wallet aged {:.0f} days".format(eth_balance, wallet_age_days), "🚨", "L1", "High", "On-chain Heuristic"))
         elif wallet_age_days < 30 and eth_balance > 50:
             l1 = max(l1, 60)
-            signals.append(("Significant value in young wallet ({:.1f} ETH, {:.0f} days old)".format(eth_balance, wallet_age_days), "⚠️", "L1"))
+            signals.append(("Significant value in young wallet ({:.1f} ETH, {:.0f} days old)".format(eth_balance, wallet_age_days), "⚠️", "L1", "Medium", "On-chain Heuristic"))
 
     # ── L2: Graph Topology (max 100) ─────────────────────────────
     l2 = 0
@@ -744,22 +763,22 @@ async def scan_wallet(address: str, db: Session, depth: str = "quick", case_id: 
         # Fan-out: 1 sender -> many unique receivers
         if unique_recv_ratio > 0.8 and tx_len >= 20:
             l2 = max(l2, 75)
-            signals.append(("High fan-out: {:.0%} of transactions to unique addresses".format(unique_recv_ratio), "🕸️", "L2"))
+            signals.append(("High fan-out: {:.0%} of transactions to unique addresses".format(unique_recv_ratio), "🕸️", "L2", "Medium", "On-chain Heuristic"))
         elif unique_recv_ratio > 0.4 and tx_len >= 10:
             l2 = max(l2, 50)
-            signals.append(("Elevated fan-out: {:.0%} of transactions to unique addresses".format(unique_recv_ratio), "🕸️", "L2"))
+            signals.append(("Elevated fan-out: {:.0%} of transactions to unique addresses".format(unique_recv_ratio), "🕸️", "L2", "Medium", "On-chain Heuristic"))
 
         # Star-in topology: many unique senders -> this wallet
         if unique_send_ratio > 0.8 and unique_recv_ratio < 0.1 and tx_len >= 20:
             l2 = max(l2, 60)
-            signals.append(("Aggregation hub: {:.0%} unique senders, {:.0%} receivers".format(unique_send_ratio, unique_recv_ratio), "⬇️", "L2"))
+            signals.append(("Aggregation hub: {:.0%} unique senders, {:.0%} receivers".format(unique_send_ratio, unique_recv_ratio), "⬇️", "L2", "Medium", "On-chain Heuristic"))
 
         # Mixer contract interaction (NOW using full DB, not just 7 hardcoded)
         mixer_counterparties = all_counterparties & all_mixer_addrs
         if mixer_counterparties:
             mixer_cp_score = min(90, len(mixer_counterparties) * 25)
             l2 = max(l2, mixer_cp_score)
-            signals.append(("Direct interaction with {} known mixer/sanctioned contract(s)".format(len(mixer_counterparties)), "🌪️", "L2"))
+            signals.append(("Direct interaction with {} known mixer/sanctioned contract(s)".format(len(mixer_counterparties)), "🌪️", "L2", "Medium", "On-chain Heuristic"))
 
         # Hop contamination from DB wallets (NOW using batch lookup, not per-tx query)
         contamination = 0
@@ -775,7 +794,7 @@ async def scan_wallet(address: str, db: Session, depth: str = "quick", case_id: 
         if contamination > 40:
             l2 = max(l2, int(contamination))
             source_label = contamination_sources[0] if contamination_sources else "unknown"
-            signals.append(("1-hop contamination from '{}' ({:.0f}% risk transfer)".format(source_label, contamination), "☣️", "L2"))
+            signals.append(("1-hop contamination from '{}' ({:.0f}% risk transfer)".format(source_label, contamination), "☣️", "L2", "Medium", "On-chain Heuristic"))
         elif contamination > 20:
             l2 = max(l2, int(contamination))
 
@@ -792,20 +811,20 @@ async def scan_wallet(address: str, db: Session, depth: str = "quick", case_id: 
         if peak_ratio > 0.6 and len(tx_history) >= 20:
             # 60%+ of all observed txs happened in a single day
             l3 = max(l3, 85)
-            signals.append(("EXTREME burst: {:.0%} of activity on {} ({} txs)".format(peak_ratio, peak_day, peak_daily), "⚡", "L3"))
+            signals.append(("EXTREME burst: {:.0%} of activity on {} ({} txs)".format(peak_ratio, peak_day, peak_daily), "⚡", "L3", "High", "On-chain Heuristic"))
         elif peak_ratio > 0.35 and len(tx_history) >= 10:
             # 35%+ of all observed txs happened in a single day
             l3 = max(l3, 65)
-            signals.append(("Transaction burst: {:.0%} of activity on {} ({} txs)".format(peak_ratio, peak_day, peak_daily), "⚡", "L3"))
+            signals.append(("Transaction burst: {:.0%} of activity on {} ({} txs)".format(peak_ratio, peak_day, peak_daily), "⚡", "L3", "Medium", "On-chain Heuristic"))
         elif avg_daily > 0:
             burst_ratio = peak_daily / avg_daily
             if burst_ratio >= 10 and peak_daily >= 20:
                 # 10x normal activity
                 l3 = max(l3, 55)
-                signals.append(("Relative burst: {} txs on {} ({:.0f}x daily average)".format(peak_daily, peak_day, burst_ratio), "⚡", "L3"))
+                signals.append(("Relative burst: {} txs on {} ({:.0f}x daily average)".format(peak_daily, peak_day, burst_ratio), "⚡", "L3", "Medium", "On-chain Heuristic"))
             elif burst_ratio >= 5 and peak_daily >= 10:
                 l3 = max(l3, 40)
-                signals.append(("Mild burst: {} txs on {} ({:.0f}x daily average)".format(peak_daily, peak_day, burst_ratio), "📊", "L3"))
+                signals.append(("Mild burst: {} txs on {} ({:.0f}x daily average)".format(peak_daily, peak_day, burst_ratio), "📊", "L3", "Low", "On-chain Heuristic"))
 
     # Peel chain / structuring: same outflow amount repeated
     if out_values:
@@ -813,7 +832,7 @@ async def scan_wallet(address: str, db: Session, depth: str = "quick", case_id: 
         top_out_val, top_out_count = out_counts.most_common(1)[0]
         if top_out_count >= 3 and top_out_val > 0.01:
             l3 = max(l3, 50)
-            signals.append(("Structuring pattern: {:.3f} ETH sent {} times (peel chain indicator)".format(top_out_val, top_out_count), "⛓️", "L3"))
+            signals.append(("Structuring pattern: {:.3f} ETH sent {} times (peel chain indicator)".format(top_out_val, top_out_count), "⛓️", "L3", "Medium", "On-chain Heuristic"))
 
     # Dormancy-then-spike: long gap then sudden activity
     if len(timestamps) >= 5:
@@ -825,12 +844,12 @@ async def scan_wallet(address: str, db: Session, depth: str = "quick", case_id: 
                 max_gap_days = gap
         if max_gap_days > 60 and len(timestamps) > 10:
             l3 = max(l3, 45)
-            signals.append(("Dormancy-then-spike: {:.0f}-day gap in activity detected".format(max_gap_days), "💤", "L3"))
+            signals.append(("Dormancy-then-spike: {:.0f}-day gap in activity detected".format(max_gap_days), "💤", "L3", "Medium", "On-chain Heuristic"))
 
     # Low balance but high historical volume (pass-through / money mule)
     if eth_balance < 0.1 and total_volume_eth > 50:
         l3 = max(l3, 55)
-        signals.append(("Pass-through pattern: {:.0f} ETH volume, only {:.4f} ETH retained".format(total_volume_eth, eth_balance), "↔️", "L3"))
+        signals.append(("Pass-through pattern: {:.0f} ETH volume, only {:.4f} ETH retained".format(total_volume_eth, eth_balance), "↔️", "L3", "Medium", "On-chain Heuristic"))
 
     # ── L4: Attribution Intelligence (max 100) ───────────────────
     l4 = 0
@@ -838,14 +857,14 @@ async def scan_wallet(address: str, db: Session, depth: str = "quick", case_id: 
     if wallet_db:
         l4 = min(100, wallet_db.risk_score)
         icon = "💥" if wallet_db.threat_level == "CRITICAL" else "⚠️"
-        signals.append(("THREAT DB: {} — {}".format(wallet_db.label, wallet_db.category), icon, "L4"))
+        signals.append(("THREAT DB: {} — {}".format(wallet_db.label, wallet_db.category), icon, "L4", "High", "Threat DB"))
         if wallet_db.sanctioned:
             l4 = 100
-            signals.append(("OFAC SANCTIONED ENTITY — legally designated threat actor", "🚫", "L4"))
+            signals.append(("OFAC SANCTIONED ENTITY — legally designated threat actor", "🚫", "L4", "High", "Threat DB"))
 
     if forta_count > 0:
         l4 = max(l4, min(forta_count * 25, 90))
-        signals.append(("Forta Network: {} real-time malicious alert(s) triggered".format(forta_count), "🚨", "L4"))
+        signals.append(("Forta Network: {} real-time malicious alert(s) triggered".format(forta_count), "🚨", "L4", "High", "Forta Network"))
 
     # Mixer interactions (full DB, not just hardcoded 7)
     mixer_interactions = sum(1 for tx in tx_history
@@ -853,24 +872,24 @@ async def scan_wallet(address: str, db: Session, depth: str = "quick", case_id: 
                              or tx.get("from", "").lower() in all_mixer_addrs)
     if mixer_interactions > 0:
         l4 = max(l4, min(mixer_interactions * 15, 85))
-        signals.append(("Known mixer contract interaction: {} transactions".format(mixer_interactions), "🌀", "L4"))
+        signals.append(("Known mixer contract interaction: {} transactions".format(mixer_interactions), "🌀", "L4", "High", "On-chain Intelligence"))
 
     # Known-bad counterparty count from batch lookup
     bad_cp_count = len(known_bad_map)
     if bad_cp_count >= 5:
         l4 = max(l4, 75)
-        signals.append(("{} counterparties found in threat intelligence DB".format(bad_cp_count), "🔍", "L4"))
+        signals.append(("{} counterparties found in threat intelligence DB".format(bad_cp_count), "🔍", "L4", "High", "Threat DB"))
     elif bad_cp_count >= 2:
         l4 = max(l4, 50)
-        signals.append(("{} counterparties found in threat intelligence DB".format(bad_cp_count), "🔍", "L4"))
+        signals.append(("{} counterparties found in threat intelligence DB".format(bad_cp_count), "🔍", "L4", "High", "Threat DB"))
     elif bad_cp_count == 1:
         l4 = max(l4, 30)
 
     # Exchange legitimacy signal (positive — reduces suspicion)
     if exchange_overlap_pct > 0.5:
-        signals.append(("{:.0%} of counterparties are known exchanges — strong legitimacy signal".format(exchange_overlap_pct), "🏦", "L4"))
+        signals.append(("{:.0%} of counterparties are known exchanges — strong legitimacy signal".format(exchange_overlap_pct), "🏦", "L4", "High", "Exchange Database"))
     elif exchange_overlap_pct > 0.2:
-        signals.append(("{:.0%} of counterparties are known exchanges".format(exchange_overlap_pct), "🏦", "L4"))
+        signals.append(("{:.0%} of counterparties are known exchanges".format(exchange_overlap_pct), "🏦", "L4", "High", "Exchange Database"))
 
     # ── L5: Deterministic Cross-Axis Correlator (max 100) ────────
     l5 = _compute_l5_deterministic(l1, l2, l3, l4, entity_class,
@@ -944,16 +963,16 @@ async def scan_wallet(address: str, db: Session, depth: str = "quick", case_id: 
     # Integrate OSINT scores (CAPPED to prevent unbounded score inflation)
     osint_adjustment = 0
     if osint_data.get("summary", {}).get("twitter_mentions", 0) > 0:
-        signals.append(("Address mentioned {} times on Twitter/X".format(osint_data['summary']['twitter_mentions']), "🐦", "OSINT"))
+        signals.append(("Address mentioned {} times on Twitter/X".format(osint_data['summary']['twitter_mentions']), "🐦", "OSINT", "Low", "OSINT"))
         osint_adjustment += 5
     if osint_data.get("summary", {}).get("github_mentions", 0) > 0:
-        signals.append(("Address found in {} GitHub repos".format(osint_data['summary']['github_mentions']), "💻", "OSINT"))
+        signals.append(("Address found in {} GitHub repos".format(osint_data['summary']['github_mentions']), "💻", "OSINT", "Low", "OSINT"))
         osint_adjustment += 8
     if osint_data.get("summary", {}).get("reddit_mentions", 0) > 0:
-        signals.append(("Address mentioned {} times on Reddit".format(osint_data['summary']['reddit_mentions']), "👽", "OSINT"))
+        signals.append(("Address mentioned {} times on Reddit".format(osint_data['summary']['reddit_mentions']), "👽", "OSINT", "Low", "OSINT"))
         osint_adjustment += 5
     if osint_data.get("summary", {}).get("ens_name"):
-        signals.append(("Resolved ENS domain: {}".format(osint_data['summary']['ens_name']), "🏷️", "OSINT"))
+        signals.append(("Resolved ENS domain: {}".format(osint_data['summary']['ens_name']), "🏷️", "OSINT", "Low", "OSINT"))
         osint_adjustment -= 3
     # Cap total OSINT adjustment to ±15 to prevent single-source score inflation
     osint_adjustment = max(-5, min(osint_adjustment, 15))
@@ -987,10 +1006,10 @@ async def scan_wallet(address: str, db: Session, depth: str = "quick", case_id: 
     print(f"[SCAN] Score breakdown: raw={raw_score:.1f} -> class_mod={class_modifier}x -> dormancy={dormancy_modifier}x -> legit={legitimacy_suppressor}x -> floor={persistence_floor} -> FINAL={final_score} ({label})")
 
     # ═══════════════════════════════════════════════════════════════
-    # AI FORENSIC INTERPRETER (narrative only, does NOT change score)
+    # Analytical Engine FORENSIC INTERPRETER (narrative only, does NOT change score)
     # ═══════════════════════════════════════════════════════════════
 
-    ai_prompt = f"""You are a forensic AI analyzing an Ethereum wallet as a defense attorney — your job is to find any legitimate reason to LOWER the risk score IF justified.
+    ai_prompt = f"""You are a forensic Analytical Engine analyzing an Ethereum wallet as a defense attorney — your job is to find any legitimate reason to LOWER the risk score IF justified.
 
 Wallet: {address}
 Entity Class: {entity_class} (risk modifier: {class_modifier}x)
@@ -1047,7 +1066,7 @@ Use ALL of this evidence to form a comprehensive forensic assessment. Weigh beha
         ai_data = _build_wallet_fallback(l1, l2, l3, l4, l5, label, entity_class, signals,
                                           exchange_overlap_pct, mixer_overlap_pct)
 
-    # ── Layer 6 & 7: Independent AI Agent Ratings ──
+    # ── Layer 6 & 7: Independent Analytical Engine Agent Ratings ──
     dual_ratings = await generate_dual_quick_ratings(ai_prompt, entity_type="wallet")
     
     print(f"[SCAN] Final: {final_score}/100 ({label}) | Entity: {entity_class}")
@@ -1149,12 +1168,12 @@ Use ALL of this evidence to form a comprehensive forensic assessment. Weigh beha
             "firstSeen": wallet_db.first_seen if wallet_db else first_seen,
             "lastSeen": last_seen if last_seen != "N/A" else "Live",
             "ethBalance": eth_balance_str,
-            "totalReceived": f"{total_received_eth:.4f} ETH" if total_received_eth > 0 else "Unknown",
-            "totalSent": f"{total_sent_eth:.4f} ETH" if total_sent_eth > 0 else "Unknown",
+            "totalReceived": f"{total_received_eth:.4f} ETH" if total_received_eth > 0 else "Data Not Available",
+            "totalSent": f"{total_sent_eth:.4f} ETH" if total_sent_eth > 0 else "Data Not Available",
             "txCount": tx_count,
             "uniqueCounterparties": counterparties if counterparties > 0 else (wallet_db.counterparties if wallet_db else 0),
-            "walletAgeDays": "Unknown",
-            "totalVolumeUSD": wallet_db.amount_usd if wallet_db else (f"~${total_volume_eth * eth_price:,.0f}" if total_volume_eth > 0 else "Unknown"),
+            "walletAgeDays": "Data Not Available",
+            "totalVolumeUSD": wallet_db.amount_usd if wallet_db else (f"~${total_volume_eth * eth_price:,.0f}" if total_volume_eth > 0 else "Data Not Available"),
             "ethPrice": eth_price,
             "entityClass": entity_class,
             "classModifier": class_modifier,
@@ -1176,7 +1195,7 @@ Use ALL of this evidence to form a comprehensive forensic assessment. Weigh beha
             "factors": ui_factors,
             "aiAgentA": dual_ratings.get("agentA"),
             "aiAgentB": dual_ratings.get("agentB"),
-            "aiAnalysis": {
+            "analyticalSynthesis": {
                 "rating": label,
                 "hypothesis": ai_data.get("hypothesis", ""),
                 "mitre_tag": ai_data.get("mitre_tag", ""),
@@ -1191,7 +1210,7 @@ Use ALL of this evidence to form a comprehensive forensic assessment. Weigh beha
         },
         "osint": {
             "summary": osint_data.get("summary", {}),
-            "aiAnalysis": {
+            "analyticalSynthesis": {
                 "hypothesis": ai_data.get("hypothesis", ""),
                 "mitre_tag": ai_data.get("mitre_tag", ""),
                 "verdict": ai_data.get("verdict", "")
@@ -1215,7 +1234,7 @@ Use ALL of this evidence to form a comprehensive forensic assessment. Weigh beha
             "mixerCounterparties": mixer_overlap_count,
             "bridgeActivity": [],
             "launderingIndicators": [s[0] for s in signals if s[2] in ("L1", "L3")],
-            "totalMixedETH": "Unknown"
+            "totalMixedETH": "Data Not Available"
         },
         "graph": {
             "nodes": graph_nodes,
@@ -1262,7 +1281,7 @@ Use ALL of this evidence to form a comprehensive forensic assessment. Weigh beha
             scan_timestamp=time.time(),
             risk_score=final_score,
             entity_class=entity_class,
-            triggered_signals=[{"reason": s[0], "icon": s[1], "layer": s[2]} for s in signals],
+            triggered_signals=[{"reason": s[0], "icon": s[1], "layer": s[2], "confidence": s[3] if len(s)>3 else "Medium", "source": s[4] if len(s)>4 else "On-chain Heuristic"} for s in signals],
             scan_depth=depth,
             case_id=case_id,
             raw_data=response_data
@@ -1340,7 +1359,7 @@ Use ALL of this evidence to form a comprehensive forensic assessment. Weigh beha
 def _build_wallet_fallback(l1: int, l2: int, l3: int, l4: int, l5: int,
                             label: str, entity_class: str, signals: list,
                             exchange_pct: float, mixer_pct: float) -> dict:
-    """Deterministic fallback AI verdict based on which layer scored highest."""
+    """Deterministic fallback Analytical Engine verdict based on which layer scored highest."""
     top_signal = signals[0][0] if signals else "No specific signals triggered"
 
     if l4 >= 90:

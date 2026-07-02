@@ -1,5 +1,5 @@
 // src/api/axon.js - API client for Axon Backend
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8001';
+const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8001';
 
 export const scanContract = async (address, caseId = null, depth = 'quick') => {
   const response = await fetch(`${API_BASE}/scan/contract`, {
@@ -62,7 +62,7 @@ export const resolveChain = async (address) => {
 };
 
 export const resolveChainAI = async (address) => {
-  const response = await fetch(`${API_BASE}/scan/chain-resolution-ai/${address}`);
+  const response = await fetch(`${API_BASE}/scan/chain-resolution/${address}`);
   if (!response.ok) throw new Error('Failed to resolve chain via AI');
   return response.json();
 };

@@ -158,7 +158,7 @@ class AxonScraper:
                     if not ETH_ADDR_RE.match(address):
                         continue
                     if isinstance(label_info, dict):
-                        name = label_info.get("nameTag", label_info.get("label", "Unknown"))
+                        name = label_info.get("nameTag", label_info.get("label", "Data Not Available"))
                         labels = str(label_info.get("labels", "")).lower()
                     elif isinstance(label_info, str):
                         name = label_info
@@ -167,7 +167,7 @@ class AxonScraper:
                         continue
 
                     # Categorize by label keywords
-                    category = "Unknown"
+                    category = "Data Not Available"
                     threat_level = "MEDIUM"
                     tags = []
                     sanctioned = False
@@ -211,7 +211,7 @@ class AxonScraper:
                 for item in data:
                     if isinstance(item, dict) and "address" in item:
                         address = item["address"]
-                        name = item.get("nameTag", item.get("label", item.get("name", "Unknown")))
+                        name = item.get("nameTag", item.get("label", item.get("name", "Data Not Available")))
                         labels_str = str(item.get("labels", "")) + " " + str(name)
                         labels = labels_str.lower()
 
@@ -411,7 +411,7 @@ class AxonScraper:
                     text = response.text
                     addrs = ETH_ADDR_RE.findall(text)
                     for addr in addrs:
-                        self._add_wallet(addr, f"Address from {name}", "Unknown",
+                        self._add_wallet(addr, f"Address from {name}", "Data Not Available",
                                          source=name, tags=["scraped"])
                         count += 1
 
@@ -425,7 +425,7 @@ class AxonScraper:
                     for line in text.strip().split("\n"):
                         addr = line.strip()
                         if ETH_ADDR_RE.match(addr):
-                            self._add_wallet(addr, f"Address from {name}", "Unknown",
+                            self._add_wallet(addr, f"Address from {name}", "Data Not Available",
                                              source=name, tags=["scraped"])
                             count += 1
 
@@ -436,7 +436,7 @@ class AxonScraper:
                 else:
                     addrs = ETH_ADDR_RE.findall(text)
                     for addr in addrs:
-                        self._add_wallet(addr, f"Address from {name}", "Unknown",
+                        self._add_wallet(addr, f"Address from {name}", "Data Not Available",
                                          source=name, tags=["scraped"])
                         count += 1
 
@@ -477,7 +477,7 @@ class AxonScraper:
                                 for addr in addrs[:100]:  # Cap at 100 per file
                                     self._add_wallet(
                                         addr, f"GitHub Research: {query[:30]}",
-                                        "Unknown", source=f"GitHub Search: {query[:20]}",
+                                        "Data Not Available", source=f"GitHub Search: {query[:20]}",
                                         tags=["github_search", "research"]
                                     )
                                     count += 1

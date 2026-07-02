@@ -108,7 +108,7 @@ async def decode_defi_interactions(transactions: List[Dict]) -> List[Dict]:
         defi_keywords = ["swap", "deposit", "stake", "borrow", "mint", "claim", "liquidity", "pool"]
         is_defi = any(kw in simple_name.lower() for kw in defi_keywords)
         
-        if is_defi or "Unknown" not in signature:
+        if is_defi or "Data Not Available" not in signature:
             decoded_interactions.append({
                 "hash": tx.get("hash", ""),
                 "timestamp": tx.get("timeStamp", "0"),

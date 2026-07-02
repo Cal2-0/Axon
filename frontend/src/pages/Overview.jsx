@@ -251,7 +251,7 @@ export default function Overview() {
                   code: 'WI', color: 'axon-purple', title: 'Wallet Intelligence', file: 'wallet_scorer.py',
                   status: '✅ Production', statusColor: 'bg-axon-green/10 text-axon-green border-axon-green/20',
                   desc: 'Analyzes wallet behavior using machine learning models to detect unusual deviations in transfer activities and flags high-risk actors.',
-                  chips: [['Isolation Forest', 'ML Anomaly Model'], ['Heuristics Engine', 'Rule penalties'], ['Wallet Profiling', 'Behavioral stats'], ['Risk Score', '0–100 output']]
+                  chips: [['Isolation Forest', 'ML Anomaly Model'], ['Heuristics Engine', 'Rule penalties'], ['Wallet Profiling', 'Behavioral stats'], ['Threat Level', '0–100 output']]
                 },
                 {
                   code: 'TG', color: 'axon-orange', title: 'Transaction Graph', file: 'transaction_graph.py',

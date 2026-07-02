@@ -39,32 +39,35 @@ Instead of a single AI model returning a flat verdict, Axon spawns **three disti
 2. **Defense AI:** Attempts to find legitimate, benign explanations for the wallet's behavior.
 3. **Chief Judge AI:** Synthesizes the debate into a final, court-ready MITRE ATT&CK forensic verdict.
 
-### 🌐 Multi-Chain Portfolio Exposure
-Cross-chain crime requires cross-chain tracking. Axon actively fetches balances across **Bitcoin (BTC)**, **Solana (SOL)**, and **EVM Chains** (Ethereum, BNB, Arbitrum, Base, Optimism, Polygon, Avalanche) to provide a complete global net worth exposure map for any suspect.
+### 🕸️ BFS Fund Flow Tracing (Trace to Exchange)
+Axon's proprietary tracing engine uses a bounded Breadth-First-Search (BFS) algorithm to map the forward flow of funds across multiple hops. 
+Crucially, it uses an **Attribution Circuit Breaker**: if the tracer hits a known KYC entity (e.g., a Binance Deposit Wallet) from our Threat Intelligence Database, it automatically flags the node as an **[ATTRIBUTION HIT]** and safely terminates that branch.
 
-### 🕵️ Smart OSINT Intelligence Engine
-Axon doesn't just look on-chain. It runs a live Open-Source Intelligence (OSINT) scraper that hunts down mentions of an address across **Reddit, GitHub, Twitter**, and the open web via DuckDuckGo. It also automatically resolves `.eth` domains using the Ethereum Name Service (ENS).
+### 🛡️ Cryptographically Verifiable Chain of Custody PDFs
+When an investigation goes to court or is handed to law enforcement, digital evidence must be tamper-proof.
+Axon automatically generates printable PDF dossiers embedded with an authentic, backend-generated **SHA-256 Hash** and an **Environmental Metadata** block (logging Engine Version, Threat DB timestamps, and Node Sources). Any third party can independently hash the raw JSON payload to verify the document hasn't been altered since the scan.
 
-### 🕸️ Interactive Sankey & Force-Directed Graphs
-Visualize capital flight and laundering patterns effortlessly. Axon maps 2nd and 3rd degree interactions, identifying choke points, intermediary hops, and star-topology distribution nodes using interactive **D3.js Force Graphs** and **Sankey Diagrams**.
+### 🏛️ Court-Safe Defensible Reporting
+Axon guarantees legal admissibility by assigning explicit **Confidence Levels** (High/Medium/Low) and **Source Attributions** (e.g., On-Chain Heuristic, OSINT) to every single anomaly detected. It avoids black-box "AI" labels, classifying generative insights under rigorous **Analytical Engine Synthesis**.
 
-### 💼 Comprehensive Case Management
-Track long-running investigations natively. Create persistent cases, assign specific investigators (e.g., "Agent Smith"), tag threats (`Laundering`, `Phishing`, `Critical`), and attach forensic logs and Bulk Scans directly to your digital workspace.
+### 🕵️‍♂️ The "Etherscan Escape Hatch" (UTF-8 Extractor)
+Hackers frequently communicate or leave ransom demands via 0-value transactions. Axon features a robust UTF-8 decoder built directly into the Etherscan ingestion pipeline. It automatically parses hex data, filters out binary noise, and prints plain-text criminal communications directly onto the investigative timeline.
 
-### ⚡ Bulk / Batch Scanning Mode
-Upload 50+ addresses at once. The engine will sequentially investigate each address, throttling automatically to bypass API rate limits, and output a massive CSV / Data Table to instantly triage the most dangerous entities in a massive dataset.
+### 🌐 Cross-Chain Coin Identification & Routing
+Axon no longer guesses what chain an address belongs to. It uses a **Deterministic Identification Pipeline**:
+1. **Syntax Check:** Regex validation for BTC, SOL, TRX, EVM formats.
+2. **Cryptographic Checksums:** Verifies base58/bech32 encodings (BTC) or Keccak-256 (EVM).
+3. **Live RPC Probes:** In the event of ambiguity, it probes the blockchain directly.
+4. **AI Tie-Breaker:** Resolves complex edge cases before routing to the correct specialized chain scorer.
 
 ### 🔐 DeFi Protocol Signature Decoder
-Say goodbye to raw Hex Calldata. Axon taps into the Openchain 4byte signature database to automatically translate confusing, unverified smart contract calls into plain English (e.g., converting `0x38ed1739` to `swapExactTokensForETH`).
+Say goodbye to raw Hex Calldata. Axon taps into the Openchain 4byte signature database to automatically translate confusing, unverified smart contract calls into plain English (e.g., converting `0x38ed1739` to `Swapped Token A for Token B`).
 
-### 💵 Stablecoin Flow Tracking
-Explicitly scrapes and tracks ERC-20 `tokentx` events for USDT and USDC, mapping how stablecoin liquidity enters and exits a suspect wallet.
+### 📡 Active Mempool Monitoring & Clustering (Stubbed)
+Tracking moving targets. Axon's architecture includes a background engine to subscribe to Webhooks/Mempool events. Combined with Wallet DNA Fingerprinting and BTC Change-Address heuristics, Axon clusters zero-day wallets to known threat actors based purely on behavior.
 
-### 🛡️ Cryptographically Verifiable Reports
-Axon generates tamper-proof PDF dossiers. Every generated report automatically embeds an authentic, backend-generated SHA-256 integrity hash that is permanently sealed in the Verification Database. Any third party can independently verify the hash to ensure the document has not been altered since generation.
-
-### 🧠 Auto-Learning Threat Engine
-The platform dynamically learns from its own intelligence gathering. If a previously unknown smart contract or wallet scans with a CRITICAL risk score (80+), Axon's auto-learn mechanism automatically commits it to the internal Threat Database, ensuring future scans immediately recognize the threat without requiring manual analyst intervention.
+### 💼 Bulk Scanning & Case Management
+Track long-running investigations natively. Create persistent cases, assign specific investigators, and upload 50+ addresses at once. The engine will sequentially investigate each address, throttling automatically to bypass API rate limits, and output a massive CSV to triage threats.
 
 ---
 
@@ -195,7 +198,7 @@ Documentation, API research, threat corpus compilation, engine design.
 ### Phase 3 — Frontend Dashboard & Deployment `100%`
 React dashboard with all investigation views, D3 graph visualization, Netlify/Render CI/CD.
 
-### Phase 4 — Advanced Capabilities `75%`
+### Phase 4 — Advanced Capabilities `100%`
 - Case Management Engine (assignees, threat tags)
 - OSINT Scraper & ENS Lookups
 - Dueling 3-Agent AI Forensic Debate
@@ -203,6 +206,13 @@ React dashboard with all investigation views, D3 graph visualization, Netlify/Re
 - Sankey Diagrams & Transaction Maps
 - Multi-Chain Portfolio Scraping
 - Real-World Demo Data Integration
+
+### Phase 5 — Court-Ready Digital Forensics `100%`
+- Terminology Overhaul: Purged "AI" and subjective Risk terms for defensible forensic language.
+- Evidence Confidence & Source Attribution: Every finding lists explicit Confidence (High/Medium) and Source.
+- Environmental Metadata: Embedded PDF blocks locking in Engine version, DB date, and Node Source.
+- Etherscan Escape Hatch: Automated UTF-8 extraction of ransom/taunt messages from 0-value transactions.
+- Bulk Triage Matrix: Instant Boolean flags (Mixer/Exchange exposure) injected into bulk batch scans.
 
 ---
 

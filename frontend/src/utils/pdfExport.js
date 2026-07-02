@@ -88,7 +88,7 @@ export async function downloadWalletPDF(result) {
   // ── Exchange Findings ──
   const exchangeFindings = (result.exchange?.findings || []).map(f => `
     <tr>
-      <td style="font-weight:600">${_esc(f.exchange || 'Unknown')}</td>
+      <td style="font-weight:600">${_esc(f.exchange || 'Data Not Available')}</td>
       <td style="font-family:'Courier New',monospace;font-size:10px">${_esc(f.address || 'N/A')}</td>
       <td style="font-family:'Courier New',monospace;font-size:11px">${f.confidence || 0}%</td>
       <td>${_esc(f.type || 'N/A')}</td>
@@ -108,14 +108,14 @@ export async function downloadWalletPDF(result) {
     </tr>
   `).join('');
 
-  // ── AI Forensic Verdict ──
-  const aiAnalysis = result.risk?.aiAnalysis || result.osint?.aiAnalysis || {};
-  const hypothesis = aiAnalysis.hypothesis || 'No AI analysis available.';
-  const verdict = aiAnalysis.verdict || 'No verdict available.';
-  const mitreTag = aiAnalysis.mitre_tag || 'N/A';
+  // ── Analytical Engine Forensic Verdict ──
+  const analyticalSynthesis = result.risk?.analyticalSynthesis || result.osint?.analyticalSynthesis || {};
+  const hypothesis = analyticalSynthesis.hypothesis || 'No Analytical Engine analysis available.';
+  const verdict = analyticalSynthesis.verdict || 'No verdict available.';
+  const mitreTag = analyticalSynthesis.mitre_tag || 'N/A';
 
   // ── Scoring metadata ──
-  const entityClass = result.risk?.entityClass || result.identity?.entityClass || 'Unknown';
+  const entityClass = result.risk?.entityClass || result.identity?.entityClass || 'Data Not Available';
   const classModifier = result.risk?.classModifier || result.identity?.classModifier || 1.0;
   const persistenceFloor = result.risk?.persistenceFloor ?? 'N/A';
   const dormancyModifier = result.risk?.dormancyModifier ?? 'N/A';
@@ -275,14 +275,14 @@ export async function downloadWalletPDF(result) {
         anomaly confidence: <strong style="color:#7c3aed">${result.risk?.anomalyScore || 0}%</strong>.
       </p>
       <div class="grid3" style="margin-top:12px">
-        <div class="cell"><div class="label">Total Volume</div><div class="val">${_esc(result.identity.totalVolumeUSD || 'Unknown')}</div></div>
+        <div class="cell"><div class="label">Total Volume</div><div class="val">${_esc(result.identity.totalVolumeUSD || 'Data Not Available')}</div></div>
         <div class="cell"><div class="label">Transaction Count</div><div class="val">${(result.identity.txCount || 0).toLocaleString()}</div></div>
         <div class="cell"><div class="label">Active Period</div><div class="val">${_esc(result.identity.firstSeen || 'N/A')} → ${_esc(result.identity.lastSeen || 'N/A')}</div></div>
       </div>
     </div>
   </div>
 
-  <!-- ═══ AI FORENSIC VERDICT ═══ -->
+  <!-- ═══ Analytical Engine FORENSIC VERDICT ═══ -->
   <div class="verdict-box" style="margin-top:16px">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
       <span style="display:inline-block;padding:2px 8px;background:#0f172a;color:#fff;border-radius:3px;font-size:9px;font-weight:700;font-family:'JetBrains Mono',monospace;letter-spacing:0.1em">FORENSIC VERDICT</span>
@@ -307,8 +307,8 @@ export async function downloadWalletPDF(result) {
       ['Tag', result.identity.tag || label, score >= 80 ? '#dc2626' : '#16a34a'],
       ['ENS', result.identity.ens || 'None', '#7c3aed'],
       ['ETH Balance', (result.identity.ethBalance || '0') + ' ETH', '#0284c7'],
-      ['Total Received', result.identity.totalReceived || 'Unknown', '#16a34a'],
-      ['Total Sent', result.identity.totalSent || 'Unknown', '#dc2626'],
+      ['Total Received', result.identity.totalReceived || 'Data Not Available', '#16a34a'],
+      ['Total Sent', result.identity.totalSent || 'Data Not Available', '#dc2626'],
       ['Counterparties', result.identity.uniqueCounterparties || 0, '#0f172a'],
       ['First Seen', result.identity.firstSeen || 'N/A', '#64748b'],
       ['Last Active', result.identity.lastSeen || 'N/A', '#64748b'],
@@ -395,7 +395,7 @@ export async function downloadWalletPDF(result) {
   <div class="grid3" style="margin-bottom:12px">
     <div class="cell"><div class="label">Mixers Detected</div><div class="val" style="font-size:18px;color:#dc2626">${(result.mixer?.findings || []).length}</div></div>
     <div class="cell"><div class="label">Bridges Used</div><div class="val" style="font-size:18px;color:#ea580c">${(result.mixer?.bridgeActivity || []).length}</div></div>
-    <div class="cell"><div class="label">Total Mixed</div><div class="val" style="font-size:14px;color:#dc2626">${_esc(result.mixer?.totalMixedETH || 'Unknown')}</div></div>
+    <div class="cell"><div class="label">Total Mixed</div><div class="val" style="font-size:14px;color:#dc2626">${_esc(result.mixer?.totalMixedETH || 'Data Not Available')}</div></div>
   </div>
   ${mixerFindings ? `
   <h3>6.1 Mixer Usage Detail</h3>
@@ -415,7 +415,7 @@ export async function downloadWalletPDF(result) {
   </div>
   <h3>7.1 Node Classification Matrix</h3>
   <table>
-    <thead><tr><th>Node</th><th>Type</th><th>Risk Score</th><th>Classification</th></tr></thead>
+    <thead><tr><th>Node</th><th>Type</th><th>Threat Level</th><th>Classification</th></tr></thead>
     <tbody>${graphNodes}</tbody>
   </table>
 
@@ -492,7 +492,7 @@ export async function downloadContractPDF(result) {
   const axes = result.risk?.axes || {};
   const signals = result.risk?.factors || [];
   const goplus = result.goplus?.checks || [];
-  const aiAnalysis = result.risk?.aiAnalysis || {};
+  const analyticalSynthesis = result.risk?.analyticalSynthesis || {};
 
   const axisRows = [
     ['A1', 'Code Security', axes.A1 ?? 0],
@@ -588,13 +588,13 @@ export async function downloadContractPDF(result) {
     <div style="flex:1">
       <div class="grid4" style="margin-bottom:12px">
         <div class="cell"><div class="label">Contract</div><div class="val mono" style="font-size:8px;color:#0284c7">${_esc(result.identity?.address || 'N/A')}</div></div>
-        <div class="cell"><div class="label">Name</div><div class="val">${_esc(result.identity?.name || 'Unknown')}</div></div>
+        <div class="cell"><div class="label">Name</div><div class="val">${_esc(result.identity?.name || 'Data Not Available')}</div></div>
         <div class="cell"><div class="label">Verified</div><div class="val" style="color:${result.identity?.verified ? '#16a34a' : '#dc2626'}">${result.identity?.verified ? 'Yes' : 'No'}</div></div>
         <div class="cell"><div class="label">Proxy</div><div class="val">${result.identity?.proxy ? 'Yes' : 'No'}</div></div>
       </div>
       <div class="verdict-box">
         <div style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:2px">Executive Verdict</div>
-        <p style="font-size:12px;color:#0f172a;font-weight:700">${_esc(aiAnalysis.verdict || 'No verdict available.')}</p>
+        <p style="font-size:12px;color:#0f172a;font-weight:700">${_esc(analyticalSynthesis.verdict || 'No verdict available.')}</p>
       </div>
     </div>
   </div>
@@ -651,9 +651,9 @@ export async function downloadBulkPDF(report) {
     const isHigh = score >= 60 && score < 80;
     const isMedium = score >= 40 && score < 60;
     const rColor = isCritical ? '#dc2626' : isHigh ? '#ea580c' : isMedium ? '#ca8a04' : '#16a34a';
-    const rLabel = r.data?.risk?.label || "Unknown";
+    const rLabel = r.data?.risk?.label || "Data Not Available";
     const name = r.data?.identity?.name || r.address;
-    const mitre = r.data?.risk?.aiAnalysis?.mitre_tag || 'N/A';
+    const mitre = r.data?.risk?.analyticalSynthesis?.mitre_tag || 'N/A';
 
     return `
       <tr>

@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import SmartAddressInput from '../components/SmartAddressInput';
+import SmartAddressInput, { isValidAddress } from '../components/SmartAddressInput';
 import ContractForensicReport from '../components/ContractForensicReport';
-import { downloadContractPDF } from '../utils/pdfExport';
 import GraphView from '../components/GraphView';
 // ─── HELPERS ───────────────────────────────────────────────────────────────
 function CopyButton({ text }) {
@@ -87,12 +86,10 @@ export default function ContractInvestigation({ caseId }) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [activeCodeTab, setActiveCodeTab] = useState('source');
-  const [showReport, setShowReport] = useState(false);
   const [reportHash, setReportHash] = useState(null);
   const [isDeepDiving, setIsDeepDiving] = useState(false);
   const [deepDiveError, setDeepDiveError] = useState(null);
   const [deepDiveResult, setDeepDiveResult] = useState(null);
-  const [deepDiveStatus, setDeepDiveStatus] = useState('Running full deep scan (1000 txs + 3-AI Prosecution/Defense/Judge pipeline)...');
   const location = useLocation();
 
   useEffect(() => {
@@ -161,8 +158,34 @@ export default function ContractInvestigation({ caseId }) {
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = url; a.download = `axon-contract-report-${result.identity.address.slice(0, 10)}.json`;
-    a.click(); URL.revokeObjectURL(url);
+    a.href = url;
+    a.download = `axon-contract-report-${result.identity.address.slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadCoC = async () => {
+    if (!result || !result.report_metadata || !result.report_metadata.report_id) {
+      alert("No verifiable report ID found for this scan. Run a new scan to generate a Final Analysis PDF.");
+      return;
+    }
+    const reportId = result.report_metadata.report_id;
+    try {
+      const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8001';
+      const response = await fetch(`${API_BASE}/scan/report/${reportId}/pdf`);
+      if (!response.ok) throw new Error("Failed to generate PDF from backend");
+      
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${reportId}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      alert("Error generating Final Analysis PDF: " + err.message);
+    }
   };
 
   return (
@@ -242,13 +265,9 @@ export default function ContractInvestigation({ caseId }) {
               )}
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={async () => await downloadContractPDF(result)} className="axon-button text-xs px-4 py-2 gap-1.5 bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500 hover:text-white" id="contract-download-pdf-btn">
+              <button onClick={handleDownloadCoC} className="axon-button text-xs px-4 py-2 gap-1.5 bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500 hover:text-white" id="contract-download-pdf-btn">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                📄 Download PDF
-              </button>
-              <button onClick={() => setShowReport(true)} className="axon-button text-xs px-4 py-2 gap-1.5 bg-axon-purple/10 border-axon-purple/30 text-axon-purple hover:bg-axon-purple hover:text-white">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                🔬 Audit Report
+                📄 Download Final Analysis PDF
               </button>
               <button onClick={handleExport} className="axon-button text-xs px-4 py-2 gap-1.5">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
@@ -282,8 +301,8 @@ export default function ContractInvestigation({ caseId }) {
             </div>
           </CollapsibleSection>
 
-          {/* 2. Risk Score */}
-          <CollapsibleSection color="orange" icon="⚠️" title="Risk Assessment" badge="5-AXIS BEHAVIORAL MATRIX">
+          {/* 2. Threat Indicator */}
+          <CollapsibleSection color="orange" icon="⚠️" title="Threat Assessment" badge="5-AXIS BEHAVIORAL MATRIX">
             <div className="flex flex-col md:flex-row gap-8 items-start">
               <div className="shrink-0 flex flex-col items-center gap-4">
                 <RiskMeter score={result.risk.score} label={result.risk.label} />
@@ -315,26 +334,26 @@ export default function ContractInvestigation({ caseId }) {
               <div className="flex-1 space-y-6">
                 
                 {/* Initial Quick Forensic Verdict */}
-                {result.risk.aiAnalysis && result.risk.aiAnalysis.verdict ? (
+                {result.risk.analyticalSynthesis && result.risk.analyticalSynthesis.verdict ? (
                   <div className="mb-6 bg-[#1e293b]/50 rounded-xl border border-blue-500/30 p-5 font-sans text-sm leading-relaxed text-gray-200">
                     <div className="flex items-center gap-2 mb-4 border-b border-blue-500/20 pb-2">
-                      <span className="px-2 py-0.5 text-[10px] font-mono font-bold tracking-widest text-white bg-blue-600 rounded">FORENSIC VERDICT</span>
-                      <span className="text-xs font-mono font-bold text-blue-400">{result.risk.aiAnalysis.mitre_tag || "N/A"}</span>
+                      <span className="px-2 py-0.5 text-[10px] font-mono font-bold tracking-widest text-white bg-blue-600 rounded">ANALYST SYNTHESIS</span>
+                      <span className="text-xs font-mono font-bold text-blue-400">{result.risk.analyticalSynthesis.mitre_tag || "N/A"}</span>
                     </div>
                     
                     <div className="mb-4">
                       <div className="text-[10px] font-bold text-blue-400/70 uppercase tracking-widest mb-1">Plausible Hypothesis</div>
-                      <p className="text-gray-300 font-mono text-xs break-words">{result.risk.aiAnalysis.hypothesis}</p>
+                      <p className="text-gray-300 font-mono text-xs break-words">{result.risk.analyticalSynthesis.hypothesis}</p>
                     </div>
 
                     <div>
-                      <div className="text-[10px] font-bold text-blue-400/70 uppercase tracking-widest mb-1">Executive Verdict</div>
-                      <p className="text-white font-bold break-words">{result.risk.aiAnalysis.verdict}</p>
+                      <div className="text-[10px] font-bold text-blue-400/70 uppercase tracking-widest mb-1">Adversarial Synthesis (Executive Verdict)</div>
+                      <p className="text-white font-bold break-words">{result.risk.analyticalSynthesis.verdict}</p>
                     </div>
 
                     <div className="mt-6 border-t border-blue-500/20 pt-4 flex flex-col sm:flex-row items-center justify-between gap-4">
                       <div className="text-xs text-blue-300/70 max-w-sm">
-                        This is a quick summary. For a comprehensive forensic analysis, run the Dual Adversarial AI Engine.
+                        This is a quick summary. For a comprehensive forensic analysis, run the Dual Adversarial Analytical Engine Engine.
                       </div>
                       <button
                         onClick={handleDeepDive}
@@ -363,7 +382,7 @@ export default function ContractInvestigation({ caseId }) {
           </CollapsibleSection>
 
           {/* Deep Dive Independent Module */}
-          {deepDiveResult && deepDiveResult.risk && deepDiveResult.risk.aiAnalysis && (
+          {deepDiveResult && deepDiveResult.risk && deepDiveResult.risk.analyticalSynthesis && (
             <CollapsibleSection color="cyan" icon="🧠" title="Dual-Adversarial Deep Scan" badge="3-AI PIPELINE" defaultOpen={true}>
 
               {/* Updated Risk Score Delta */}
@@ -406,18 +425,18 @@ export default function ContractInvestigation({ caseId }) {
                   <div className="bg-red-950/20 rounded-xl border border-red-500/30 p-4">
                     <div className="flex items-center justify-between mb-3 border-b border-red-500/20 pb-2">
                       <span className="px-2 py-0.5 text-[10px] font-mono font-bold tracking-widest text-white bg-red-600 rounded">PROSECUTION AI</span>
-                      <span className="text-xs font-mono font-bold text-red-400">{deepDiveResult.risk.aiAnalysis.prosecution_risk} RISK</span>
+                      <span className="text-xs font-mono font-bold text-red-400">{deepDiveResult.risk.analyticalSynthesis.prosecution_risk} RISK</span>
                     </div>
-                    <p className="text-gray-300 font-mono text-xs break-words">{deepDiveResult.risk.aiAnalysis.prosecution_summary}</p>
+                    <p className="text-gray-300 font-mono text-xs break-words">{deepDiveResult.risk.analyticalSynthesis.prosecution_summary}</p>
                   </div>
 
                   {/* Defense Panel */}
                   <div className="bg-[#064e3b]/40 rounded-xl border border-emerald-500/30 p-4">
                     <div className="flex items-center justify-between mb-3 border-b border-emerald-500/20 pb-2">
                       <span className="px-2 py-0.5 text-[10px] font-mono font-bold tracking-widest text-white bg-emerald-600 rounded">DEFENSE AI</span>
-                      <span className="text-xs font-mono font-bold text-emerald-400">{deepDiveResult.risk.aiAnalysis.defense_risk} RISK</span>
+                      <span className="text-xs font-mono font-bold text-emerald-400">{deepDiveResult.risk.analyticalSynthesis.defense_risk} RISK</span>
                     </div>
-                    <p className="text-gray-300 font-mono text-xs break-words">{deepDiveResult.risk.aiAnalysis.defense_summary}</p>
+                    <p className="text-gray-300 font-mono text-xs break-words">{deepDiveResult.risk.analyticalSynthesis.defense_summary}</p>
                   </div>
                 </div>
 
@@ -427,30 +446,30 @@ export default function ContractInvestigation({ caseId }) {
                   <div className="flex items-center justify-between mb-4 border-b border-blue-500/20 pb-2 relative z-10">
                     <div className="flex items-center gap-2">
                       <span className="px-2 py-0.5 text-[10px] font-mono font-bold tracking-widest text-white bg-blue-600 rounded">CHIEF JUDGE VERDICT</span>
-                      <span className="text-xs font-mono font-bold text-blue-400">{deepDiveResult.risk.aiAnalysis.mitre_tag || "N/A"}</span>
+                      <span className="text-xs font-mono font-bold text-blue-400">{deepDiveResult.risk.analyticalSynthesis.mitre_tag || "N/A"}</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-[10px] font-bold text-blue-400/70 uppercase tracking-widest">Confidence</span>
-                      <span className="text-xs font-mono font-bold text-white bg-blue-500/20 px-2 py-0.5 rounded">{deepDiveResult.risk.aiAnalysis.confidence}%</span>
+                      <span className="text-xs font-mono font-bold text-white bg-blue-500/20 px-2 py-0.5 rounded">{deepDiveResult.risk.analyticalSynthesis.confidence}%</span>
                     </div>
                   </div>
                   
                   <div className="mb-4 relative z-10">
                     <div className="text-[10px] font-bold text-blue-400/70 uppercase tracking-widest mb-1">Synthesized Hypothesis</div>
-                    <p className="text-gray-300 font-mono text-xs break-words">{deepDiveResult.risk.aiAnalysis.hypothesis}</p>
+                    <p className="text-gray-300 font-mono text-xs break-words">{deepDiveResult.risk.analyticalSynthesis.hypothesis}</p>
                   </div>
 
                   <div className="mb-4 relative z-10">
                     <div className="text-[10px] font-bold text-blue-400/70 uppercase tracking-widest mb-1">Judge Reasoning</div>
-                    <p className="text-gray-400 italic text-xs break-words border-l-2 border-blue-500/30 pl-3">{deepDiveResult.risk.aiAnalysis.judge_reasoning}</p>
+                    <p className="text-gray-400 italic text-xs break-words border-l-2 border-blue-500/30 pl-3">{deepDiveResult.risk.analyticalSynthesis.judge_reasoning}</p>
                   </div>
 
                   <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 relative z-10">
                     <div className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-1 flex justify-between">
                       <span>Final Executive Verdict</span>
-                      <span className="opacity-70">Consensus: {deepDiveResult.risk.aiAnalysis.consensus_level}</span>
+                      <span className="opacity-70">Consensus: {deepDiveResult.risk.analyticalSynthesis.consensus_level}</span>
                     </div>
-                    <p className="text-white font-bold break-words">{deepDiveResult.risk.aiAnalysis.verdict}</p>
+                    <p className="text-white font-bold break-words">{deepDiveResult.risk.analyticalSynthesis.verdict}</p>
                   </div>
                 </div>
               </div>
@@ -550,7 +569,7 @@ export default function ContractInvestigation({ caseId }) {
                   The source code for this contract is not available on Etherscan. AXON is unable to perform static analysis. 
                 </p>
                 <button className="axon-button bg-red-500/20 text-red-400 border-red-500/40 hover:bg-red-500 hover:text-white px-4 py-2 text-xs">
-                  Request AI Bytecode Decompilation (BETA)
+                  Request Analytical Engine Bytecode Decompilation (BETA)
                 </button>
               </div>
             ) : (
@@ -667,10 +686,6 @@ export default function ContractInvestigation({ caseId }) {
         </div>
       )}
 
-      {/* Forensic Report Overlay */}
-      {showReport && result && (
-        <ContractForensicReport result={result} onClose={() => setShowReport(false)} />
-      )}
 
     </div>
   );

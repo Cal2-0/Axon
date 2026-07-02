@@ -300,7 +300,7 @@ async def fetch_etherscan_source(client: httpx.AsyncClient, address: str) -> dic
     key = _get_etherscan_key()
     if not key:
         print("[CONTRACT] WARNING: ETHERSCAN_API_KEY is EMPTY")
-        return {"source": "", "abi": "[]", "name": "Unknown", "compiler": "N/A", "proxy": False, "license": "Unknown"}
+        return {"source": "", "abi": "[]", "name": "Data Not Available", "compiler": "N/A", "proxy": False, "license": "Data Not Available"}
 
     url = f"https://api.etherscan.io/v2/api?chainid=1&module=contract&action=getsourcecode&address={address}&apikey={key}"
     try:
@@ -311,15 +311,15 @@ async def fetch_etherscan_source(client: httpx.AsyncClient, address: str) -> dic
             return {
                 "source": r.get("SourceCode", ""),
                 "abi": r.get("ABI", "[]"),
-                "name": r.get("ContractName", "Unknown"),
+                "name": r.get("ContractName", "Data Not Available"),
                 "compiler": r.get("CompilerVersion", "N/A"),
                 "proxy": r.get("Proxy", "0") == "1",
-                "license": r.get("LicenseType", "Unknown")
+                "license": r.get("LicenseType", "Data Not Available")
             }
     except Exception as e:
         print(f"[CONTRACT] Etherscan source error: {e}")
 
-    return {"source": "", "abi": "[]", "name": "Unknown", "compiler": "N/A", "proxy": False, "license": "Unknown"}
+    return {"source": "", "abi": "[]", "name": "Data Not Available", "compiler": "N/A", "proxy": False, "license": "Data Not Available"}
 
 
 async def fetch_goplus_security(client: httpx.AsyncClient, address: str) -> dict:
@@ -409,7 +409,7 @@ async def scan_contract(address: str, db: Session, depth: str = "quick", case_id
     tx_history = tx_data.get("transactions", [])
     tx_count = max(tx_data.get("tx_count", 0), len(tx_history))
 
-    name = etherscan.get("name", "Unknown")
+    name = etherscan.get("name", "Data Not Available")
     if goplus and goplus.get("token_name"):
         name = goplus.get("token_name")
 
@@ -720,10 +720,10 @@ async def scan_contract(address: str, db: Session, depth: str = "quick", case_id
     print(f"[CONTRACT] {name} ({address[:10]}...): Score={final_score:.0f} ({label}), Axes={axis}, Mult={multiplier}, Proto={protocol_class['category']}")
 
     # ═══════════════════════════════════════════════════════
-    # AI FORENSIC INTERPRETER
+    # Analytical Engine FORENSIC INTERPRETER
     # ═══════════════════════════════════════════════════════
 
-    # Strictly constrain the AI narrative based on the score band
+    # Strictly constrain the Analytical Engine narrative based on the score band
     if final_score <= 25:
         verdict_constraint = "LOW RISK. You MUST conclude this is a benign, safe, or low-risk contract. Do NOT suggest it is malicious, a honeypot, or a money laundering tool. The narrative MUST match the low score."
     elif final_score <= 50:
@@ -790,9 +790,9 @@ Use ALL of this evidence to form a comprehensive forensic assessment."""
 
     ai_data = await analyze_entity(ai_prompt, depth=depth, entity_type="contract")
 
-    # Validate AI response has the expected keys
+    # Validate Analytical Engine response has the expected keys
     if not isinstance(ai_data, dict) or "hypothesis" not in ai_data:
-        print(f"[CONTRACT] AI returned unexpected format: {type(ai_data)} — using fallback")
+        print(f"[CONTRACT] Analytical Engine returned unexpected format: {type(ai_data)} — using fallback")
         ai_data = _build_fallback(axis, label, name, signals, is_known_exchange, protocol_class, mitre_tag)
     elif ai_data.get("hypothesis", "").startswith("AI parsing unavailable"):
         ai_data = _build_fallback(axis, label, name, signals, is_known_exchange, protocol_class, mitre_tag)
@@ -800,7 +800,7 @@ Use ALL of this evidence to form a comprehensive forensic assessment."""
     # Force MITRE tag to evidence-driven value (don't trust LLM to set it)
     ai_data["mitre_tag"] = mitre_tag
 
-    # ── Layer 6 & 7: Independent AI Agent Ratings ──
+    # ── Layer 6 & 7: Independent Analytical Engine Agent Ratings ──
     dual_ratings = await generate_dual_quick_ratings(ai_prompt, entity_type="contract")
 
     # ═══════════════════════════════════════════════════════
@@ -882,6 +882,11 @@ Use ALL of this evidence to form a comprehensive forensic assessment."""
         if to_addr not in node_ids:
             is_mixer = to_addr in all_mixer_addrs
             is_exchange = to_addr in all_exchange_addrs
+            # Phase 3: Contract Parser Stub
+            parsed_interactions = []
+            if "swap" in name.lower() or "router" in name.lower():
+                parsed_interactions.append({"type": "Swap", "description": "Swapped Token A for Token B on DEX Router", "severity": "INFO"})
+
             db_entry = known_bad_map.get(to_addr)
             if db_entry:
                 node_risk = min(db_entry.risk_score, 100)
@@ -920,13 +925,13 @@ Use ALL of this evidence to form a comprehensive forensic assessment."""
             "address": address,
             "name": protocol_class["name"] if protocol_class["matched"] else name,
             "label": protocol_class["name"] if protocol_class["matched"] else name,
-            "compiler": etherscan.get("compiler", "Unknown"),
+            "compiler": etherscan.get("compiler", "Data Not Available"),
             "network": "Ethereum Mainnet",
             "license": etherscan.get("license", "None"),
-            "deployedDate": "Unknown",
+            "deployedDate": "Data Not Available",
             "proxyType": "Upgradeable Proxy" if is_proxy else "None",
             "verified": is_verified,
-            "deployer": etherscan.get("constructorArguments", "Unknown"),
+            "deployer": etherscan.get("constructorArguments", "Data Not Available"),
             "proxy": is_proxy,
             "protocolCategory": protocol_class["category"],
             "protocolContext": protocol_class["context"],
@@ -935,10 +940,10 @@ Use ALL of this evidence to form a comprehensive forensic assessment."""
         "info": {
             "tokenName": goplus.get("token_name", "N/A"),
             "symbol": goplus.get("token_symbol", "N/A"),
-            "totalSupply": goplus.get("total_supply", "Unknown"),
-            "holders": goplus.get("holder_count", "Unknown"),
-            "contractBalance": "Unknown",
-            "ownerAddress": goplus.get("owner_address", "Unknown"),
+            "totalSupply": goplus.get("total_supply", "Data Not Available"),
+            "holders": goplus.get("holder_count", "Data Not Available"),
+            "contractBalance": "Data Not Available",
+            "ownerAddress": goplus.get("owner_address", "Data Not Available"),
             "isMintable": goplus.get("is_mintable") == "1",
             "isFreezable": goplus.get("is_blacklisted") == "1",
             "isBlacklist": goplus.get("is_blacklisted") == "1",
@@ -957,7 +962,7 @@ Use ALL of this evidence to form a comprehensive forensic assessment."""
             "multiplier": multiplier,
             "aiAgentA": dual_ratings.get("agentA"),
             "aiAgentB": dual_ratings.get("agentB"),
-            "aiAnalysis": {
+            "analyticalSynthesis": {
                 "rating": label,
                 "hypothesis": ai_data.get("hypothesis", ""),
                 "mitre_tag": ai_data.get("mitre_tag", ""),
@@ -1053,7 +1058,7 @@ Use ALL of this evidence to form a comprehensive forensic assessment."""
                         label=f"Auto-Detected Contract: {protocol_class['name'] if protocol_class['matched'] else name}",
                         category="Malicious Contract",
                         chain="ETH",
-                        amount_usd="Unknown",
+                        amount_usd="Data Not Available",
                         threat_level="CRITICAL" if final_score >= 90 else "HIGH",
                         sanctioned=protocol_class.get("category") == "SANCTIONED",
                         risk_score=final_score,
@@ -1081,7 +1086,7 @@ def _build_fallback(axis: dict, label: str, name: str, signals: list,
                     is_known_exchange: bool = False,
                     protocol_class: dict = None,
                     mitre_tag: str = "N/A") -> dict:
-    """Build a deterministic AI fallback based on the matrix data + protocol classification."""
+    """Build a deterministic Analytical Engine fallback based on the matrix data + protocol classification."""
     if protocol_class is None:
         protocol_class = {"category": "UNKNOWN", "context": ""}
 

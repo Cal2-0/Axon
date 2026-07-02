@@ -32,7 +32,7 @@ def detect_address_type(address: str) -> dict:
         return {"chain": "Solana", "type": "SOLANA"}
     if addr.startswith("1") or addr.startswith("3") or addr.startswith("bc1"):
         return {"chain": "Bitcoin", "type": "BTC"}
-    return {"chain": "Unknown", "type": "UNKNOWN"}
+    return {"chain": "Data Not Available", "type": "UNKNOWN"}
 
 async def fetch_btc_balance(client: httpx.AsyncClient, address: str) -> dict:
     try:

@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import GraphView from '../components/GraphView';
 import SmartAddressInput, { isValidAddress } from '../components/SmartAddressInput';
-import ForensicReport from '../components/ForensicReport';
 import { downloadWalletPDF } from '../utils/pdfExport';
 import { formatINR, formatIndian } from '../utils/indianFormat';
 import TemporalHeatmap from '../components/TemporalHeatmap';
@@ -195,7 +194,7 @@ const DEMO_PROFILES = {
         { id: '0xFTXHot2', label: 'FTX Hot Wallet 2', type: 'victim', risk: 20 },
         { id: '0xRenBr', label: 'RenBridge', type: 'mixer', risk: 65 },
         { id: '0xSwap1', label: 'DEX Swap #1', type: 'default', risk: 15 },
-        { id: '0xTumbler', label: 'Unknown Contract', type: 'suspect', risk: 80 },
+        { id: '0xTumbler', label: 'Not Determined', type: 'suspect', risk: 80 },
         { id: '0xInter1', label: 'Intermediary #1', type: 'suspect', risk: 72 },
       ],
       edges: [
@@ -326,6 +325,22 @@ function RiskMeter({ score, label }) {
 export default function WalletInvestigation({ caseId }) {
   const [address, setAddress] = useState('');
   const [loading, setLoading] = useState(false);
+  const [cryptoPrices, setCryptoPrices] = useState({
+    ethereum: { usd: 3500, inr: 290500 },
+    bitcoin: { usd: 65000, inr: 5400000 },
+    solana: { usd: 140, inr: 11600 },
+    tron: { usd: 0.12, inr: 10 }
+  });
+
+  useEffect(() => {
+    fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum,bitcoin,solana,tron,binancecoin,matic-network,avalanche-2&vs_currencies=usd,inr')
+      .then(res => res.json())
+      .then(data => {
+        setCryptoPrices(prev => ({ ...prev, ...data }));
+      })
+      .catch(err => console.error('Failed to fetch live crypto prices:', err));
+  }, []);
+
   const [result, setResult] = useState(null);
   const [crossChain, setCrossChain] = useState(null);
   const [chainData, setChainData] = useState(null);
@@ -333,23 +348,11 @@ export default function WalletInvestigation({ caseId }) {
   const [deepDiveStatus, setDeepDiveStatus] = useState('');
   const [deepDiveError, setDeepDiveError] = useState('');
   const [deepDiveResult, setDeepDiveResult] = useState(null);
-  const [showReport, setShowReport] = useState(false);
-  const [ethPrice, setEthPrice] = useState({ usd: 3500, inr: 290500 });
   const [reportHash, setReportHash] = useState(null);
   const [isAiAnalyzingChain, setIsAiAnalyzingChain] = useState(false);
   const [aiOneCardResult, setAiOneCardResult] = useState(null);
   const location = useLocation();
 
-  useEffect(() => {
-    fetch('https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd,inr')
-      .then(res => res.json())
-      .then(data => {
-        if (data.ethereum) {
-          setEthPrice({ usd: data.ethereum.usd, inr: data.ethereum.inr });
-        }
-      })
-      .catch(err => console.error('Failed to fetch live ETH price:', err));
-  }, []);
 
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
@@ -383,8 +386,8 @@ export default function WalletInvestigation({ caseId }) {
       } catch (err) {
         // Fallback to error profile
         profile = {
-          identity: { address: targetAddress.trim(), tag: 'EXTERNAL', label: `${chainInfo?.chain || 'Unknown'} Wallet`, ethBalance: 'N/A', totalVolumeUSD: 'N/A' },
-          risk: { score: 0, label: 'ERROR', mlClassification: 'Unknown', anomalyScore: 0, factors: [] },
+          identity: { address: targetAddress.trim(), tag: 'EXTERNAL', label: `${chainInfo?.chain || 'Data Not Available'} Wallet`, ethBalance: 'N/A', totalVolumeUSD: 'N/A' },
+          risk: { score: 0, label: 'ERROR', mlClassification: 'Data Not Available', anomalyScore: 0, factors: [] },
           osint: { summary: `Failed to scan address. Error: ${err.message}`, aliases: [], walletMentions: 0 },
           exchange: { detected: false, findings: [], cashOutEvents: 0, totalCashOutUSD: '$0', summary: 'N/A' },
           mixer: { detected: false, findings: [], bridgeActivity: [], launderingIndicators: [], totalMixedETH: '0' },
@@ -490,6 +493,30 @@ export default function WalletInvestigation({ caseId }) {
     URL.revokeObjectURL(url);
   };
 
+  const handleDownloadCoC = async () => {
+    if (!result || !result.report_metadata || !result.report_metadata.report_id) {
+      alert("No verifiable report ID found for this scan. Run a new scan to generate a Final Analysis PDF.");
+      return;
+    }
+    const reportId = result.report_metadata.report_id;
+    try {
+      const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8001';
+      const response = await fetch(`${API_BASE}/scan/report/${reportId}/pdf`);
+      if (!response.ok) throw new Error("Failed to generate PDF from backend");
+      
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${reportId}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      alert("Error generating Final Analysis PDF: " + err.message);
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-fade-in pb-20">
 
@@ -556,7 +583,7 @@ export default function WalletInvestigation({ caseId }) {
         </div>
       </form>
 
-      {/* Simple AI Card Result */}
+      {/* Simple Analytical Engine Card Result */}
       {aiOneCardResult && (
         <div className="glass-panel p-6 border border-axon-purple/40 animate-fade-in bg-gradient-to-r from-axon-bg to-axon-purple/5">
           <div className="flex items-center gap-3 mb-2">
@@ -566,29 +593,21 @@ export default function WalletInvestigation({ caseId }) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
             <div className="p-3 bg-axon-card rounded-lg border border-axon-border">
               <div className="text-[10px] uppercase font-bold text-axon-text-dim mb-1">Most Likely Crypto</div>
-              <div className="text-base font-mono text-axon-cyan font-bold">{aiOneCardResult.chain}</div>
-              <div className="text-[10px] text-axon-text-dim mt-1">Confidence: {aiOneCardResult.confidence}%</div>
+              <div className="text-base font-mono text-axon-cyan font-bold">{aiOneCardResult.candidates?.[0]?.chain || 'Data Not Available'}</div>
+              <div className="text-[10px] text-axon-text-dim mt-1">Confidence: {aiOneCardResult.candidates?.[0]?.confidence ? (aiOneCardResult.candidates[0].confidence * 100).toFixed(0) : '0'}%</div>
             </div>
-            {aiOneCardResult.official_website && typeof aiOneCardResult.official_website === 'string' && aiOneCardResult.official_website !== 'null' && aiOneCardResult.official_website !== 'None' && (
+            {aiOneCardResult.candidates?.[0]?.explorer_url && (
               <div className="p-3 bg-axon-card rounded-lg border border-axon-border">
-                <div className="text-[10px] uppercase font-bold text-axon-text-dim mb-1">Official Website</div>
-                <a href={aiOneCardResult.official_website} target="_blank" rel="noreferrer" className="text-base font-medium text-axon-purple hover:underline truncate block">
-                  {String(aiOneCardResult.official_website).replace(/^https?:\/\//, '')}
+                <div className="text-[10px] uppercase font-bold text-axon-text-dim mb-1">Explorer Link</div>
+                <a href={aiOneCardResult.candidates[0].explorer_url} target="_blank" rel="noreferrer" className="text-base font-medium text-axon-purple hover:underline truncate block">
+                  {String(aiOneCardResult.candidates[0].explorer_url).replace(/^https?:\/\//, '')}
                 </a>
               </div>
             )}
-            {aiOneCardResult.explorer_url && typeof aiOneCardResult.explorer_url === 'string' && aiOneCardResult.explorer_url !== 'null' && aiOneCardResult.explorer_url !== 'None' && (
-              <div className="p-3 bg-axon-card rounded-lg border border-axon-border">
-                <div className="text-[10px] uppercase font-bold text-axon-text-dim mb-1">Block Explorer</div>
-                <a href={String(aiOneCardResult.explorer_url).replace('<address>', address)} target="_blank" rel="noreferrer" className="text-sm font-medium text-blue-400 hover:underline break-all block">
-                  View Address on Explorer ↗
-                </a>
-              </div>
-            )}
-            {aiOneCardResult.description && typeof aiOneCardResult.description === 'string' && (
-              <div className="mt-4 p-4 bg-[#1e293b]/50 border border-axon-cyan/20 rounded-lg text-sm text-gray-300 leading-relaxed font-sans">
-                <div className="text-[10px] font-bold text-axon-cyan/70 uppercase tracking-widest mb-2">Network Intelligence</div>
-                {aiOneCardResult.description}
+            {aiOneCardResult.ai_summary && (
+              <div className="p-3 bg-axon-card rounded-lg border border-axon-border md:col-span-1">
+                <div className="text-[10px] uppercase font-bold text-axon-text-dim mb-1">Analytical Engine Summary</div>
+                <div className="text-xs text-white leading-relaxed">{aiOneCardResult.ai_summary}</div>
               </div>
             )}
           </div>
@@ -632,17 +651,11 @@ export default function WalletInvestigation({ caseId }) {
               )}
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={() => downloadWalletPDF(result)} className="axon-button text-xs px-4 py-2 gap-1.5 bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500 hover:text-white" id="wallet-download-pdf-btn">
+              <button onClick={handleDownloadCoC} className="axon-button text-xs px-4 py-2 gap-1.5 bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500 hover:text-white" id="wallet-download-pdf-btn">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
-                📄 Download PDF
-              </button>
-              <button onClick={() => setShowReport(true)} className="axon-button text-xs px-4 py-2 gap-1.5 bg-axon-purple/10 border-axon-purple/30 text-axon-purple hover:bg-axon-purple hover:text-white">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                🔒 Forensic Report
+                📄 Download Final Analysis PDF
               </button>
               <button onClick={handleExport} className="axon-button text-xs px-4 py-2 gap-1.5">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -696,7 +709,7 @@ export default function WalletInvestigation({ caseId }) {
                    )}
                  </div>
               )}
-              {chainData && chainData.chain === 'Unknown' && (
+              {chainData && chainData.chain === 'Data Not Available' && (
                 <div className="mt-2">
                   <button onClick={handleAiChainAnalyze} disabled={isAiAnalyzingChain} className="axon-button text-xs px-4 py-2 gap-1.5 bg-blue-600/20 border-blue-500/50 text-blue-400 hover:bg-blue-600 hover:text-white transition-colors">
                     {isAiAnalyzingChain ? (
@@ -706,7 +719,7 @@ export default function WalletInvestigation({ caseId }) {
                     )}
                     {isAiAnalyzingChain ? 'Analyzing...' : 'AI Analyze Unknown Chain'}
                   </button>
-                  <p className="text-[10px] text-axon-text-dim mt-1.5">Run a small AI analysis to tell what crypto is most likely and find the official website.</p>
+                  <p className="text-[10px] text-axon-text-dim mt-1.5">Run a small Analytical Engine analysis to tell what crypto is most likely and find the official website.</p>
                 </div>
               )}
             </div>
@@ -721,8 +734,11 @@ export default function WalletInvestigation({ caseId }) {
                 {(() => {
                   const isEVM = chainData?.type === 'EVM';
                   const sym = chainData?.chain === 'Bitcoin' ? 'BTC' : chainData?.chain === 'Solana' ? 'SOL' : chainData?.chain === 'Tron' ? 'TRX' : 'ETH';
+                  const cgId = chainData?.chain === 'Bitcoin' ? 'bitcoin' : chainData?.chain === 'Solana' ? 'solana' : chainData?.chain === 'Tron' ? 'tron' : 'ethereum';
+                  
                   const rawBalance = String(result.identity.ethBalance).replace(/,/g, '').replace(/ ETH| BTC| SOL| TRX/g, '');
                   const balNum = parseFloat(rawBalance);
+                  const priceData = cryptoPrices[cgId];
                   
                   return (
                     <>
@@ -730,11 +746,11 @@ export default function WalletInvestigation({ caseId }) {
                         {result.identity.ethBalance === 'N/A' ? 'N/A' : `${rawBalance} ${sym}`}
                       </div>
                       <div className="text-[11px] text-axon-text-dim mt-0.5 font-mono">
-                        {isEVM && !isNaN(balNum) && ethPrice ? (
+                        {!isNaN(balNum) && priceData ? (
                           <>
-                            ≈ ${(balNum * ethPrice.usd).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})} USD
+                            ≈ ${(balNum * priceData.usd).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})} USD
                             <span className="mx-2">|</span>
-                            ≈ {formatINR(balNum * ethPrice.inr)} INR
+                            ≈ {formatINR(balNum * priceData.inr)} INR
                           </>
                         ) : (
                           <>Value Calculation N/A for {sym}</>
@@ -756,8 +772,8 @@ export default function WalletInvestigation({ caseId }) {
                 { label: 'Counterparties', value: result.identity.uniqueCounterparties, color: 'text-white' },
                 { label: 'First Seen', value: result.identity.firstSeen, color: 'text-axon-text-muted' },
                 { label: 'Last Active', value: result.identity.lastSeen, color: 'text-axon-text-muted' },
-                { label: 'Total Received', value: result.identity.totalReceived, color: 'text-axon-green' },
-                { label: 'Total Sent', value: result.identity.totalSent, color: 'text-red-400' },
+                { label: 'Total Received', value: String(result.identity.totalReceived || 'Data Not Available').replace(/ ETH| BTC| SOL| TRX/g, '') + (result.identity.totalReceived && result.identity.totalReceived !== 'Data Not Available' ? ' ' + (chainData?.chain === 'Bitcoin' ? 'BTC' : chainData?.chain === 'Solana' ? 'SOL' : chainData?.chain === 'Tron' ? 'TRX' : 'ETH') : ''), color: 'text-axon-green' },
+                { label: 'Total Sent', value: String(result.identity.totalSent || 'Data Not Available').replace(/ ETH| BTC| SOL| TRX/g, '') + (result.identity.totalSent && result.identity.totalSent !== 'Data Not Available' ? ' ' + (chainData?.chain === 'Bitcoin' ? 'BTC' : chainData?.chain === 'Solana' ? 'SOL' : chainData?.chain === 'Tron' ? 'TRX' : 'ETH') : ''), color: 'text-red-400' },
               ].map(item => (
                 <div key={item.label} className="bg-axon-bg rounded-lg border border-axon-border p-3 text-center">
                   <div className={`text-sm font-bold font-mono ${item.color}`}>{item.value}</div>
@@ -767,8 +783,8 @@ export default function WalletInvestigation({ caseId }) {
             </div>
           </CollapsibleSection>
 
-          {/* ── 2. Risk Score ─────────────────────────────────────────── */}
-          <CollapsibleSection color="red" icon="⚠️" title="Risk Assessment" badge="5-LAYER BEHAVIORAL ENGINE" defaultOpen={true}>
+          {/* ── 2. Threat Indicator ─────────────────────────────────────────── */}
+          <CollapsibleSection color="red" icon="⚠️" title="Threat Assessment" badge="5-LAYER BEHAVIORAL ENGINE" defaultOpen={true}>
             <div className="flex flex-col md:flex-row gap-8 items-start">
               <div className="flex flex-col items-center gap-3 shrink-0">
                 <RiskMeter score={result.risk.score} label={result.risk.label} />
@@ -781,7 +797,7 @@ export default function WalletInvestigation({ caseId }) {
                     { l: 'L2: Graph', v: result.risk.layers?.L2 },
                     { l: 'L3: Economic', v: result.risk.layers?.L3 },
                     { l: 'L4: Attribution', v: result.risk.layers?.L4 },
-                    { l: 'L5: AI Delta', v: result.risk.layers?.L5 }
+                    { l: 'L5: Analytical Engine Delta', v: result.risk.layers?.L5 }
                   ].map(a => (
                      <div key={a.l} className="flex justify-between items-center text-[11px] mb-1">
                         <span className="text-axon-text-muted">{a.l}</span>
@@ -795,7 +811,7 @@ export default function WalletInvestigation({ caseId }) {
                   <div className="text-sm font-bold font-mono text-axon-purple">{result.risk.mlClassification}</div>
                 </div>
                 <div className="w-full bg-axon-bg rounded border border-axon-border p-3 text-center min-w-[150px]">
-                  <div className="text-xs text-axon-text-dim mb-1">Anomaly Score</div>
+                  <div className="text-xs text-axon-text-dim mb-1">Anomaly Severity</div>
                   <div className="text-lg font-bold font-mono text-axon-purple">{result.risk.anomalyScore}%</div>
                   <div className="w-full h-1.5 bg-axon-card rounded-full mt-2 overflow-hidden">
                     <div className="h-full bg-axon-purple rounded-full" style={{ width: `${result.risk.anomalyScore}%` }} />
@@ -804,27 +820,27 @@ export default function WalletInvestigation({ caseId }) {
               </div>
               <div className="flex-1 min-w-0">
                 
-                {/* AI Forensic Analysis (Quick Scan) */}
-                {result.risk.aiAnalysis && (
+                {/* Analytical Engine Forensic Analysis (Quick Scan) */}
+                {result.risk.analyticalSynthesis && (
                   <div className="mb-6 bg-[#1e293b]/50 rounded-xl border border-blue-500/30 p-5 font-sans text-sm leading-relaxed text-gray-200">
                     <div className="flex items-center gap-2 mb-4 border-b border-blue-500/20 pb-2">
-                      <span className="px-2 py-0.5 text-[10px] font-mono font-bold tracking-widest text-white bg-blue-600 rounded">FORENSIC VERDICT</span>
-                      <span className="text-xs font-mono font-bold text-blue-400">{result.risk.aiAnalysis.mitre_tag || "N/A"}</span>
+                      <span className="px-2 py-0.5 text-[10px] font-mono font-bold tracking-widest text-white bg-blue-600 rounded">ANALYST SYNTHESIS</span>
+                      <span className="text-xs font-mono font-bold text-blue-400">{result.risk.analyticalSynthesis.mitre_tag || "N/A"}</span>
                     </div>
                     
                     <div className="mb-4">
                       <div className="text-[10px] font-bold text-blue-400/70 uppercase tracking-widest mb-1">Plausible Hypothesis</div>
-                      <p className="text-gray-300 font-mono text-xs break-words">{result.risk.aiAnalysis.hypothesis}</p>
+                      <p className="text-gray-300 font-mono text-xs break-words">{result.risk.analyticalSynthesis.hypothesis}</p>
                     </div>
 
                     <div>
-                      <div className="text-[10px] font-bold text-blue-400/70 uppercase tracking-widest mb-1">Executive Verdict</div>
-                      <p className="text-white font-bold break-words">{result.risk.aiAnalysis.verdict}</p>
+                      <div className="text-[10px] font-bold text-blue-400/70 uppercase tracking-widest mb-1">Adversarial Synthesis (Executive Verdict)</div>
+                      <p className="text-white font-bold break-words">{result.risk.analyticalSynthesis.verdict}</p>
                     </div>
 
                     <div className="mt-6 border-t border-blue-500/20 pt-4 flex flex-col sm:flex-row items-center justify-between gap-4">
                       <div className="text-xs text-blue-300/70 max-w-sm">
-                        This is a quick summary. For a comprehensive forensic analysis, run the Dual Adversarial AI Engine.
+                        This is a quick summary. For a comprehensive forensic analysis, run the Dual Adversarial Analytical Engine Engine.
                       </div>
                       {!deepDiveResult && (
                         <button
@@ -856,7 +872,7 @@ export default function WalletInvestigation({ caseId }) {
           </CollapsibleSection>
 
           {/* ── Deep Dive Results (shown after deep scan completes) ── */}
-          {deepDiveResult && deepDiveResult.risk && deepDiveResult.risk.aiAnalysis && (
+          {deepDiveResult && deepDiveResult.risk && deepDiveResult.risk.analyticalSynthesis && (
             <CollapsibleSection color="purple" icon="🧠" title="Dual-Adversarial Deep Scan" badge="3-AI PIPELINE" defaultOpen={true}>
               
               {/* Updated Risk Score Delta */}
@@ -899,18 +915,18 @@ export default function WalletInvestigation({ caseId }) {
                   <div className="bg-red-950/20 rounded-xl border border-red-500/30 p-4">
                     <div className="flex items-center justify-between mb-3 border-b border-red-500/20 pb-2">
                       <span className="px-2 py-0.5 text-[10px] font-mono font-bold tracking-widest text-white bg-red-600 rounded">PROSECUTION AI</span>
-                      <span className="text-xs font-mono font-bold text-red-400">{deepDiveResult.risk.aiAnalysis.prosecution_risk || deepDiveResult.risk.label} RISK</span>
+                      <span className="text-xs font-mono font-bold text-red-400">{deepDiveResult.risk.analyticalSynthesis.prosecution_risk || deepDiveResult.risk.label} RISK</span>
                     </div>
-                    <p className="text-gray-300 font-mono text-xs break-words">{deepDiveResult.risk.aiAnalysis.prosecution_summary}</p>
+                    <p className="text-gray-300 font-mono text-xs break-words">{deepDiveResult.risk.analyticalSynthesis.prosecution_summary}</p>
                   </div>
 
                   {/* Defense Panel */}
                   <div className="bg-[#064e3b]/40 rounded-xl border border-emerald-500/30 p-4">
                     <div className="flex items-center justify-between mb-3 border-b border-emerald-500/20 pb-2">
                       <span className="px-2 py-0.5 text-[10px] font-mono font-bold tracking-widest text-white bg-emerald-600 rounded">DEFENSE AI</span>
-                      <span className="text-xs font-mono font-bold text-emerald-400">{deepDiveResult.risk.aiAnalysis.defense_risk || 'MEDIUM'} RISK</span>
+                      <span className="text-xs font-mono font-bold text-emerald-400">{deepDiveResult.risk.analyticalSynthesis.defense_risk || 'MEDIUM'} RISK</span>
                     </div>
-                    <p className="text-gray-300 font-mono text-xs break-words">{deepDiveResult.risk.aiAnalysis.defense_summary}</p>
+                    <p className="text-gray-300 font-mono text-xs break-words">{deepDiveResult.risk.analyticalSynthesis.defense_summary}</p>
                   </div>
                 </div>
 
@@ -920,32 +936,32 @@ export default function WalletInvestigation({ caseId }) {
                   <div className="flex items-center justify-between mb-4 border-b border-blue-500/20 pb-2 relative z-10">
                     <div className="flex items-center gap-2">
                       <span className="px-2 py-0.5 text-[10px] font-mono font-bold tracking-widest text-white bg-blue-600 rounded">CHIEF JUDGE VERDICT</span>
-                      <span className="text-xs font-mono font-bold text-blue-400">{deepDiveResult.risk.aiAnalysis.mitre_tag || "N/A"}</span>
+                      <span className="text-xs font-mono font-bold text-blue-400">{deepDiveResult.risk.analyticalSynthesis.mitre_tag || "N/A"}</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-[10px] font-bold text-blue-400/70 uppercase tracking-widest">Confidence</span>
-                      <span className="text-xs font-mono font-bold text-white bg-blue-500/20 px-2 py-0.5 rounded">{deepDiveResult.risk.aiAnalysis.confidence || '—'}%</span>
+                      <span className="text-xs font-mono font-bold text-white bg-blue-500/20 px-2 py-0.5 rounded">{deepDiveResult.risk.analyticalSynthesis.confidence || '—'}%</span>
                     </div>
                   </div>
                   
                   <div className="mb-4 relative z-10">
                     <div className="text-[10px] font-bold text-blue-400/70 uppercase tracking-widest mb-1">Synthesized Hypothesis</div>
-                    <p className="text-gray-300 font-mono text-xs break-words">{deepDiveResult.risk.aiAnalysis.hypothesis}</p>
+                    <p className="text-gray-300 font-mono text-xs break-words">{deepDiveResult.risk.analyticalSynthesis.hypothesis}</p>
                   </div>
 
-                  {deepDiveResult.risk.aiAnalysis.judge_reasoning && (
+                  {deepDiveResult.risk.analyticalSynthesis.judge_reasoning && (
                     <div className="mb-4 relative z-10">
                       <div className="text-[10px] font-bold text-blue-400/70 uppercase tracking-widest mb-1">Judge Reasoning</div>
-                      <p className="text-gray-400 italic text-xs break-words border-l-2 border-blue-500/30 pl-3">{deepDiveResult.risk.aiAnalysis.judge_reasoning}</p>
+                      <p className="text-gray-400 italic text-xs break-words border-l-2 border-blue-500/30 pl-3">{deepDiveResult.risk.analyticalSynthesis.judge_reasoning}</p>
                     </div>
                   )}
 
                   <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 relative z-10">
                     <div className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-1 flex justify-between">
                       <span>Final Executive Verdict</span>
-                      <span className="opacity-70">Consensus: {deepDiveResult.risk.aiAnalysis.consensus_level || 'N/A'}</span>
+                      <span className="opacity-70">Consensus: {deepDiveResult.risk.analyticalSynthesis.consensus_level || 'N/A'}</span>
                     </div>
-                    <p className="text-white font-bold break-words">{deepDiveResult.risk.aiAnalysis.verdict}</p>
+                    <p className="text-white font-bold break-words">{deepDiveResult.risk.analyticalSynthesis.verdict}</p>
                   </div>
                 </div>
               </div>
@@ -1061,16 +1077,16 @@ export default function WalletInvestigation({ caseId }) {
 
 {/* ── 4. OSINT & Threat Alerts ──────────────────────────────────────── */}
           <CollapsibleSection color="purple" icon="🛰️" title="OSINT & Threat Alerts" badge="LIVE" defaultOpen={false}>
-            {result.osint.aiAnalysis && result.osint.aiAnalysis.verdict ? (
+            {result.osint.analyticalSynthesis && result.osint.analyticalSynthesis.verdict ? (
               <div className="mb-6 p-4 bg-axon-purple/5 border border-axon-purple/20 rounded-lg">
                 <div className="flex items-center gap-2 mb-3 border-b border-axon-purple/20 pb-2">
                   <span className="px-2 py-0.5 text-[10px] font-bold font-mono bg-axon-purple/20 text-axon-purple rounded">THREAT SUMMARY</span>
-                  <span className="text-xs font-bold text-white">{result.osint.aiAnalysis.mitre_tag || "N/A"}</span>
+                  <span className="text-xs font-bold text-white">{result.osint.analyticalSynthesis.mitre_tag || "N/A"}</span>
                 </div>
                 <div className="text-xs text-axon-text-dim uppercase tracking-widest mb-1 font-bold">Hypothesis</div>
-                <p className="text-sm text-axon-text-muted leading-relaxed mb-3">{result.osint.aiAnalysis.hypothesis}</p>
+                <p className="text-sm text-axon-text-muted leading-relaxed mb-3">{result.osint.analyticalSynthesis.hypothesis}</p>
                 <div className="text-xs text-axon-text-dim uppercase tracking-widest mb-1 font-bold">Verdict</div>
-                <p className="text-sm text-axon-purple font-bold leading-relaxed">{result.osint.aiAnalysis.verdict}</p>
+                <p className="text-sm text-axon-purple font-bold leading-relaxed">{result.osint.analyticalSynthesis.verdict}</p>
               </div>
             ) : (
               <div className="mb-4 p-3 bg-axon-purple/5 border border-axon-purple/20 rounded-lg text-sm text-axon-text-muted">
@@ -1279,15 +1295,54 @@ export default function WalletInvestigation({ caseId }) {
             </CollapsibleSection>
           )}
 
+          {/* ── 6.75 DeFi Interactions & Timeline ───────────────────────────────────── */}
+          {result.graph?.defi_interactions && result.graph.defi_interactions.length > 0 && (
+            <CollapsibleSection color="purple" icon="📜" title="DeFi Interactions & Timeline" badge={`${result.graph.defi_interactions.length} PARSED EVENTS`} defaultOpen={true}>
+              <div className="overflow-x-auto max-h-[400px] overflow-y-auto custom-scrollbar">
+                <table className="w-full text-sm font-mono">
+                  <thead className="sticky top-0 bg-axon-bg z-10">
+                    <tr className="border-b border-axon-border text-left">
+                      <th className="py-3 pr-4 text-xs text-axon-text-dim uppercase tracking-wider bg-axon-bg">Narrative</th>
+                      <th className="py-3 pr-4 text-xs text-axon-text-dim uppercase tracking-wider bg-axon-bg">Signature</th>
+                      <th className="py-3 pr-4 text-xs text-axon-text-dim uppercase tracking-wider bg-axon-bg">To Contract</th>
+                      <th className="py-3 pr-4 text-xs text-axon-text-dim uppercase tracking-wider bg-axon-bg">Hash</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {result.graph.defi_interactions.map((interaction, i) => (
+                      <tr key={interaction.hash || i} className="border-b border-axon-border/50 hover:bg-axon-card/30 transition-colors">
+                        <td className="py-3 pr-4 text-white font-bold break-words whitespace-normal max-w-[300px]">
+                          {interaction.narrative}
+                        </td>
+                        <td className="py-3 pr-4 text-axon-purple text-xs">
+                          {interaction.signature}
+                        </td>
+                        <td className="py-3 pr-4 text-axon-cyan">
+                          {interaction.to ? interaction.to.substring(0, 8) + '...' + interaction.to.substring(interaction.to.length - 6) : 'Data Not Available'}
+                        </td>
+                        <td className="py-3 pr-4">
+                          <div className="flex items-center gap-2 text-axon-cyan">
+                            {interaction.hash ? interaction.hash.substring(0, 10) + '...' : 'N/A'}
+                            {interaction.hash && <CopyButton text={interaction.hash} />}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CollapsibleSection>
+          )}
+
           {/* ── 7. Transaction History ────────────────────────────────── */}
-          <CollapsibleSection color="slate" icon="📜" title="Transaction History" badge={`${result.transactions?.length || 0} RECORDS`} defaultOpen={false}>
+          <CollapsibleSection color="slate" icon="📜" title="General Transaction Timeline" badge={`${result.transactions?.length || 0} RECORDS`} defaultOpen={true}>
             {result.transactions && result.transactions.length > 0 ? (
               <div className="overflow-x-auto max-h-[500px] overflow-y-auto custom-scrollbar">
                 <table className="w-full text-sm font-mono">
                   <thead className="sticky top-0 bg-axon-bg z-10">
                     <tr className="border-b border-axon-border text-left">
-                      {['Hash', 'Block', 'Type', 'From / To', 'Value (ETH)', 'Gas Fee'].map(h => (
-                        <th key={h} className="py-3 pr-4 text-xs text-axon-text-dim uppercase tracking-wider bg-axon-bg">{h}</th>
+                      {['Date', 'Hash', 'Block', 'Type', 'From / To', 'Value (Native)', 'Gas Fee'].map(h => (
+                        <th key={h} className="py-3 pr-4 text-xs text-axon-text-dim uppercase tracking-wider bg-axon-bg whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -1297,8 +1352,12 @@ export default function WalletInvestigation({ caseId }) {
                       const valEth = (parseInt(tx.value || '0') / 1e18).toFixed(4);
                       const gasEth = ((parseInt(tx.gasUsed || '0') * parseInt(tx.gasPrice || '0')) / 1e18).toFixed(6);
                       const displayAddr = isIncoming ? tx.from : tx.to;
+                      const dateStr = tx.timeStamp && tx.timeStamp !== '0' ? new Date(parseInt(tx.timeStamp) * 1000).toLocaleString() : 'N/A';
                       return (
                         <tr key={tx.hash || i} className="border-b border-axon-border/50 hover:bg-axon-card/30 transition-colors">
+                          <td className="py-3 pr-4 text-axon-text-muted whitespace-nowrap text-xs">
+                            {dateStr}
+                          </td>
                           <td className="py-3 pr-4">
                             <div className="flex items-center gap-2 text-axon-cyan">
                               {tx.hash ? tx.hash.substring(0, 10) + '...' : 'N/A'}
@@ -1368,11 +1427,6 @@ export default function WalletInvestigation({ caseId }) {
             Enter a wallet address above to run all 5 intelligence modules simultaneously using real data.
           </p>
         </div>
-      )}
-
-      {/* Forensic Report Overlay */}
-      {showReport && result && (
-        <ForensicReport result={result} onClose={() => setShowReport(false)} />
       )}
 
     </div>

@@ -1,0 +1,23 @@
+{
+  "Bitcoin": "https://mempool.space/address/{addr}",
+  "Bitcoin_Alt": "https://blockstream.info/address/{addr}",
+  "Ethereum": "https://etherscan.io/address/{addr}",
+  "BSC": "https://bscscan.com/address/{addr}",
+  "Polygon": "https://polygonscan.com/address/{addr}",
+  "Avalanche": "https://snowtrace.io/address/{addr}",
+  "Arbitrum": "https://arbiscan.io/address/{addr}",
+  "Optimism": "https://optimistic.etherscan.io/address/{addr}",
+  "Base": "https://basescan.org/address/{addr}",
+  "Litecoin": "https://blockchair.com/litecoin/address/{addr}",
+  "Dogecoin": "https://blockchair.com/dogecoin/address/{addr}",
+  "Bitcoin Cash": "https://blockchair.com/bitcoin-cash/address/{addr}",
+  "Tron": "https://tronscan.org/#/address/{addr}",
+  "Solana": "https://solscan.io/account/{addr}",
+  "XRP": "https://xrpscan.com/account/{addr}",
+  "Cardano": "https://cardanoscan.io/address/{addr}",
+  "Polkadot": "https://polkadot.subscan.io/account/{addr}",
+  "Kusama": "https://kusama.subscan.io/account/{addr}",
+  "Stellar": "https://stellar.expert/explorer/public/account/{addr}",
+  "Cosmos Hub": "https://www.mintscan.io/cosmos/address/{addr}",
+  "Algorand": "https://allo.info/account/{addr}"
+}

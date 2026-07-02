@@ -37,7 +37,7 @@ export default function IssueList({ findings }) {
                 </span>
               )}
               <span className={`px-2 py-1 text-xs font-bold rounded uppercase border ${getImpactColor(f.impact)}`}>
-                {f.impact || 'Unknown'} Impact
+                {f.impact || 'Data Not Available'} Impact
               </span>
             </div>
           </div>

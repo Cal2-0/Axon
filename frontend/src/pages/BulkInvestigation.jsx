@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { bulkScan } from '../api/axon';
 import { useNavigate } from 'react-router-dom';
-import { downloadBulkPDF } from '../utils/pdfExport';
 
 export default function BulkInvestigation({ caseId }) {
   const [inputData, setInputData] = useState('');
@@ -9,20 +8,32 @@ export default function BulkInvestigation({ caseId }) {
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState(null);
   const [reportHash, setReportHash] = useState(null);
+  const [failedChainNames, setFailedChainNames] = useState({});
   const navigate = useNavigate();
+
+  const sampleScenarios = {
+    "MIXED_CHAINS": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045\n1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa\nTE2RzoSV3wFK99w6J9UnnZ4vLfXYoxvRwP\nDFndh9WcBjjTG5hZzXW9v4n3jA2U6vFf3K\nLtc1q... (Litecoin - Unsupported)",
+    "EXPLOIT_CLUSTER": "0x59ABf3837Fa962d6853b4Cc0a19513AA031fd32b\n0xC8a65Fadf0e0dDAf421F28FEAb69Bf6E2E589963\n0x629eEED06a0cdEc0eB79B5e94b28c03e8a4a5B0E"
+  };
 
   const handleScan = async (e) => {
     e.preventDefault();
     
-    // Regex to match 0x followed by 40 hex characters
-    const addressRegex = /0x[a-fA-F0-9]{40}/g;
+    // Regex to match EVM, Bitcoin, TRON, and others
+    const addressRegex = /\b(0x[a-fA-F0-9]{40}|[a-zA-Z0-9]{25,65})\b/g;
     let addresses = inputData.match(addressRegex) || [];
     
-    // Remove duplicates and normalize
-    addresses = [...new Set(addresses)].map(a => a.toLowerCase());
+    // Remove duplicates case-insensitively while preserving original case
+    const uniqueMap = new Map();
+    addresses.forEach(addr => {
+      if (!uniqueMap.has(addr.toLowerCase())) {
+        uniqueMap.set(addr.toLowerCase(), addr);
+      }
+    });
+    addresses = Array.from(uniqueMap.values());
 
     if (addresses.length === 0) {
-      alert("No valid Ethereum addresses found. Ensure addresses start with 0x and are 42 characters long.");
+      alert("No valid addresses found.");
       return;
     }
 
@@ -33,6 +44,20 @@ export default function BulkInvestigation({ caseId }) {
       const targetCaseId = caseId || (inputCaseId ? parseInt(inputCaseId) : null);
       const result = await bulkScan(addresses, targetCaseId);
       setReport(result);
+      
+      if (result.errors && result.errors.length > 0) {
+        const { resolveChainAI } = await import('../api/axon');
+        const names = {};
+        for (const err of result.errors) {
+          try {
+            const aiInfo = await resolveChainAI(err.address);
+            names[err.address] = aiInfo?.candidates?.[0]?.chain || 'Data Not Available';
+          } catch(e) {
+            names[err.address] = 'Data Not Available';
+          }
+        }
+        setFailedChainNames(names);
+      }
       
       try {
         if (result.report_metadata && result.report_metadata.sha256_hash) {
@@ -115,6 +140,24 @@ export default function BulkInvestigation({ caseId }) {
                 Upload File (.txt)
               </label>
             </div>
+            
+            <div className="flex gap-2 mb-3">
+              <button 
+                type="button"
+                onClick={() => setInputData(sampleScenarios.MIXED_CHAINS)}
+                className="px-2 py-1 bg-axon-purple/10 text-axon-purple text-[10px] font-bold border border-axon-purple/30 rounded hover:bg-axon-purple/20 transition-colors"
+              >
+                Load Mix (Multi-Chain + Unsupported)
+              </button>
+              <button 
+                type="button"
+                onClick={() => setInputData(sampleScenarios.EXPLOIT_CLUSTER)}
+                className="px-2 py-1 bg-axon-orange/10 text-axon-orange text-[10px] font-bold border border-axon-orange/30 rounded hover:bg-axon-orange/20 transition-colors"
+              >
+                Load EVM Exploits
+              </button>
+            </div>
+
             <textarea
               className="w-full bg-[#05080f] border border-axon-border rounded-lg p-5 text-axon-cyan font-mono text-sm focus:border-axon-orange focus:ring-1 focus:ring-axon-orange outline-none transition-all resize-y min-h-[200px] shadow-inner"
               placeholder={"Paste wallet addresses, CSV logs, or unstructured intercept data containing 0x... addresses. \n\nAXON Regex Extraction Engine is active."}
@@ -125,7 +168,7 @@ export default function BulkInvestigation({ caseId }) {
             <div className="flex justify-between items-center mt-2">
               <div className="text-xs text-axon-text-dim font-mono flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-axon-green animate-pulse"></span>
-                Extracted Targets: {new Set(inputData.match(/0x[a-fA-F0-9]{40}/g) || []).size}
+                Extracted Targets: {new Set(inputData.match(/\b(0x[a-fA-F0-9]{40}|[a-zA-Z0-9]{25,65})\b/g) || []).size}
               </div>
             </div>
           </div>
@@ -215,20 +258,34 @@ export default function BulkInvestigation({ caseId }) {
             <div className="flex gap-3">
               <button onClick={() => { setReport(null); setInputData(''); setReportHash(null); }} className="axon-button px-4 py-2 text-xs">Reset Tool</button>
               
-              {report.report_metadata?.report_id && (
-                <button onClick={() => window.open(`/verify/${report.report_metadata.report_id}`, '_blank')} className="axon-button px-4 py-2 text-xs border-axon-purple/30 text-axon-purple hover:bg-axon-purple hover:text-white">
-                  🔒 Verify Report
-                </button>
-              )}
-              
               {/* Master Report Button */}
               <button 
-                onClick={() => {
-                  downloadBulkPDF(report);
+                onClick={async () => {
+                  try {
+                    const reportId = report.report_metadata?.report_id;
+                    if (!reportId) {
+                      alert("No Verifiable Report ID found for this batch.");
+                      return;
+                    }
+                    const response = await fetch(`http://127.0.0.1:8001/scan/report/${reportId}/pdf`);
+                    if (!response.ok) throw new Error("Failed to generate PDF from backend");
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = `AXON_CoC_Bulk_Report_${reportId}.pdf`;
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                    window.URL.revokeObjectURL(url);
+                  } catch (err) {
+                    console.error(err);
+                    alert("Error generating Master Report PDF: " + err.message);
+                  }
                 }} 
                 className="axon-button px-4 py-2 text-xs border-purple-500/30 text-purple-400 hover:bg-purple-500 hover:text-white"
               >
-                <span>⚖️</span> Master Report (.pdf)
+                <span>📄</span> Download Master Analysis PDF
               </button>
 
               <button 
@@ -297,7 +354,7 @@ export default function BulkInvestigation({ caseId }) {
                     <div className="flex items-center gap-2 mb-1">
                       {isCritical && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>}
                       <span className={`text-xs font-bold uppercase tracking-widest ${textClass}`}>
-                        {r.data?.risk?.label || "Unknown"}
+                        {r.data?.risk?.label || "Data Not Available"}
                       </span>
                     </div>
                     <div className="text-sm text-axon-text-muted truncate" title={r.data?.identity?.label || "Unattributed Entity"}>
@@ -349,6 +406,28 @@ export default function BulkInvestigation({ caseId }) {
               );
             })}
           </div>
+
+          {report.errors && report.errors.length > 0 && (
+            <div className="mt-8">
+              <h3 className="text-lg font-bold text-red-400 mb-4 flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                Failed / Unsupported Targets ({report.errors.length})
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {report.errors.map((err, i) => (
+                  <div key={i} className="bg-red-500/5 border border-red-500/30 rounded-lg p-4">
+                    <div className="font-mono text-xs text-white truncate mb-1">{err.address}</div>
+                    {failedChainNames[err.address] && failedChainNames[err.address] !== 'Data Not Available' && (
+                      <div className="text-[10px] text-axon-orange font-bold uppercase tracking-widest mb-2">
+                        {failedChainNames[err.address]}
+                      </div>
+                    )}
+                    <div className="text-xs text-red-400 font-bold">{err.error || "Unknown Error"}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

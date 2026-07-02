@@ -5,9 +5,10 @@ const SAMPLES = [
   { "address": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa", "name": "Bitcoin Genesis Block", "type": "Wallet", "expectedRisk": "LOW", "description": "Satoshi Nakamoto's original Genesis block address." },
   { "address": "TE2RzoSV3wFK99w6J9UnnZ4vLfXYoxvRwP", "name": "Justin Sun (TRON)", "type": "Wallet", "expectedRisk": "LOW", "description": "Justin Sun's public TRON wallet." },
   { "address": "DFndh9WcBjjTG5hZzXW9v4n3jA2U6vFf3K", "name": "Dogecoin Party Wallet", "type": "Wallet", "expectedRisk": "UNSUPPORTED", "description": "Used to test the identification engine's circuit breakers for unsupported chains." },
+  { "address": "ltc1q3n990v2u0cqv8dly70y09m98svy582jqwk8n9j", "name": "Litecoin Whale", "type": "Wallet", "expectedRisk": "UNSUPPORTED", "description": "Litecoin address to test unsupported chains handling." },
   { "address": "0x56D8B635A7C88Fd1104D23d632AF40c1C3Aac4e3", "name": "Nomad Bridge Exploiter", "type": "Wallet", "expectedRisk": "CRITICAL", "description": "Wallet tied to the Nomad bridge free-for-all exploit." },
   { "address": "0x75A77dbDEab6E384D0E5cae2B70072D56EE140e6", "name": "Lazarus Group Sub-wallet", "type": "Wallet", "expectedRisk": "CRITICAL", "description": "Lazarus group wallet used to wash funds." },
-  { "address": "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296", "name": "Justin Sun", "type": "Wallet", "expectedRisk": "LOW", "description": "Tron founder public wallet. High volume interactions." },
+  { "address": "0x3DdfA8eC3052539b6C9549F12cEA2C295cfF5296", "name": "Justin Sun (EVM)", "type": "Wallet", "expectedRisk": "LOW", "description": "Tron founder public wallet. High volume interactions." },
   { "address": "0x71660c4005BA85c37ccec55d0C4493E66Fe775d3", "name": "Coinbase 1", "type": "Wallet", "expectedRisk": "LOW", "description": "Coinbase hot wallet." },
   { "address": "0x59ABf3837Fa962d6853b4Cc0a19513AA031fd32b", "name": "FTX Accounts Drainer", "type": "Wallet", "expectedRisk": "CRITICAL", "description": "The address responsible for draining FTX funds during the collapse." },
   { "address": "0x1da5821544e25c636c1417Ba96Ade4Cf6D2f9B5A", "name": "OFAC Sanctioned entity", "type": "Wallet", "expectedRisk": "CRITICAL", "description": "Explicitly blacklisted by OFAC." },
@@ -71,7 +72,8 @@ Targets:
 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045
 1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa
 TE2RzoSV3wFK99w6J9UnnZ4vLfXYoxvRwP
-DFndh9WcBjjTG5hZzXW9v4n3jA2U6vFf3K`;
+DFndh9WcBjjTG5hZzXW9v4n3jA2U6vFf3K
+ltc1q3n990v2u0cqv8dly70y09m98svy582jqwk8n9j`;
 
 const STORY_3 = `EXPLOIT INVESTIGATION: MAJOR BREACHES
 =====================================
@@ -185,9 +187,15 @@ export default function DemoSamples() {
                   <h3 className="text-lg font-bold text-white mb-1">{s.name}</h3>
                   <div className="flex items-center gap-2">
                     <span className="text-xs font-mono text-gray-500 uppercase tracking-widest">{s.type}</span>
-                    <span className={`px-2 py-0.5 text-[9px] font-bold rounded border font-mono ${riskColor}`}>
-                      EXPECTED: {s.expectedRisk}
-                    </span>
+                    {s.expectedRisk === "UNSUPPORTED" ? (
+                      <span className="px-2 py-0.5 text-[9px] font-bold rounded border font-mono text-gray-400 bg-gray-500/15 border-gray-500/30">
+                        EXPECTED: UNSUPPORTED
+                      </span>
+                    ) : (
+                      <span className={`px-2 py-0.5 text-[9px] font-bold rounded border font-mono ${riskColor}`}>
+                        EXPECTED: {s.expectedRisk}
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="flex flex-col gap-2">

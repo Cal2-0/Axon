@@ -138,7 +138,7 @@ export default function VerifyReport() {
                 <div className="font-mono text-axon-text-muted capitalize">{result.scan_depth}</div>
               </div>
               <div>
-                <div className="text-[10px] font-bold text-axon-text-dim uppercase tracking-widest mb-1">Risk Score</div>
+                <div className="text-[10px] font-bold text-axon-text-dim uppercase tracking-widest mb-1">Threat Level</div>
                 <div className={`font-mono font-bold text-lg ${
                   result.risk_score >= 80 ? 'text-red-500' :
                   result.risk_score >= 60 ? 'text-axon-orange' :

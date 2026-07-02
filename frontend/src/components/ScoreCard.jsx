@@ -48,11 +48,11 @@ export default function ScoreCard({ score, label }) {
         {/* Score Text */}
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span className="text-4xl font-mono font-bold" style={{ color }}>{score}</span>
-          <span className="text-xs text-axon-text-muted mt-1 uppercase tracking-widest">Risk</span>
+          <span className="text-xs text-axon-text-muted mt-1 uppercase tracking-widest">Threat</span>
         </div>
       </div>
-      <div className="mt-6 text-center">
-        <h3 className="text-lg font-medium text-axon-text mb-1">Overall Risk Level</h3>
+      <div className="mt-6 text-center w-full">
+        <h3 className="text-lg font-medium text-axon-text mb-2">Threat Level: {score}/100 | Observed Behaviour: {label} | Confidence: Medium</h3>
         <p className="text-sm text-axon-text-dim">Score is calculated based on identified vulnerabilities and heuristic analysis.</p>
       </div>
     </div>
