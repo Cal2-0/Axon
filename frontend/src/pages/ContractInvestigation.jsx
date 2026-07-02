@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import SmartAddressInput, { isValidAddress } from '../components/SmartAddressInput';
 import ContractForensicReport from '../components/ContractForensicReport';
 import GraphView from '../components/GraphView';
+import { downloadContractPDF } from '../utils/pdfExport';
 // ─── HELPERS ───────────────────────────────────────────────────────────────
 function CopyButton({ text }) {
   const [copied, setCopied] = useState(false);
@@ -165,23 +166,9 @@ export default function ContractInvestigation({ caseId }) {
   };
 
   const handleDownloadCoC = async () => {
-    if (!result || !result.report_metadata || !result.report_metadata.report_id) {
-      alert("No verifiable report ID found for this scan. Run a new scan to generate a Final Analysis PDF.");
-      return;
-    }
-    const reportId = result.report_metadata.report_id;
+    if (!result) return;
     try {
-      const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8001';
-      const response = await fetch(`${API_BASE}/scan/report/${reportId}/pdf`);
-      if (!response.ok) throw new Error("Failed to generate PDF from backend");
-      
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${reportId}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
+      await downloadContractPDF(result);
     } catch (err) {
       console.error(err);
       alert("Error generating Final Analysis PDF: " + err.message);

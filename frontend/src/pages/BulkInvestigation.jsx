@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { bulkScan } from '../api/axon';
 import { useNavigate } from 'react-router-dom';
+import { downloadBulkPDF } from '../utils/pdfExport';
 
 export default function BulkInvestigation({ caseId }) {
   const [inputData, setInputData] = useState('');
@@ -262,22 +263,7 @@ export default function BulkInvestigation({ caseId }) {
               <button 
                 onClick={async () => {
                   try {
-                    const reportId = report.report_metadata?.report_id;
-                    if (!reportId) {
-                      alert("No Verifiable Report ID found for this batch.");
-                      return;
-                    }
-                    const response = await fetch(`http://127.0.0.1:8001/scan/report/${reportId}/pdf`);
-                    if (!response.ok) throw new Error("Failed to generate PDF from backend");
-                    const blob = await response.blob();
-                    const url = window.URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = `AXON_CoC_Bulk_Report_${reportId}.pdf`;
-                    document.body.appendChild(link);
-                    link.click();
-                    link.remove();
-                    window.URL.revokeObjectURL(url);
+                    await downloadBulkPDF(report);
                   } catch (err) {
                     console.error(err);
                     alert("Error generating Master Report PDF: " + err.message);

@@ -386,7 +386,7 @@ export default function WalletInvestigation({ caseId }) {
       } catch (err) {
         // Fallback to error profile
         profile = {
-          identity: { address: targetAddress.trim(), tag: 'EXTERNAL', label: `${chainInfo?.chain || 'Data Not Available'} Wallet`, ethBalance: 'N/A', totalVolumeUSD: 'N/A' },
+          identity: { address: targetAddress.trim(), tag: 'EXTERNAL', label: `${chainInfo?.candidates?.[0]?.chain || chainInfo?.chain || 'Data Not Available'} Wallet`, ethBalance: 'N/A', totalVolumeUSD: 'N/A' },
           risk: { score: 0, label: 'ERROR', mlClassification: 'Data Not Available', anomalyScore: 0, factors: [] },
           osint: { summary: `Failed to scan address. Error: ${err.message}`, aliases: [], walletMentions: 0 },
           exchange: { detected: false, findings: [], cashOutEvents: 0, totalCashOutUSD: '$0', summary: 'N/A' },
@@ -494,23 +494,9 @@ export default function WalletInvestigation({ caseId }) {
   };
 
   const handleDownloadCoC = async () => {
-    if (!result || !result.report_metadata || !result.report_metadata.report_id) {
-      alert("No verifiable report ID found for this scan. Run a new scan to generate a Final Analysis PDF.");
-      return;
-    }
-    const reportId = result.report_metadata.report_id;
+    if (!result) return;
     try {
-      const API_BASE = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8001';
-      const response = await fetch(`${API_BASE}/scan/report/${reportId}/pdf`);
-      if (!response.ok) throw new Error("Failed to generate PDF from backend");
-      
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${reportId}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
+      await downloadWalletPDF(result);
     } catch (err) {
       console.error(err);
       alert("Error generating Final Analysis PDF: " + err.message);
@@ -684,9 +670,9 @@ export default function WalletInvestigation({ caseId }) {
                   : result.identity.tag === 'EXTERNAL' ? 'bg-axon-orange/20 text-axon-orange border-axon-orange/40'
                   : 'bg-axon-cyan/20 text-axon-cyan border-axon-cyan/40'
                 }`}>{result.identity.tag}</span>
-                {chainData && chainData.chain && (
+                {(chainData?.candidates?.[0]?.chain || chainData?.chain) && (
                   <span className="shrink-0 px-2 py-0.5 text-[10px] font-bold font-mono tracking-widest text-axon-orange bg-axon-orange/10 border border-axon-orange/30 rounded uppercase">
-                    CHAIN: {chainData.chain}
+                    CHAIN: {chainData.candidates?.[0]?.chain || chainData.chain}
                   </span>
                 )}
                 {result.identity.entityClass && (
@@ -696,20 +682,20 @@ export default function WalletInvestigation({ caseId }) {
                 )}
               </div>
               
-              {chainData && chainData.explorer_url && typeof chainData.explorer_url === 'string' && chainData.explorer_url !== 'null' && chainData.explorer_url !== 'None' && (
+              {(chainData?.candidates?.[0]?.explorer_url || chainData?.explorer_url) && typeof (chainData?.candidates?.[0]?.explorer_url || chainData?.explorer_url) === 'string' && (chainData?.candidates?.[0]?.explorer_url || chainData?.explorer_url) !== 'null' && (chainData?.candidates?.[0]?.explorer_url || chainData?.explorer_url) !== 'None' && (
                  <div className="flex items-center gap-2">
-                   <a href={String(chainData.explorer_url).replace('<address>', result.identity.address)} target="_blank" rel="noreferrer" className="axon-button text-[10px] px-3 py-1.5 gap-1.5 bg-axon-bg border-axon-border hover:border-axon-cyan hover:text-white transition-colors">
+                   <a href={String(chainData?.candidates?.[0]?.explorer_url || chainData?.explorer_url).replace('<address>', result.identity.address)} target="_blank" rel="noreferrer" className="axon-button text-[10px] px-3 py-1.5 gap-1.5 bg-axon-bg border-axon-border hover:border-axon-cyan hover:text-white transition-colors">
                      🔗 View in Block Explorer
                      <svg className="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                    </a>
-                   {chainData.official_website && (
-                     <a href={chainData.official_website} target="_blank" rel="noreferrer" className="axon-button text-[10px] px-3 py-1.5 gap-1.5 bg-axon-bg border-axon-border hover:border-axon-purple hover:text-white transition-colors">
+                   {(chainData?.candidates?.[0]?.official_website || chainData?.official_website) && (
+                     <a href={chainData.candidates?.[0]?.official_website || chainData.official_website} target="_blank" rel="noreferrer" className="axon-button text-[10px] px-3 py-1.5 gap-1.5 bg-axon-bg border-axon-border hover:border-axon-purple hover:text-white transition-colors">
                        🌐 Official Website
                      </a>
                    )}
                  </div>
               )}
-              {chainData && chainData.chain === 'Data Not Available' && (
+              {chainData && (chainData.candidates?.[0]?.chain || chainData.chain) === 'Data Not Available' && (
                 <div className="mt-2">
                   <button onClick={handleAiChainAnalyze} disabled={isAiAnalyzingChain} className="axon-button text-xs px-4 py-2 gap-1.5 bg-blue-600/20 border-blue-500/50 text-blue-400 hover:bg-blue-600 hover:text-white transition-colors">
                     {isAiAnalyzingChain ? (
@@ -732,9 +718,10 @@ export default function WalletInvestigation({ caseId }) {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="bg-axon-bg rounded-lg border border-axon-border p-3 text-center col-span-2">
                 {(() => {
+                  const activeChain = chainData?.candidates?.[0]?.chain || chainData?.chain;
                   const isEVM = chainData?.type === 'EVM';
-                  const sym = chainData?.chain === 'Bitcoin' ? 'BTC' : chainData?.chain === 'Solana' ? 'SOL' : chainData?.chain === 'Tron' ? 'TRX' : 'ETH';
-                  const cgId = chainData?.chain === 'Bitcoin' ? 'bitcoin' : chainData?.chain === 'Solana' ? 'solana' : chainData?.chain === 'Tron' ? 'tron' : 'ethereum';
+                  const sym = activeChain === 'Bitcoin' ? 'BTC' : activeChain === 'Solana' ? 'SOL' : activeChain === 'Tron' ? 'TRX' : 'ETH';
+                  const cgId = activeChain === 'Bitcoin' ? 'bitcoin' : activeChain === 'Solana' ? 'solana' : activeChain === 'Tron' ? 'tron' : 'ethereum';
                   
                   const rawBalance = String(result.identity.ethBalance).replace(/,/g, '').replace(/ ETH| BTC| SOL| TRX/g, '');
                   const balNum = parseFloat(rawBalance);
@@ -772,8 +759,8 @@ export default function WalletInvestigation({ caseId }) {
                 { label: 'Counterparties', value: result.identity.uniqueCounterparties, color: 'text-white' },
                 { label: 'First Seen', value: result.identity.firstSeen, color: 'text-axon-text-muted' },
                 { label: 'Last Active', value: result.identity.lastSeen, color: 'text-axon-text-muted' },
-                { label: 'Total Received', value: String(result.identity.totalReceived || 'Data Not Available').replace(/ ETH| BTC| SOL| TRX/g, '') + (result.identity.totalReceived && result.identity.totalReceived !== 'Data Not Available' ? ' ' + (chainData?.chain === 'Bitcoin' ? 'BTC' : chainData?.chain === 'Solana' ? 'SOL' : chainData?.chain === 'Tron' ? 'TRX' : 'ETH') : ''), color: 'text-axon-green' },
-                { label: 'Total Sent', value: String(result.identity.totalSent || 'Data Not Available').replace(/ ETH| BTC| SOL| TRX/g, '') + (result.identity.totalSent && result.identity.totalSent !== 'Data Not Available' ? ' ' + (chainData?.chain === 'Bitcoin' ? 'BTC' : chainData?.chain === 'Solana' ? 'SOL' : chainData?.chain === 'Tron' ? 'TRX' : 'ETH') : ''), color: 'text-red-400' },
+                { label: 'Total Received', value: String(result.identity.totalReceived || 'Data Not Available').replace(/ ETH| BTC| SOL| TRX/g, '') + (result.identity.totalReceived && result.identity.totalReceived !== 'Data Not Available' ? ' ' + ((chainData?.candidates?.[0]?.chain || chainData?.chain) === 'Bitcoin' ? 'BTC' : (chainData?.candidates?.[0]?.chain || chainData?.chain) === 'Solana' ? 'SOL' : (chainData?.candidates?.[0]?.chain || chainData?.chain) === 'Tron' ? 'TRX' : 'ETH') : ''), color: 'text-axon-green' },
+                { label: 'Total Sent', value: String(result.identity.totalSent || 'Data Not Available').replace(/ ETH| BTC| SOL| TRX/g, '') + (result.identity.totalSent && result.identity.totalSent !== 'Data Not Available' ? ' ' + ((chainData?.candidates?.[0]?.chain || chainData?.chain) === 'Bitcoin' ? 'BTC' : (chainData?.candidates?.[0]?.chain || chainData?.chain) === 'Solana' ? 'SOL' : (chainData?.candidates?.[0]?.chain || chainData?.chain) === 'Tron' ? 'TRX' : 'ETH') : ''), color: 'text-red-400' },
               ].map(item => (
                 <div key={item.label} className="bg-axon-bg rounded-lg border border-axon-border p-3 text-center">
                   <div className={`text-sm font-bold font-mono ${item.color}`}>{item.value}</div>
