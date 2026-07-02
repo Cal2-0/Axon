@@ -398,7 +398,7 @@ export default function WalletInvestigation({ caseId }) {
 
       if (autoDeepDive && chainInfo.type === 'EVM') {
         setIsDeepDiveActive(true);
-        setDeepDiveStatus('Running full deep scan (1000 txs + 3-AI Prosecution/Defense/Judge pipeline)...');
+        setDeepDiveStatus('Running full deep scan (1000 txs + Dual-Adversarial Synthesis pipeline)...');
         scanWallet(targetAddress.trim(), caseId, 'deep').then(deepResult => {
             setDeepDiveResult(deepResult);
             setIsDeepDiveActive(false);
@@ -446,7 +446,7 @@ export default function WalletInvestigation({ caseId }) {
   const handleDeepDive = async () => {
     if (!result || !result.identity || !result.identity.address) return;
     setIsDeepDiveActive(true);
-    setDeepDiveStatus('Running full deep scan (1000 txs + 3-AI Prosecution/Defense/Judge pipeline)...');
+    setDeepDiveStatus('Running full deep scan (1000 txs + Dual-Adversarial Synthesis pipeline)...');
     setDeepDiveError('');
 
     try {
@@ -873,7 +873,7 @@ export default function WalletInvestigation({ caseId }) {
 
           {/* ── Deep Dive Results (shown after deep scan completes) ── */}
           {deepDiveResult && deepDiveResult.risk && deepDiveResult.risk.analyticalSynthesis && (
-            <CollapsibleSection color="purple" icon="🧠" title="Dual-Adversarial Deep Scan" badge="3-AI PIPELINE" defaultOpen={true}>
+            <CollapsibleSection color="purple" icon="🧠" title="Dual-Adversarial Deep Scan" badge="3-AGENT PIPELINE" defaultOpen={true}>
               
               {/* Updated Risk Score Delta */}
               {deepDiveResult.risk.score !== undefined && (
@@ -914,7 +914,7 @@ export default function WalletInvestigation({ caseId }) {
                   {/* Prosecution Panel */}
                   <div className="bg-red-950/20 rounded-xl border border-red-500/30 p-4">
                     <div className="flex items-center justify-between mb-3 border-b border-red-500/20 pb-2">
-                      <span className="px-2 py-0.5 text-[10px] font-mono font-bold tracking-widest text-white bg-red-600 rounded">PROSECUTION AI</span>
+                      <span className="px-2 py-0.5 text-[10px] font-mono font-bold tracking-widest text-white bg-red-600 rounded">PROSECUTION PERSPECTIVE</span>
                       <span className="text-xs font-mono font-bold text-red-400">{deepDiveResult.risk.analyticalSynthesis.prosecution_risk || deepDiveResult.risk.label} RISK</span>
                     </div>
                     <p className="text-gray-300 font-mono text-xs break-words">{deepDiveResult.risk.analyticalSynthesis.prosecution_summary}</p>
@@ -923,7 +923,7 @@ export default function WalletInvestigation({ caseId }) {
                   {/* Defense Panel */}
                   <div className="bg-[#064e3b]/40 rounded-xl border border-emerald-500/30 p-4">
                     <div className="flex items-center justify-between mb-3 border-b border-emerald-500/20 pb-2">
-                      <span className="px-2 py-0.5 text-[10px] font-mono font-bold tracking-widest text-white bg-emerald-600 rounded">DEFENSE AI</span>
+                      <span className="px-2 py-0.5 text-[10px] font-mono font-bold tracking-widest text-white bg-emerald-600 rounded">DEFENSE PERSPECTIVE</span>
                       <span className="text-xs font-mono font-bold text-emerald-400">{deepDiveResult.risk.analyticalSynthesis.defense_risk || 'MEDIUM'} RISK</span>
                     </div>
                     <p className="text-gray-300 font-mono text-xs break-words">{deepDiveResult.risk.analyticalSynthesis.defense_summary}</p>
@@ -935,7 +935,7 @@ export default function WalletInvestigation({ caseId }) {
                   <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 blur-[40px] rounded-full"></div>
                   <div className="flex items-center justify-between mb-4 border-b border-blue-500/20 pb-2 relative z-10">
                     <div className="flex items-center gap-2">
-                      <span className="px-2 py-0.5 text-[10px] font-mono font-bold tracking-widest text-white bg-blue-600 rounded">CHIEF JUDGE VERDICT</span>
+                      <span className="px-2 py-0.5 text-[10px] font-mono font-bold tracking-widest text-white bg-blue-600 rounded">EXECUTIVE VERDICT</span>
                       <span className="text-xs font-mono font-bold text-blue-400">{deepDiveResult.risk.analyticalSynthesis.mitre_tag || "N/A"}</span>
                     </div>
                     <div className="flex items-center gap-3">
