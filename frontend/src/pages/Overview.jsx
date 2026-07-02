@@ -65,6 +65,20 @@ export default function Overview() {
         'Enterprise developer API with SDKs in Python, Go, and TypeScript.',
         'Sanctions screening automation (OFAC, EU, UN).'
       ]
+    },
+    {
+      id: 5,
+      title: 'Phase 5: Court-Ready Digital Forensics',
+      status: '✅ Completed',
+      statusColor: 'text-axon-green bg-axon-green/10 border-axon-green/30',
+      description: 'Upgrades the entire platform to output defensible, court-safe intelligence. Purges black-box AI concepts and integrates deterministic evidence markers.',
+      items: [
+        'Terminology Overhaul — Rebranded subjective risk and AI labels into rigid forensic constructs (e.g. "Analytical Engine Synthesis").',
+        'Evidence Confidence & Source Attribution — Every anomaly carries a Confidence Level (High/Medium/Low) and Source (On-Chain Heuristic vs OSINT).',
+        'Environmental Metadata — Auto-embeds Engine Version, Threat DB timestamps, and Node Sources into every investigation record for chain of custody.',
+        'Etherscan Escape Hatch — Automatically extracts and decodes UTF-8 text from 0-value ransomware transactions.',
+        'Bulk Triage Matrix — Transforms batch scans into a highly scannable boolean matrix of critical risk vectors.'
+      ]
     }
   ];
 
