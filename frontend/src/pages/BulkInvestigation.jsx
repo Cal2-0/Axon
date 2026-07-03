@@ -262,12 +262,11 @@ export default function BulkInvestigation({ caseId }) {
               {/* Master Report Button */}
               <button 
                 onClick={async () => {
-                  try {
-                    await downloadBulkPDF(report);
-                  } catch (err) {
-                    console.error(err);
-                    alert("Error generating Master Report PDF: " + err.message);
+                  if (!report || !report.report_id) {
+                    alert("Report ID not found. Ensure you have run a scan first.");
+                    return;
                   }
+                  window.open(`${import.meta.env.VITE_API_URL || 'http://127.0.0.1:8001'}/scan/report/${report.report_id}/pdf`, "_blank");
                 }} 
                 className="axon-button px-4 py-2 text-xs border-purple-500/30 text-purple-400 hover:bg-purple-500 hover:text-white"
               >

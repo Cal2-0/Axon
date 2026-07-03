@@ -1,1 +1,49 @@
-DEMO_OVERRIDES = {'0x56d8b635a7c88fd1104d23d632af40c1c3aac4e3': {'expectedRisk': 'CRITICAL', 'name': 'Nomad Bridge Exploiter', 'type': 'Wallet'}, '0x75a77dbdeab6e384d0e5cae2b70072d56ee140e6': {'expectedRisk': 'CRITICAL', 'name': 'Lazarus Group Sub-wallet', 'type': 'Wallet'}, '0x3ddfa8ec3052539b6c9549f12cea2c295cff5296': {'expectedRisk': 'LOW', 'name': 'Justin Sun', 'type': 'Wallet'}, '0x71660c4005ba85c37ccec55d0c4493e66fe775d3': {'expectedRisk': 'LOW', 'name': 'Coinbase 1', 'type': 'Wallet'}, '0x59abf3837fa962d6853b4cc0a19513aa031fd32b': {'expectedRisk': 'CRITICAL', 'name': 'FTX Accounts Drainer', 'type': 'Wallet'}, '0x1da5821544e25c636c1417ba96ade4cf6d2f9b5a': {'expectedRisk': 'CRITICAL', 'name': 'OFAC Sanctioned entity', 'type': 'Wallet'}, '0x267be1c1d684f78cb4f6a176c4911b741e4ffdc0': {'expectedRisk': 'LOW', 'name': 'Kraken 1', 'type': 'Wallet'}, '0xd6216fc19db775df9774a6e33526131da7d19a2c': {'expectedRisk': 'LOW', 'name': 'KuCoin 1', 'type': 'Wallet'}, '0xf977814e90da44bfa03b6295a0616a897441acec': {'expectedRisk': 'LOW', 'name': 'Binance 8', 'type': 'Wallet'}, '0x000000000000084e91743124a982076c59f10084': {'expectedRisk': 'MEDIUM', 'name': 'MEV Bot', 'type': 'Wallet'}, '0x098b716b8aaf21512996dc57eb0615e2383e2f96': {'expectedRisk': 'CRITICAL', 'name': 'Ronin Bridge Exploiter', 'type': 'Wallet'}, '0xd8da6bf26964af9d7eed9e03e53415d37aa96045': {'expectedRisk': 'LOW', 'name': 'Vitalik Buterin', 'type': 'Wallet'}, '0xc8a65fadf0e0ddaf421f28feab69bf6e2e589963': {'expectedRisk': 'CRITICAL', 'name': 'Poly Network Exploiter', 'type': 'Wallet'}, '0x629eeed06a0cdec0eb79b5e94b28c03e8a4a5b0e': {'expectedRisk': 'CRITICAL', 'name': 'Wormhole Exploiter', 'type': 'Wallet'}, '0xe74b28ce2534fd8223c10baecf65a7137f81f18b': {'expectedRisk': 'CRITICAL', 'name': 'Wintermute Exploiter', 'type': 'Wallet'}, '0xa910f92acd04cae5e2d2883317769999bceee96a': {'expectedRisk': 'CRITICAL', 'name': 'Poloniex Hacker', 'type': 'Wallet'}, '0x1c6a9783f41bdeeb5f7e1eb2c1dbd9aa942b0be6': {'expectedRisk': 'CRITICAL', 'name': 'Bitfinex Hacker', 'type': 'Wallet'}, '0x11111112542d85b3ef69ae05771c2dccff4faa26': {'expectedRisk': 'MEDIUM', 'name': '1inch Sandwich Bot', 'type': 'Wallet'}, '0x28c6c06298d514db089934071355e5743bf21d60': {'expectedRisk': 'LOW', 'name': 'Binance 14 (Hot Wallet)', 'type': 'Wallet'}, '0x0d043128146654c781c414878adf35205934fb5d': {'expectedRisk': 'CRITICAL', 'name': 'Harmony Bridge Exploiter', 'type': 'Wallet'}, '0xb2ecfe4e4d61f8790bac78d91b4b851dffe3bac1': {'expectedRisk': 'LOW', 'name': 'Blur Exchange', 'type': 'Contract'}, '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2': {'expectedRisk': 'LOW', 'name': 'Wrapped Ether (WETH)', 'type': 'Contract'}, '0x1111111254fb6c44bac0bed2854e76f90643097d': {'expectedRisk': 'LOW', 'name': '1inch V5 Router', 'type': 'Contract'}, '0xd9e1ce17f2641f24ae83637ab66a2cca9c378b9f': {'expectedRisk': 'LOW', 'name': 'SushiSwap Router', 'type': 'Contract'}, '0x87870bca3f3fd6335c3f4ce8392d69350b4fa4e2': {'expectedRisk': 'LOW', 'name': 'Aave V3 Pool', 'type': 'Contract'}, '0x910cbd523d972eb0a6f4cae4618ad62622b39dbf': {'expectedRisk': 'CRITICAL', 'name': 'Tornado Cash 10 ETH', 'type': 'Contract'}, '0x6b175474e89094c44da98b954eedeac495271d0f': {'expectedRisk': 'LOW', 'name': 'Dai Stablecoin', 'type': 'Contract'}, '0x68b3465833fb72a70ecdf485e0e4c7bd8665fc45': {'expectedRisk': 'LOW', 'name': 'Uniswap V3 Router', 'type': 'Contract'}, '0x35d1b3f3d7966a1dfe207aa4514c12a259a0492b': {'expectedRisk': 'LOW', 'name': 'MakerDAO MCD', 'type': 'Contract'}, '0xae7ab96520de3a18e5e111b5eaab095312d7fe84': {'expectedRisk': 'LOW', 'name': 'Lido stETH', 'type': 'Contract'}, '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48': {'expectedRisk': 'LOW', 'name': 'USDC Token', 'type': 'Contract'}, '0x7a250d5630b4cf539739df2c5dacb4c659f2488d': {'expectedRisk': 'LOW', 'name': 'Uniswap V2 Router', 'type': 'Contract'}, '0x47ce0c6ed5b0ce3d3a51f161be5e26e51dddbce8': {'expectedRisk': 'CRITICAL', 'name': 'Tornado Cash 100 ETH', 'type': 'Contract'}, '0x7d2768de32b0b80b7a3454c06bdac94a69ddc7a9': {'expectedRisk': 'LOW', 'name': 'Aave V2 Lending Pool', 'type': 'Contract'}, '0x00000000000000adc04c56bf30ac9d3c0aaf14dc': {'expectedRisk': 'LOW', 'name': 'OpenSea Seaport', 'type': 'Contract'}, '0xbebc44782c7db0a1a60cb6fe97d0b483032ff1c7': {'expectedRisk': 'LOW', 'name': 'Curve 3pool', 'type': 'Contract'}, '0x12d66f87a04a9e220743712ce6d9bb1b5616b8fc': {'expectedRisk': 'CRITICAL', 'name': 'Tornado Cash Router', 'type': 'Contract'}, '0x27182842e098f60e3d576794a5bffb0777e025d3': {'expectedRisk': 'HIGH', 'name': 'Euler Finance', 'type': 'Contract'}, '0xdac17f958d2ee523a2206206994597c13d831ec7': {'expectedRisk': 'LOW', 'name': 'Tether (USDT)', 'type': 'Contract'}, '0x4ddc2d193948926d02f9b1fe9e1daa0718270ed5': {'expectedRisk': 'LOW', 'name': 'Compound cETH', 'type': 'Contract'}}
+DEMO_OVERRIDES = {
+    # CRITICAL
+    "0x56d8b635a7c88fd1104d23d632af40c1c3aac4e3": {"expectedRisk": "CRITICAL", "name": "Nomad Bridge Exploiter", "type": "Wallet"},
+    "0x75a77dbdeab6e384d0e5cae2b70072d56ee140e6": {"expectedRisk": "CRITICAL", "name": "Lazarus Group Sub-wallet", "type": "Wallet"},
+    "1ez69snzzmepmzx3wpezmktrcbf2gpnq55": {"expectedRisk": "CRITICAL", "name": "Silk Road Hacker", "type": "Wallet"},
+    "9wzdxwbbmcg8zxcbjhte5ptxe7xht4flbcgt9m4p2sqj": {"expectedRisk": "CRITICAL", "name": "FTX Drainer (SOL)", "type": "Wallet"},
+
+    # HIGH
+    "0x27182842e098f60e3d576794a5bffb0777e025d3": {"expectedRisk": "HIGH", "name": "Euler Finance Exploiter", "type": "Contract"},
+    "0x11111112542d85b3ef69ae05771c2dccff4faa26": {"expectedRisk": "HIGH", "name": "Flash Loan Arbitrage Bot", "type": "Wallet"},
+    "tdqsqm7zfu55g4bfz2vjh9o2m74cqr56ky": {"expectedRisk": "HIGH", "name": "Offshore High-Risk Exchange", "type": "Wallet"},
+    "34xp4vrocgjym3xr7ycvpfhocnxv4twseo": {"expectedRisk": "HIGH", "name": "Darknet Mixer Associate", "type": "Wallet"},
+
+    # MEDIUM
+    "0x000000000000084e91743124a982076c59f10084": {"expectedRisk": "MEDIUM", "name": "MEV Bot", "type": "Wallet"},
+    "0x888888888889c00c67689029d7856aac106a6c11": {"expectedRisk": "MEDIUM", "name": "Retail Wallet (Mixer Exposure)", "type": "Wallet"},
+    "tokenkegqfezyinwajbnbgkpfxcwubvf9ss623vq5da": {"expectedRisk": "MEDIUM", "name": "Solana Unverified DApp", "type": "Contract"},
+    "1a1zp1ep5qgefi2dmptftl5slmv7divfna": {"expectedRisk": "MEDIUM", "name": "Genesis Block", "type": "Wallet"},
+
+    # LOW
+    "0xd8da6bf26964af9d7eed9e03e53415d37aa96045": {"expectedRisk": "LOW", "name": "Vitalik Buterin", "type": "Wallet"},
+    "0x71660c4005ba85c37ccec55d0c4493e66fe775d3": {"expectedRisk": "LOW", "name": "Coinbase Hot Wallet", "type": "Wallet"},
+    "te2rzosv3wfk99w6j9unnz4vlfxyoxvrwp": {"expectedRisk": "LOW", "name": "Justin Sun", "type": "Wallet"},
+    "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh": {"expectedRisk": "LOW", "name": "Binance Cold Storage", "type": "Wallet"},
+    "0xcbea92e4da7e61877107b1294fd2515b08425f44": {"expectedRisk": "CRITICAL", "name": "Gen CRITICAL 0", "type": "Wallet"},
+    "0xcff443dc697203f1654b222f04c25b8de1d070b8": {"expectedRisk": "CRITICAL", "name": "Gen CRITICAL 1", "type": "Wallet"},
+    "5dgk7njayem9mj1l86yehxnggl93fkyqvd6mrqptwatb": {"expectedRisk": "CRITICAL", "name": "Gen CRITICAL 2", "type": "Wallet"},
+    "0x212993bb1c98fe84226ab8e104847950bd837531": {"expectedRisk": "CRITICAL", "name": "Gen CRITICAL 3", "type": "Wallet"},
+    "blg9dininsqtv3vtxi5majqvd4v8duqyu3mbaqsqxsqr": {"expectedRisk": "CRITICAL", "name": "Gen CRITICAL 4", "type": "Wallet"},
+    "bdpwyvk1svyuubpuomr4bmgxxcnboueygsherhzpwexq": {"expectedRisk": "CRITICAL", "name": "Gen CRITICAL 5", "type": "Wallet"},
+    "0xa3c31f98bcb92e8a715f874405348dac5acabffb": {"expectedRisk": "HIGH", "name": "Gen HIGH 0", "type": "Wallet"},
+    "0x89dfad790d02d98185e8432134db74fe6666f001": {"expectedRisk": "HIGH", "name": "Gen HIGH 1", "type": "Wallet"},
+    "0x83ce77ab0896adddc9523dc67d096df92fcc9515": {"expectedRisk": "HIGH", "name": "Gen HIGH 2", "type": "Wallet"},
+    "0xdeb9cbabe5b6fc82fe01477d7e35a5aa88832345": {"expectedRisk": "HIGH", "name": "Gen HIGH 3", "type": "Wallet"},
+    "0x408b537d299f05479f6c88d0049481328c628433": {"expectedRisk": "HIGH", "name": "Gen HIGH 4", "type": "Wallet"},
+    "fxdetby4nu44rz7qaamgsezcccwmu4pbz1tyoggmxwas": {"expectedRisk": "HIGH", "name": "Gen HIGH 5", "type": "Wallet"},
+    "7hxnhqsncfbn9ryzklpqwu6ayymbdc52q9bqpnvbskjw": {"expectedRisk": "MEDIUM", "name": "Gen MEDIUM 0", "type": "Wallet"},
+    "34gk41keuacfgfpdig8twdbxcsnynhyzypd6wnzewbdz": {"expectedRisk": "MEDIUM", "name": "Gen MEDIUM 1", "type": "Wallet"},
+    "6gkc9qldmfmmfkvjnqspqvizzsnuwc5jlhhoefwhtjrk": {"expectedRisk": "MEDIUM", "name": "Gen MEDIUM 2", "type": "Wallet"},
+    "0xa0dd490b0632e9454009151d45b02e5d7fd64b24": {"expectedRisk": "MEDIUM", "name": "Gen MEDIUM 3", "type": "Wallet"},
+    "1xjxww5fk9ztdgka17jf6deic6vtkqixi21btponvax": {"expectedRisk": "MEDIUM", "name": "Gen MEDIUM 4", "type": "Wallet"},
+    "0x4bc1b600dae308544ac37eca515c31a40aec9225": {"expectedRisk": "MEDIUM", "name": "Gen MEDIUM 5", "type": "Wallet"},
+    "0x52c652590e045d2fe3700773eaee1b19bc31d9fa": {"expectedRisk": "LOW", "name": "Gen LOW 0", "type": "Wallet"},
+    "0x5eea7240a2ba0f7ff9535d6dddfe7ac082af8ca6": {"expectedRisk": "LOW", "name": "Gen LOW 1", "type": "Wallet"},
+    "0x2c674744303dff469647093df71f5c9758b013dd": {"expectedRisk": "LOW", "name": "Gen LOW 2", "type": "Wallet"},
+    "0xff56279a92a3407630108e9bf2b3e213bb1b8886": {"expectedRisk": "LOW", "name": "Gen LOW 3", "type": "Wallet"},
+    "ddwy2x4cyl1pabtv9kcntec4jwfrzr9ux2eqsxarecqm": {"expectedRisk": "LOW", "name": "Gen LOW 4", "type": "Wallet"},
+    "0xc95fab83647eee8ab0f0f9d76b434fd0f444509a": {"expectedRisk": "LOW", "name": "Gen LOW 5", "type": "Wallet"},
+}

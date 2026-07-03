@@ -27,11 +27,11 @@ import random
 
 # ─── MODEL REGISTRY ────────────────────────────────────────────────────────────
 MODELS = {
-    "fast":        "llama-3.1-8b-instant",               # Groq (Bulk / Contracts)
-    "smart":       "llama-3.3-70b-versatile",            # Groq (Smarter, used for chain resolution)
-    "prosecution": "llama-3.3-70b-versatile",            # Groq (Deep Scans)
-    "defense":     "llama-3.3-70b-versatile",            # Groq (Deep Scans)
-    "judge":       "llama-3.3-70b-versatile",            # Groq (Deep Scans)
+    "fast":        "meta-llama/llama-3.1-8b-instruct",               # OpenRouter
+    "smart":       "meta-llama/llama-3.3-70b-instruct",              # OpenRouter
+    "prosecution": "meta-llama/llama-3.3-70b-instruct",              # OpenRouter
+    "defense":     "meta-llama/llama-3.3-70b-instruct",              # OpenRouter
+    "judge":       "meta-llama/llama-3.3-70b-instruct",              # OpenRouter
 }
 
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"

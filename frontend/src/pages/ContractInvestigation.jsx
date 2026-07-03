@@ -166,13 +166,12 @@ export default function ContractInvestigation({ caseId }) {
   };
 
   const handleDownloadCoC = async () => {
-    if (!result) return;
-    try {
-      await downloadContractPDF(result);
-    } catch (err) {
-      console.error(err);
-      alert("Error generating Final Analysis PDF: " + err.message);
+    if (!result || !result.report_metadata || !result.report_metadata.report_id) {
+      alert("Report ID not found. Ensure you have run a scan first.");
+      return;
     }
+    const reportId = result.report_metadata.report_id;
+    window.open(`${import.meta.env.VITE_API_URL || 'http://127.0.0.1:8001'}/scan/report/${reportId}/pdf`, "_blank");
   };
 
   return (

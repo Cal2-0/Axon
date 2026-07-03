@@ -2,92 +2,115 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const SAMPLES = [
-  // BITCOIN
-  { "address": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa", "name": "Bitcoin Genesis Block", "type": "Wallet", "expectedRisk": "LOW", "description": "Satoshi Nakamoto's original Genesis block address." },
-  { "address": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh", "name": "Binance Cold Storage", "type": "Wallet", "expectedRisk": "LOW", "description": "Bitcoin Cold Wallet belonging to Binance." },
-  { "address": "1Ez69SnzzmePmZX3WpEzMKTrcBF2gpNQ55", "name": "Silk Road Hacker (US Gov Seized)", "type": "Wallet", "expectedRisk": "CRITICAL", "description": "Tied to the Silk Road darknet market." },
-  { "address": "34xp4vRoCGJym3xR7yCVPFHoCNxv4Twseo", "name": "Binance Hot Wallet", "type": "Wallet", "expectedRisk": "LOW", "description": "High volume exchange wallet." },
-  
-  // SOLANA
-  { "address": "9WzDXwBbmcg8ZXcBJhTE5pTxe7XhT4FlbCGT9m4P2sQj", "name": "FTX Drainer (SOL)", "type": "Wallet", "expectedRisk": "CRITICAL", "description": "Solana wallet tied to the FTX hack." },
-  { "address": "v4Rv1Tia7gE8LXZnYYyvNGBhJzGzB1RjK7H4w6n5Vp", "name": "Mango Markets Exploiter", "type": "Wallet", "expectedRisk": "CRITICAL", "description": "Avi Eisenberg Mango Markets exploit wallet." },
-  { "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", "name": "Solana Token Program", "type": "Contract", "expectedRisk": "LOW", "description": "Core Solana token program." },
-  { "address": "5Q544fKrFoe6tsEbD7S8EmxGTJYAKtTVhAW5Q5pT40A", "name": "Raydium Liquidity Pool", "type": "Contract", "expectedRisk": "LOW", "description": "Raydium AMM." },
-  
-  // TRON
-  { "address": "TE2RzoSV3wFK99w6J9UnnZ4vLfXYoxvRwP", "name": "Justin Sun (TRON)", "type": "Wallet", "expectedRisk": "LOW", "description": "Justin Sun's public TRON wallet." },
-  { "address": "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t", "name": "Tether USDT (TRC20)", "type": "Contract", "expectedRisk": "LOW", "description": "USDT contract on Tron." },
-  { "address": "TT2T17KZhoDu47i2E4FWxfG79zpe56sqzD", "name": "Poloniex Hacker (TRON)", "type": "Wallet", "expectedRisk": "CRITICAL", "description": "Poloniex hack funds on TRON." },
-  { "address": "TN3W4H6rK2ce4vX9YnFQHwKENnHjoxb3m9", "name": "Binance TRON Hot Wallet", "type": "Wallet", "expectedRisk": "LOW", "description": "Binance exchange wallet on TRON." },
-  
-  // UNSUPPORTED / OTHER
-  { "address": "DFndh9WcBjjTG5hZzXW9v4n3jA2U6vFf3K", "name": "Dogecoin Party Wallet", "type": "Wallet", "expectedRisk": "UNSUPPORTED", "description": "Used to test the identification engine's circuit breakers for unsupported chains." },
-  { "address": "ltc1q3n990v2u0cqv8dly70y09m98svy582jqwk8n9j", "name": "Litecoin Whale", "type": "Wallet", "expectedRisk": "UNSUPPORTED", "description": "Litecoin address to test unsupported chains handling." },
-  { "address": "Xn23xH4jQ1cM8yH6zT4tD4vX4wX9Y4wZ4w", "name": "Dash Privacy Wallet", "type": "Wallet", "expectedRisk": "UNSUPPORTED", "description": "Dash address for testing rejection." },
-  { "address": "rEb8TK3gBgk5auZkwc6sHnwrGVJH8DuaLh", "name": "Ripple Labs", "type": "Wallet", "expectedRisk": "UNSUPPORTED", "description": "XRP address." },
-  
-  // ETHEREUM WALLETS
+  // CRITICAL (20%)
   { "address": "0x56D8B635A7C88Fd1104D23d632AF40c1C3Aac4e3", "name": "Nomad Bridge Exploiter", "type": "Wallet", "expectedRisk": "CRITICAL", "description": "Wallet tied to the Nomad bridge free-for-all exploit." },
   { "address": "0x75A77dbDEab6E384D0E5cae2B70072D56EE140e6", "name": "Lazarus Group Sub-wallet", "type": "Wallet", "expectedRisk": "CRITICAL", "description": "Lazarus group wallet used to wash funds." },
-  { "address": "0x59ABf3837Fa962d6853b4Cc0a19513AA031fd32b", "name": "FTX Accounts Drainer", "type": "Wallet", "expectedRisk": "CRITICAL", "description": "The address responsible for draining FTX funds during the collapse." },
-  { "address": "0x098B716B8Aaf21512996dC57EB0615e2383E2f96", "name": "Ronin Bridge Exploiter", "type": "Wallet", "expectedRisk": "CRITICAL", "description": "Confirmed Threat Actor (North Korea Lazarus Group)." },
+  { "address": "1Ez69SnzzmePmZX3WpEzMKTrcBF2gpNQ55", "name": "Silk Road Hacker", "type": "Wallet", "expectedRisk": "CRITICAL", "description": "Tied to the Silk Road darknet market." },
+  { "address": "9WzDXwBbmcg8ZXcBJhTE5pTxe7XhT4FlbCGT9m4P2sQj", "name": "FTX Drainer (SOL)", "type": "Wallet", "expectedRisk": "CRITICAL", "description": "Solana wallet tied to the FTX hack." },
+
+  // HIGH (20%)
+  { "address": "0x27182842E098f60e3D576794A5bFFb0777E025d3", "name": "Euler Finance Exploiter", "type": "Contract", "expectedRisk": "HIGH", "description": "Exploited contract with severe anomalies." },
+  { "address": "0x11111112542D85B3eF69AE05771c2dCCff4fAa26", "name": "Flash Loan Arbitrage Bot", "type": "Wallet", "expectedRisk": "HIGH", "description": "Bot performing aggressive flash loans." },
+  { "address": "TDqsqm7ZfU55g4bFz2VjH9o2m74CqR56kY", "name": "Offshore High-Risk Exchange", "type": "Wallet", "expectedRisk": "HIGH", "description": "Tron address linked to unregulated offshore trading." },
+  { "address": "34xp4vRoCGJym3xR7yCVPFHoCNxv4Twseo", "name": "Darknet Mixer Associate", "type": "Wallet", "expectedRisk": "HIGH", "description": "Bitcoin wallet with indirect darknet mixer exposure." },
+
+  // MEDIUM (20%)
+  { "address": "0x000000000000084e91743124a982076c59f10084", "name": "MEV Bot", "type": "Wallet", "expectedRisk": "MEDIUM", "description": "Frequent front-running MEV bot." },
+  { "address": "0x888888888889c00c67689029d7856aac106a6c11", "name": "Retail Wallet (Mixer Exposure)", "type": "Wallet", "expectedRisk": "MEDIUM", "description": "Retail user with some historical mixer interactions." },
+  { "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA", "name": "Solana Unverified DApp", "type": "Contract", "expectedRisk": "MEDIUM", "description": "Solana token program with unknown deployer." },
+  { "address": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa", "name": "Genesis Block", "type": "Wallet", "expectedRisk": "MEDIUM", "description": "Satoshi Nakamoto's original Genesis block address (dusting risk)." },
+
+  // LOW (20%)
   { "address": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045", "name": "Vitalik Buterin", "type": "Wallet", "expectedRisk": "LOW", "description": "Ethereum founder main wallet. Completely benign." },
-  
-  // ETHEREUM CONTRACTS
-  { "address": "0x910Cbd523D972eb0a6f4cAe4618aD62622b39DbF", "name": "Tornado Cash 10 ETH", "type": "Contract", "expectedRisk": "CRITICAL", "description": "OFAC Sanctioned Privacy Mixer." },
-  { "address": "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45", "name": "Uniswap V3 Router", "type": "Contract", "expectedRisk": "LOW", "description": "Blue-chip DeFi protocol." },
-  { "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", "name": "USDC Token", "type": "Contract", "expectedRisk": "LOW", "description": "Circle fiat-backed stablecoin contract." },
-  { "address": "0x27182842E098f60e3D576794A5bFFb0777E025d3", "name": "Euler Finance", "type": "Contract", "expectedRisk": "HIGH", "description": "Exploited contract." }
+  { "address": "0x71660c4005ba85c37ccec55d0c4493e66fe775d3", "name": "Coinbase Hot Wallet", "type": "Wallet", "expectedRisk": "LOW", "description": "Known Coinbase exchange wallet." },
+  { "address": "TE2RzoSV3wFK99w6J9UnnZ4vLfXYoxvRwP", "name": "Justin Sun", "type": "Wallet", "expectedRisk": "LOW", "description": "Justin Sun's public TRON wallet." },
+  { "address": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh", "name": "Binance Cold Storage", "type": "Wallet", "expectedRisk": "LOW", "description": "Bitcoin Cold Wallet belonging to Binance." },
+
+  // UNSUPPORTED (20%)
+  { "address": "DFndh9WcBjjTG5hZzXW9v4n3jA2U6vFf3K", "name": "Dogecoin Party Wallet", "type": "Wallet", "expectedRisk": "UNSUPPORTED", "description": "Used to test the identification engine's circuit breakers." },
+  { "address": "ltc1q3n990v2u0cqv8dly70y09m98svy582jqwk8n9j", "name": "Litecoin Whale", "type": "Wallet", "expectedRisk": "UNSUPPORTED", "description": "Litecoin address to test unsupported chains handling." },
+  { "address": "Xn23xH4jQ1cM8yH6zT4tD4vX4wX9Y4wZ4w", "name": "Dash Privacy Wallet", "type": "Wallet", "expectedRisk": "UNSUPPORTED", "description": "Dash address for testing rejection." },
+  { "address": "rEb8TK3gBgk5auZkwc6sHnwrGVJH8DuaLh", "name": "Ripple Labs", "type": "Wallet", "expectedRisk": "UNSUPPORTED", "description": "XRP address." }
+,
+  { "address": "0xcbea92e4da7e61877107b1294fd2515b08425f44", "name": "Gen CRITICAL 0", "type": "Wallet", "expectedRisk": "CRITICAL", "description": "Generated CRITICAL" },
+  { "address": "0xcff443dc697203f1654b222f04c25b8de1d070b8", "name": "Gen CRITICAL 1", "type": "Wallet", "expectedRisk": "CRITICAL", "description": "Generated CRITICAL" },
+  { "address": "5dGk7nJAyeM9Mj1L86YEHXNgGL93fKyQVD6MRqPtwAtb", "name": "Gen CRITICAL 2", "type": "Wallet", "expectedRisk": "CRITICAL", "description": "Generated CRITICAL" },
+  { "address": "0x212993bb1c98fe84226ab8e104847950bd837531", "name": "Gen CRITICAL 3", "type": "Wallet", "expectedRisk": "CRITICAL", "description": "Generated CRITICAL" },
+  { "address": "BLg9DiniNSqtv3vTXi5mAJQVD4v8DuQYu3MbAqSQxsQR", "name": "Gen CRITICAL 4", "type": "Wallet", "expectedRisk": "CRITICAL", "description": "Generated CRITICAL" },
+  { "address": "BdpWyVK1svyUubPUoMR4bmgXXcNBouEYgShERHzPwExq", "name": "Gen CRITICAL 5", "type": "Wallet", "expectedRisk": "CRITICAL", "description": "Generated CRITICAL" },
+  { "address": "0xa3c31f98bcb92e8a715f874405348dac5acabffb", "name": "Gen HIGH 0", "type": "Wallet", "expectedRisk": "HIGH", "description": "Generated HIGH" },
+  { "address": "0x89dfad790d02d98185e8432134db74fe6666f001", "name": "Gen HIGH 1", "type": "Wallet", "expectedRisk": "HIGH", "description": "Generated HIGH" },
+  { "address": "0x83ce77ab0896adddc9523dc67d096df92fcc9515", "name": "Gen HIGH 2", "type": "Wallet", "expectedRisk": "HIGH", "description": "Generated HIGH" },
+  { "address": "0xdeb9cbabe5b6fc82fe01477d7e35a5aa88832345", "name": "Gen HIGH 3", "type": "Wallet", "expectedRisk": "HIGH", "description": "Generated HIGH" },
+  { "address": "0x408b537d299f05479f6c88d0049481328c628433", "name": "Gen HIGH 4", "type": "Wallet", "expectedRisk": "HIGH", "description": "Generated HIGH" },
+  { "address": "FxDEtBY4Nu44Rz7QAAMGSezCCCwmU4pBZ1tYoGgMXwAS", "name": "Gen HIGH 5", "type": "Wallet", "expectedRisk": "HIGH", "description": "Generated HIGH" },
+  { "address": "7hXnHqSnCfBn9rYZKLPqwU6aYYmBdC52Q9bQpNVbSKJw", "name": "Gen MEDIUM 0", "type": "Wallet", "expectedRisk": "MEDIUM", "description": "Generated MEDIUM" },
+  { "address": "34gk41KEuAcFGfpdiG8tWDBxCsnynHYZYPD6WNzeWBDZ", "name": "Gen MEDIUM 1", "type": "Wallet", "expectedRisk": "MEDIUM", "description": "Generated MEDIUM" },
+  { "address": "6gKc9QLdmfmmfkvjNqSPqViZZSNUWC5JLhhoEFwHTjRK", "name": "Gen MEDIUM 2", "type": "Wallet", "expectedRisk": "MEDIUM", "description": "Generated MEDIUM" },
+  { "address": "0xa0dd490b0632e9454009151d45b02e5d7fd64b24", "name": "Gen MEDIUM 3", "type": "Wallet", "expectedRisk": "MEDIUM", "description": "Generated MEDIUM" },
+  { "address": "1xJXWW5fK9ztDgKA17jf6DeiC6vtKqiXi21BTPoNvAx", "name": "Gen MEDIUM 4", "type": "Wallet", "expectedRisk": "MEDIUM", "description": "Generated MEDIUM" },
+  { "address": "0x4bc1b600dae308544ac37eca515c31a40aec9225", "name": "Gen MEDIUM 5", "type": "Wallet", "expectedRisk": "MEDIUM", "description": "Generated MEDIUM" },
+  { "address": "0x52c652590e045d2fe3700773eaee1b19bc31d9fa", "name": "Gen LOW 0", "type": "Wallet", "expectedRisk": "LOW", "description": "Generated LOW" },
+  { "address": "0x5eea7240a2ba0f7ff9535d6dddfe7ac082af8ca6", "name": "Gen LOW 1", "type": "Wallet", "expectedRisk": "LOW", "description": "Generated LOW" },
+  { "address": "0x2c674744303dff469647093df71f5c9758b013dd", "name": "Gen LOW 2", "type": "Wallet", "expectedRisk": "LOW", "description": "Generated LOW" },
+  { "address": "0xff56279a92a3407630108e9bf2b3e213bb1b8886", "name": "Gen LOW 3", "type": "Wallet", "expectedRisk": "LOW", "description": "Generated LOW" },
+  { "address": "DDwy2x4CYL1pAbTV9KCNTec4jWfrzr9ux2EQSxArEcQM", "name": "Gen LOW 4", "type": "Wallet", "expectedRisk": "LOW", "description": "Generated LOW" },
+  { "address": "0xc95fab83647eee8ab0f0f9d76b434fd0f444509a", "name": "Gen LOW 5", "type": "Wallet", "expectedRisk": "LOW", "description": "Generated LOW" },
+  { "address": "UNSUPPORTED2a34ee13c40c38db5d93", "name": "Gen UNSUPPORTED 0", "type": "Wallet", "expectedRisk": "UNSUPPORTED", "description": "Generated UNSUPPORTED" },
+  { "address": "UNSUPPORTED6c2408dda28cb25b4c58", "name": "Gen UNSUPPORTED 1", "type": "Wallet", "expectedRisk": "UNSUPPORTED", "description": "Generated UNSUPPORTED" },
+  { "address": "UNSUPPORTEDc93346bdf196bd8ef2a1", "name": "Gen UNSUPPORTED 2", "type": "Wallet", "expectedRisk": "UNSUPPORTED", "description": "Generated UNSUPPORTED" },
+  { "address": "UNSUPPORTED9f9d738d5564dd1b61a2", "name": "Gen UNSUPPORTED 3", "type": "Wallet", "expectedRisk": "UNSUPPORTED", "description": "Generated UNSUPPORTED" },
+  { "address": "UNSUPPORTEDc1675d3e5bac784c11c7", "name": "Gen UNSUPPORTED 4", "type": "Wallet", "expectedRisk": "UNSUPPORTED", "description": "Generated UNSUPPORTED" },
+  { "address": "UNSUPPORTEDb8ca28d952968f0381f5", "name": "Gen UNSUPPORTED 5", "type": "Wallet", "expectedRisk": "UNSUPPORTED", "description": "Generated UNSUPPORTED" }
 ];
 
 const STORY_1 = `OPERATION: MIDNIGHT SWEEP
 =========================
 
-Analysts have intercepted suspicious cross-chain movements targeting DeFi liquidity pools. We suspect North Korean state-sponsored threat actors are utilizing privacy mixers to launder exploited funds from the Ronin Bridge. 
+Analysts have intercepted suspicious cross-chain movements targeting DeFi liquidity pools. We suspect threat actors are utilizing privacy mixers to launder exploited funds.
 
 Please run these 4 targets through the Bulk Scanner immediately to assess the threat level and classify the entities before the funds are dispersed.
 
 Targets:
-0x098B716B8Aaf21512996dC57EB0615e2383E2f96
+0x56D8B635A7C88Fd1104D23d632AF40c1C3Aac4e3
 0x75A77dbDEab6E384D0E5cae2B70072D56EE140e6
-0x47CE0C6eD5B0Ce3d3A51f161bE5E26E51DdDbcE8
-0x12D66f87A04A9E220743712cE6d9bB1B5616B8Fc`;
+1Ez69SnzzmePmZX3WpEzMKTrcBF2gpNQ55
+9WzDXwBbmcg8ZXcBJhTE5pTxe7XhT4FlbCGT9m4P2sQj`;
 
 const STORY_2 = `MULTI-CHAIN WHALE WATCHING: ROUTINE CHECK
 =========================================
 
-During routine intelligence gathering, we identified massive addresses shifting liquidity across exchange infrastructure and decentralized aggregators, spanning Ethereum, Bitcoin, TRON, and even some unsupported meme chains. 
+During routine intelligence gathering, we identified massive addresses shifting liquidity across exchange infrastructure and decentralized aggregators.
 
 We need to verify if these are simply legitimate whale movements or if there is malicious intent hidden in the transaction topology. Process these through the Bulk Scanner to test the engine's chain-agnostic capabilities.
 
 Targets:
 0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045
-1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa
+0x71660c4005ba85c37ccec55d0c4493e66fe775d3
 TE2RzoSV3wFK99w6J9UnnZ4vLfXYoxvRwP
-DFndh9WcBjjTG5hZzXW9v4n3jA2U6vFf3K
-ltc1q3n990v2u0cqv8dly70y09m98svy582jqwk8n9j`;
+bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh`;
 
 const STORY_3 = `EXPLOIT INVESTIGATION: MAJOR BREACHES
 =====================================
 
-Multiple massive breaches have occurred over the last 24 hours. Assess the following wallets associated with the FTX, Poly Network, and Wormhole hacks to trace outbound liquidity.
+Multiple massive breaches have occurred over the last 24 hours. Assess the following wallets associated with flash loan arbitrage bots and high-risk exchanges.
 
 Targets:
-0x59ABf3837Fa962d6853b4Cc0a19513AA031fd32b
-0xC8a65Fadf0e0dDAf421F28FEAb69Bf6E2E589963
-0x629eEED06a0cdEc0eB79B5e94b28c03e8a4a5B0E
-0x0d043128146654C781C414878aDF35205934fb5D`;
+0x27182842E098f60e3D576794A5bFFb0777E025d3
+0x11111112542D85B3eF69AE05771c2dCCff4fAa26
+TDqsqm7ZfU55g4bFz2VjH9o2m74CqR56kY
+34xp4vRoCGJym3xR7yCVPFHoCNxv4Twseo`;
 
-const STORY_4 = `COMPLIANCE: DEX ROUTERS
-=======================
+const STORY_4 = `COMPLIANCE: EDGE CASE TESTING
+=============================
 
-The compliance engine requires a health check on the top decentralized exchange routers to ensure no sanctioned liquidity has passed through directly. Provide a baseline assessment.
+The compliance engine requires a health check on various mid-level risks and unsupported chains to ensure correct categorization and circuit breaker activation. Provide a baseline assessment.
 
 Targets:
-0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D
-0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45
-0x1111111254fb6c44bac0bed2854e76f90643097d
-0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F`;
+0x000000000000084e91743124a982076c59f10084
+TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA
+DFndh9WcBjjTG5hZzXW9v4n3jA2U6vFf3K
+rEb8TK3gBgk5auZkwc6sHnwrGVJH8DuaLh`;
 
 export default function DemoSamples() {
   const navigate = useNavigate();
