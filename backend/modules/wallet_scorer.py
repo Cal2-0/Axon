@@ -576,16 +576,24 @@ async def scan_wallet(address: str, db: Session, depth: str = "quick", case_id: 
             return_exceptions=True
         )
 
+    _collection_errors = []
     if isinstance(etherscan_result, Exception):
-        etherscan_result = {"eth_balance": "0", "tx_count": 0, "transactions": [], "stablecoin_flows": {}}
+        _collection_errors.append(f"Etherscan: {type(etherscan_result).__name__}")
+        etherscan_result = {"eth_balance": "0", "tx_count": 0, "transactions": [], "stablecoin_flows": {}, "wallet_type": "Unknown", "balance_wei": "Unknown", "tx_count_sample": 0, "first_tx_date": None, "last_tx_date": None}
     if isinstance(alchemy_tokens, Exception):
+        _collection_errors.append(f"Alchemy: {type(alchemy_tokens).__name__}")
         alchemy_tokens = []
     if isinstance(forta_count, Exception):
+        _collection_errors.append(f"Forta: {type(forta_count).__name__}")
         forta_count = 0
     if isinstance(eth_price, Exception):
+        _collection_errors.append(f"CoinGecko: {type(eth_price).__name__}")
         eth_price = 3500.0
     if isinstance(osint_data, Exception):
+        _collection_errors.append(f"OSINT: {type(osint_data).__name__}")
         osint_data = {"summary": {}, "details": {}}
+    if _collection_errors:
+        print(f"[SCAN] Collection errors: {', '.join(_collection_errors)}")
 
     eth_balance_str = etherscan_result["eth_balance"]
     tx_count = etherscan_result["tx_count"]
@@ -1189,22 +1197,22 @@ Use ALL of this evidence to form a comprehensive forensic assessment. Weigh beha
         "identity": {
             "address": address,
             "ens": osint_data.get("summary", {}).get("ens_name"),
-            "walletType": edata.get("wallet_type", "Unknown"),
-            "balanceWei": edata.get("balance_wei", "Unknown"),
-            "txCountSample": edata.get("tx_count_sample", 0),
-            "firstTxDate": edata.get("first_tx_date"),
-            "lastTxDate": edata.get("last_tx_date"),
+            "walletType": etherscan_result.get("wallet_type", "Unknown"),
+            "balanceWei": etherscan_result.get("balance_wei", "Unknown"),
+            "txCountSample": etherscan_result.get("tx_count_sample", 0),
+            "firstTxDate": etherscan_result.get("first_tx_date"),
+            "lastTxDate": etherscan_result.get("last_tx_date"),
             "label": wallet_db.label if wallet_db else "Unlabeled Wallet",
             "tag": label,
             "firstSeen": wallet_db.first_seen if wallet_db else first_seen,
             "lastSeen": last_seen if last_seen != "N/A" else "Live",
             "ethBalance": eth_balance_str,
-            "totalReceived": f"{total_received_eth:.4f} ETH" if total_received_eth > 0 else "Data Not Available",
-            "totalSent": f"{total_sent_eth:.4f} ETH" if total_sent_eth > 0 else "Data Not Available",
+            "totalReceived": f"{total_received_eth:.4f} ETH" if total_received_eth > 0 else ("Collection error — retry scan" if _collection_errors else "Data Not Available"),
+            "totalSent": f"{total_sent_eth:.4f} ETH" if total_sent_eth > 0 else ("Collection error — retry scan" if _collection_errors else "Data Not Available"),
             "txCount": tx_count,
             "uniqueCounterparties": counterparties if counterparties > 0 else (wallet_db.counterparties if wallet_db else 0),
             "walletAgeDays": "Data Not Available",
-            "totalVolumeUSD": wallet_db.amount_usd if wallet_db else (f"~${total_volume_eth * eth_price:,.0f}" if total_volume_eth > 0 else "Data Not Available"),
+            "totalVolumeUSD": wallet_db.amount_usd if wallet_db else (f"~${total_volume_eth * eth_price:,.0f}" if total_volume_eth > 0 else ("Collection error — retry scan" if _collection_errors else "Data Not Available")),
             "ethPrice": eth_price,
             "entityClass": entity_class,
             "classModifier": class_modifier,
