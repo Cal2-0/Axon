@@ -341,7 +341,7 @@ async def scan_tron_wallet(address: str, db: Session, depth: str = "quick", case
     }
 
     # ── Server-Side Hash & Report Metadata (tamper-proof) ──
-    import uuid, time, hashlib, json
+    import uuid, hashlib, json
     report_meta = {
         "report_id": f"AXON-W-{int(time.time())}-{address[:8]}-{uuid.uuid4().hex[:6]}",
         "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
