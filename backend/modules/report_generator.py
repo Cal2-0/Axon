@@ -42,7 +42,8 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
     else:
         inv_log = db.query(InvestigationLog).filter(
             InvestigationLog.entity_address == report.entity_address,
-            InvestigationLog.entity_type == report.entity_type
+            InvestigationLog.entity_type == report.entity_type,
+            InvestigationLog.scan_depth == report.scan_depth
         ).order_by(InvestigationLog.scan_timestamp.desc()).first()
 
     buffer = io.BytesIO()
@@ -84,23 +85,38 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
             Story.append(Spacer(1, 12))
 
             # SECTION 2 - EXECUTIVE SUMMARY
-            Story.append(Paragraph("<b>SECTION 2 - EXECUTIVE SUMMARY</b>", styles["Heading2"]))
+            Story.append(Paragraph("<b>EXECUTIVE SUMMARY</b>", styles["Heading1"]))
             tx_count = identity.get("tx_count") or len(txs)
-            Story.append(Paragraph(f"Target is a {report.entity_type} with a {risk.get('label', 'LOW')} risk profile (Score: {report.risk_score}), exhibiting {tx_count} transactions.", styles["Normal"]))
+            
             if ai and _is_valid(ai.get("verdict")):
-                Story.append(Paragraph(f"<b>Verdict:</b> {ai.get('verdict')}", styles["Normal"]))
-            if ai and _is_valid(ai.get("hypothesis")):
-                Story.append(Paragraph(f"<b>Recommended Action:</b> {ai.get('hypothesis')}", styles["Normal"]))
+                verdict = ai.get("verdict")
+                Story.append(Paragraph(f"Target is a <b>{identity.get('wallet_type', 'EOA')}</b> exhibiting {tx_count} transactions. <b>{verdict}</b>", styles["Normal"]))
+                if _is_valid(ai.get("hypothesis")):
+                    Story.append(Paragraph(f"<b>Assessment:</b> {ai.get('hypothesis')}", styles["Normal"]))
+            else:
+                Story.append(Paragraph(f"Target is a <b>{identity.get('wallet_type', 'EOA')}</b> exhibiting {tx_count} transactions. Algorithmic Risk Profile: <b>{risk.get('label', 'LOW')}</b>.", styles["Normal"]))
+            Story.append(Spacer(1, 12))
+
+            # KEY FINDINGS
+            Story.append(Paragraph("<b>KEY FINDINGS</b>", styles["Heading2"]))
+            findings = []
+            if osint and _is_valid(osint.get("corpus_match")):
+                findings.append(f"Threat corpus match: {osint.get('corpus_match')}")
+            findings.append(f"{tx_count} observed transactions")
+            if _is_valid(risk.get("factors")):
+                for factor in risk.get("factors", [])[:3]:
+                    findings.append(factor.get('reason'))
+            for f in findings:
+                Story.append(Paragraph(f"• {f}", styles["Normal"]))
             Story.append(Spacer(1, 12))
 
             # SECTION 3 - SUBJECT PROFILE
-            Story.append(Paragraph("<b>SECTION 3 - SUBJECT PROFILE</b>", styles["Heading2"]))
+            Story.append(Paragraph("<b>SUBJECT PROFILE</b>", styles["Heading2"]))
             addr_info = detect_address_type(report.entity_address)
             Story.append(Paragraph(f"<b>Network/Coin:</b> {addr_info.get('coin', 'Unknown')}", styles["Normal"]))
             explorer = addr_info.get("explorer", "N/A")
             if _is_valid(explorer):
                 Story.append(Paragraph(f"<b>Explorer Link:</b> <a href='{explorer}'>{explorer}</a>", styles["Normal"]))
-            Story.append(Paragraph(f"<b>Wallet Type:</b> {identity.get('wallet_type', 'EOA')}", styles["Normal"]))
             if _is_valid(identity.get("first_tx_date")):
                 Story.append(Paragraph(f"<b>First Activity:</b> {identity.get('first_tx_date')}", styles["Normal"]))
             if _is_valid(identity.get("last_tx_date")):
@@ -114,92 +130,84 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
                 Story.append(Paragraph(f"<b>Entity Classification:</b> {class_label} (Source: Threat Corpus)", styles["Normal"]))
             Story.append(Spacer(1, 12))
 
-            # SECTION 4 - BEHAVIORAL ANALYSIS
+            # THREAT DB
             if _is_valid(risk.get("factors")):
-                Story.append(Paragraph("<b>SECTION 4 - BEHAVIORAL ANALYSIS</b>", styles["Heading2"]))
+                Story.append(Paragraph("<b>THREAT DATABASE MATCHES</b>", styles["Heading2"]))
+                rows = []
                 for factor in risk.get("factors", []):
-                    Story.append(Paragraph(f"- {factor.get('reason')} [Penalty: {factor.get('penalty', 0)}]", styles["Normal"]))
+                    rows.append(["Axon Engine", "Behavioral", "High", factor.get('reason'), "N/A"])
+                if rows:
+                    Story.append(_build_table(["Threat Source", "Threat Category", "Confidence", "Evidence", "Reference"], rows, [80, 80, 60, 150, 60]))
                 Story.append(Spacer(1, 12))
 
-            # SECTION 5 - FUND FLOW ANALYSIS
-            if mixer and _is_valid(mixer.get("totalMixedETH")):
-                Story.append(Paragraph("<b>SECTION 5 - FUND FLOW ANALYSIS</b>", styles["Heading2"]))
-                Story.append(Paragraph(f"<b>Mixer Exposure:</b> {mixer.get('totalMixedETH')}", styles["Normal"]))
+            # EVIDENCE: TIMELINE
+            if txs:
+                Story.append(Paragraph("<b>EVIDENCE: TIMELINE RECONSTRUCTION</b>", styles["Heading2"]))
+                rows = []
+                for tx in txs[:15]:
+                    ts = tx.get("timeStamp")
+                    try: dstr = time.strftime("%Y-%m-%d %H:%M", time.gmtime(int(ts)))
+                    except: dstr = "N/A"
+                    try: val = f"{(int(tx.get('value', 0)) / 10**18):.5f}"
+                    except: val = "0"
+                    is_in = tx.get("to", "").lower() == report.entity_address.lower()
+                    rows.append([dstr, tx.get("hash", "")[:8]+"...", "IN" if is_in else "OUT", val])
+                if rows:
+                    Story.append(_build_table(["Date", "Hash", "Dir", "Value (ETH)"], rows, [100, 80, 40, 80]))
                 Story.append(Spacer(1, 12))
 
-            # SECTION 6 - COUNTERPARTY NETWORK
+            # COUNTERPARTIES
             if graph and _is_valid(graph.get("nodes")):
                 nodes = graph.get("nodes", [])
                 if len(nodes) > 0:
-                    Story.append(Paragraph("<b>SECTION 6 - COUNTERPARTY NETWORK</b>", styles["Heading2"]))
+                    Story.append(Paragraph("<b>COUNTERPARTIES</b>", styles["Heading2"]))
                     rows = []
                     for n in nodes[:10]:
-                        rows.append([n.get("id", "")[:12]+"...", n.get("type", "Unknown"), str(n.get("risk", 0))])
+                        rows.append([n.get("id", "")[:12]+"...", n.get("type", "Unknown"), str(n.get("interaction_count", "N/A")), str(n.get("total_value", "N/A")), str(n.get("last_seen", "N/A")), str(n.get("risk", 0))])
                     if rows:
-                        Story.append(_build_table(["Counterparty", "Type", "Risk"], rows, [140, 100, 60]))
+                        Story.append(_build_table(["Address", "Known Entity", "Tx Count", "Total Val", "Last Seen", "Threat Lvl"], rows, [80, 70, 50, 50, 60, 50]))
                     Story.append(Spacer(1, 12))
 
-            # SECTION 7 - ASSET INVENTORY
+            # ASSET INVENTORY
             if _is_valid(raw.get("holdings")):
                 holdings = raw.get("holdings", {})
-                Story.append(Paragraph("<b>SECTION 7 - ASSET INVENTORY</b>", styles["Heading2"]))
+                Story.append(Paragraph("<b>ASSET INVENTORY</b>", styles["Heading2"]))
                 rows = []
                 if isinstance(holdings, list):
                     for h in holdings:
                         if isinstance(h, dict):
-                            rows.append([h.get("chain", ""), h.get("balance", "")])
+                            rows.append([h.get("chain", ""), "N/A", "N/A", "N/A", "N/A"])
                 elif isinstance(holdings, dict):
-                    rows.append(["ERC-20 Tokens Detected", str(holdings.get("erc20_count", 0))])
-                    rows.append(["Forta Security Alerts", str(holdings.get("forta_alerts", 0))])
-                    flows = holdings.get("stablecoin_flows", {})
-                    if flows:
-                        rows.append(["USDT In/Out", f"{flows.get('usdt_in', 0):.0f} / {flows.get('usdt_out', 0):.0f}"])
-                        rows.append(["USDC In/Out", f"{flows.get('usdc_in', 0):.0f} / {flows.get('usdc_out', 0):.0f}"])
-                
+                    rows.append(["ERC-20 Tokens", str(holdings.get("erc20_count", 0)), "N/A", "N/A", "N/A"])
                 if rows:
-                    Story.append(_build_table(["Asset Metric", "Value"], rows, [150, 150]))
+                    Story.append(_build_table(["Assets", "Stablecoins", "NFTs", "Contracts", "Protocols"], rows, [80, 70, 50, 60, 60]))
                 Story.append(Spacer(1, 12))
-
-            # SECTION 8 - THREAT INTELLIGENCE
-            if osint and _is_valid(osint.get("corpus_match")):
-                Story.append(Paragraph("<b>SECTION 8 - THREAT INTELLIGENCE</b>", styles["Heading2"]))
-                Story.append(Paragraph(f"<b>Corpus Match:</b> {osint.get('corpus_match')}", styles["Normal"]))
-                Story.append(Spacer(1, 12))
-
-            # SECTION 9 - TIMELINE RECONSTRUCTION
-            if txs:
-                Story.append(Paragraph("<b>SECTION 9 - TIMELINE RECONSTRUCTION</b>", styles["Heading2"]))
-                rows = []
-                for tx in txs[:15]:
-                    ts = tx.get("timeStamp")
-                    try:
-                        dstr = time.strftime("%Y-%m-%d %H:%M", time.gmtime(int(ts)))
-                    except: dstr = "N/A"
-                    val = tx.get("value", "0")
-                    is_in = tx.get("to", "").lower() == report.entity_address.lower()
-                    rows.append([dstr, tx.get("hash", "")[:8]+"...", "IN" if is_in else "OUT", val])
-                if rows:
-                    Story.append(_build_table(["Date", "Hash", "Dir", "Value"], rows, [100, 80, 40, 80]))
-                Story.append(Spacer(1, 12))
-
-            # SECTION 10 - EXCHANGE & KYC EXPOSURE
+            
+            # EXCHANGE & KYC
             if exchange and _is_valid(exchange.get("detected")) and exchange.get("detected"):
-                Story.append(Paragraph("<b>SECTION 10 - EXCHANGE & KYC EXPOSURE (SUBPOENA TARGETS)</b>", styles["Heading2"]))
+                Story.append(Paragraph("<b>EXCHANGE & KYC EXPOSURE (SUBPOENA TARGETS)</b>", styles["Heading2"]))
                 Story.append(Paragraph(f"<b>Exchange Activity Detected:</b> {exchange.get('summary', '')}", styles["Normal"]))
                 Story.append(Paragraph("<b>Recommended legal mechanism:</b> Subpoena / MLAT to exchange compliance.", styles["Normal"]))
                 Story.append(Spacer(1, 12))
-
-            # SECTION 11 - RISK SCORE BREAKDOWN
-            Story.append(Paragraph("<b>SECTION 11 - RISK SCORE BREAKDOWN</b>", styles["Heading2"]))
-            Story.append(Paragraph(f"<b>Overall Score:</b> {report.risk_score} / 100", styles["Normal"]))
-            Story.append(Spacer(1, 12))
-
-            # SECTION 12 - INVESTIGATOR NOTES
+            
+            # INVESTIGATOR NOTES
             if ai and _is_valid(ai.get("prosecution_summary")):
-                Story.append(Paragraph("<b>SECTION 12 - INVESTIGATOR NOTES</b>", styles["Heading2"]))
+                Story.append(Paragraph("<b>INVESTIGATOR NOTES</b>", styles["Heading2"]))
                 Story.append(Paragraph(f"<b>Prosecution:</b> {ai.get('prosecution_summary')}", styles["Normal"]))
                 Story.append(Paragraph(f"<b>Defense:</b> {ai.get('defense_summary')}", styles["Normal"]))
                 Story.append(Spacer(1, 12))
+
+            # APPENDIX: METHODOLOGY
+            Story.append(PageBreak())
+            Story.append(Paragraph("<b>APPENDIX A: METHODOLOGY & RISK SCORE</b>", styles["Heading1"]))
+            Story.append(Spacer(1, 12))
+            Story.append(Paragraph(f"<b>Overall Calculated Risk Score:</b> {report.risk_score} / 100", styles["Normal"]))
+            Story.append(Spacer(1, 12))
+            if _is_valid(risk.get("factors")):
+                Story.append(Paragraph("<b>Scoring Breakdown:</b>", styles["Normal"]))
+                for factor in risk.get("factors", []):
+                    Story.append(Paragraph(f"- {factor.get('reason')} [Penalty: {factor.get('penalty', 0)}]", styles["Normal"]))
+            Story.append(Spacer(1, 12))
 
         elif report.entity_type == "contract":
             info = raw.get("info", {})

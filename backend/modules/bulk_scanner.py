@@ -39,23 +39,27 @@ async def _process_address(address: str, db: Session, semaphore: asyncio.Semapho
             if resolution in ("single_deterministic", "single_existence_confirmed", "multi_chain_active"):
                 # Use the primary/first candidate chain
                 chain = identity["candidates"][0]["chain"].lower()
-                
-                if chain == "bitcoin":
-                    result = await scan_btc_wallet(address, db, depth="quick", case_id=case_id)
-                elif chain == "solana":
-                    result = await scan_sol_wallet(address, db, depth="quick", case_id=case_id)
-                elif chain == "tron":
-                    result = await scan_tron_wallet(address, db, depth="quick", case_id=case_id)
-                elif chain.lower() in ["dogecoin", "litecoin", "unknown"]:
-                    return {"address": address, "status": "error", "error": f"Unsupported Chain ({chain})"}
-                else:
-                    # Treat as EVM compatible
-                    if await _is_contract(address):
-                        result = await scan_contract(address, db, depth="quick")
-                    else:
-                        result = await scan_wallet(address, db, depth="quick")
+            elif resolution == "unresolved_ambiguous" and identity.get("candidates") and identity["candidates"][0]["tier"] == "C":
+                # Fallback to Ethereum if EVM address has no balance on probed chains
+                chain = "ethereum"
             else:
                 return {"address": address, "status": "error", "error": "Unrecognized or unresolved address format"}
+                
+            if chain == "bitcoin":
+                result = await scan_btc_wallet(address, db, depth="quick", case_id=case_id)
+            elif chain == "solana":
+                result = await scan_sol_wallet(address, db, depth="quick", case_id=case_id)
+            elif chain == "tron":
+                result = await scan_tron_wallet(address, db, depth="quick", case_id=case_id)
+            elif chain.lower() in ["dogecoin", "litecoin", "unknown"]:
+                return {"address": address, "status": "error", "error": f"Unsupported Chain ({chain})"}
+            else:
+                # Treat as EVM compatible
+                if await _is_contract(address):
+                    result = await scan_contract(address, db, depth="quick")
+                else:
+                    result = await scan_wallet(address, db, depth="quick")
+
 
             
             # The scan_wallet function automatically writes to InvestigationLog.
