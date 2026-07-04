@@ -1181,8 +1181,8 @@ Use ALL of this evidence to form a comprehensive forensic assessment. Weigh beha
 
     # ─── Format Signals for UI ────────────────────────────────────
     ui_factors = []
-    for reason, icon, layer in signals:
-        ui_factors.append({"reason": reason, "icon": icon, "layer": layer, "penalty": 0})
+    for sig in signals:
+        ui_factors.append({"reason": sig[0], "icon": sig[1], "layer": sig[2], "penalty": 0})
 
     if not ui_factors:
         ui_factors.append({"reason": "No significant forensic signals detected", "icon": "✅", "layer": "L1", "penalty": 0})

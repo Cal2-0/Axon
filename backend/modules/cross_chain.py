@@ -106,6 +106,9 @@ async def fetch_prices(client: httpx.AsyncClient, cg_ids: set) -> dict:
     url = f"https://api.coingecko.com/api/v3/simple/price?ids={ids_str}&vs_currencies=usd,inr"
     try:
         headers = {"User-Agent": "Mozilla/5.0 (compatible; Axon/2.0)"}
+        cg_key = os.environ.get("COINGECKO_API_KEY", "")
+        if cg_key:
+            headers["x-cg-demo-api-key"] = cg_key
         res = await client.get(url, headers=headers, timeout=8.0)
         res.raise_for_status()
         data = res.json()
