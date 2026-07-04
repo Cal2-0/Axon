@@ -781,7 +781,7 @@ async def scan_wallet(address: str, db: Session, depth: str = "quick", case_id: 
         wallet_age_days = (time.time() - min(timestamps)) / 86400
         if wallet_age_days < 7 and eth_balance > 10:
             l1 = max(l1, 85)
-            signals.append(("HIGH VALUE + NEW WALLET: {:.1f} ETH in wallet aged {:.0f} days".format(eth_balance, wallet_age_days), "🚨", "L1", "High", "On-chain Heuristic"))
+            signals.append(("HIGH VALUE + RECENT ACTIVITY: {:.1f} ETH in activity span {:.0f} days".format(eth_balance, wallet_age_days), "🚨", "L1", "High", "On-chain Heuristic"))
         elif wallet_age_days < 30 and eth_balance > 50:
             l1 = max(l1, 60)
             signals.append(("Significant value in young wallet ({:.1f} ETH, {:.0f} days old)".format(eth_balance, wallet_age_days), "⚠️", "L1", "Medium", "On-chain Heuristic"))

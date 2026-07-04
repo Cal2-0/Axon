@@ -118,12 +118,12 @@ const DEMO_PROFILES = {
     },
     graph: {
       nodes: [
-        { id: '0xVitalik', label: 'vitalik.eth', type: 'default', risk: 8 },
-        { id: '0xGitcoin', label: 'Gitcoin Grants', type: 'default', risk: 2 },
-        { id: '0xUniV3', label: 'Uniswap V3', type: 'default', risk: 3 },
-        { id: '0xENS', label: 'ENS Registrar', type: 'default', risk: 1 },
-        { id: '0xLido', label: 'Lido Staking', type: 'default', risk: 5 },
-        { id: '0xCharities', label: 'Charity Donations', type: 'default', risk: 1 },
+        { id: '0xVitalik', label: 'vitalik.eth', type: 'Unknown Wallet', risk: 8 },
+        { id: '0xGitcoin', label: 'Gitcoin Grants', type: 'Unknown Wallet', risk: 2 },
+        { id: '0xUniV3', label: 'Uniswap V3', type: 'Unknown Wallet', risk: 3 },
+        { id: '0xENS', label: 'ENS Registrar', type: 'Unknown Wallet', risk: 1 },
+        { id: '0xLido', label: 'Lido Staking', type: 'Unknown Wallet', risk: 5 },
+        { id: '0xCharities', label: 'Charity Donations', type: 'Unknown Wallet', risk: 1 },
         { id: '0xRailgun', label: 'RailGun', type: 'mixer', risk: 40 },
       ],
       edges: [
@@ -193,7 +193,7 @@ const DEMO_PROFILES = {
         { id: '0xFTXHot', label: 'FTX Hot Wallet', type: 'victim', risk: 20 },
         { id: '0xFTXHot2', label: 'FTX Hot Wallet 2', type: 'victim', risk: 20 },
         { id: '0xRenBr', label: 'RenBridge', type: 'mixer', risk: 65 },
-        { id: '0xSwap1', label: 'DEX Swap #1', type: 'default', risk: 15 },
+        { id: '0xSwap1', label: 'DEX Swap #1', type: 'Unknown Wallet', risk: 15 },
         { id: '0xTumbler', label: 'Not Determined', type: 'suspect', risk: 80 },
         { id: '0xInter1', label: 'Intermediary #1', type: 'suspect', risk: 72 },
       ],

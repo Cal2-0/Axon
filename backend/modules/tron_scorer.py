@@ -157,7 +157,7 @@ async def scan_tron_wallet(address: str, db: Session, depth: str = "quick", case
         if len(graph_edges) < 50 and tx_to != "Contract":
             graph_edges.append({"source": tx_from, "target": tx_to, "value": tx_val / 10**6, "hash": tx_hash})
             if len(graph_nodes) < 50:
-                graph_nodes.append({"id": tx_to, "label": tx_to[:8] + "...", "type": "default", "risk": 10})
+                graph_nodes.append({"id": tx_to, "label": tx_to[:8] + "...", "type": "Unknown Wallet", "risk": 10})
 
         formatted_txs.append({
             "hash": tx_hash,
@@ -191,7 +191,7 @@ async def scan_tron_wallet(address: str, db: Session, depth: str = "quick", case
         if len(graph_edges) < 100:
             graph_edges.append({"source": tx_from, "target": tx_to, "value": val_usdt, "hash": tx_hash})
             if len(graph_nodes) < 100:
-                graph_nodes.append({"id": tx_to, "label": tx_to[:8] + "...", "type": "default", "risk": 10})
+                graph_nodes.append({"id": tx_to, "label": tx_to[:8] + "...", "type": "Unknown Wallet", "risk": 10})
 
     if timestamps:
         timestamps.sort()
@@ -281,10 +281,10 @@ async def scan_tron_wallet(address: str, db: Session, depth: str = "quick", case
         src = edge["source"]
         tgt = edge["target"]
         if src not in existing_node_ids:
-            graph_nodes.append({"id": src, "label": src[:6]+"...", "type": "default", "risk": 10})
+            graph_nodes.append({"id": src, "label": src[:6]+"...", "type": "Unknown Wallet", "risk": 10})
             existing_node_ids.add(src)
         if tgt not in existing_node_ids:
-            graph_nodes.append({"id": tgt, "label": tgt[:6]+"...", "type": "default", "risk": 10})
+            graph_nodes.append({"id": tgt, "label": tgt[:6]+"...", "type": "Unknown Wallet", "risk": 10})
             existing_node_ids.add(tgt)
 
     response_data = {
@@ -339,5 +339,40 @@ async def scan_tron_wallet(address: str, db: Session, depth: str = "quick", case
         "transactions": formatted_txs,
         "evidence_context": "TRON Scan Context"
     }
+
+    # ── Server-Side Hash & Report Metadata (tamper-proof) ──
+    import uuid, time, hashlib, json
+    report_meta = {
+        "report_id": f"AXON-W-{int(time.time())}-{address[:8]}-{uuid.uuid4().hex[:6]}",
+        "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "generated_timestamp": time.time(),
+        "scan_depth": depth,
+        "entity_address": address.lower(),
+        "entity_type": "wallet",
+        "engine_version": "2.0",
+    }
+    hash_payload = json.dumps(response_data, sort_keys=True, default=str)
+    report_meta["sha256_hash"] = hashlib.sha256(hash_payload.encode()).hexdigest()
+    report_meta["hash_algorithm"] = "SHA-256"
+    report_meta["hash_scope"] = "Full response_data payload (sorted keys, pre-metadata)"
+    response_data["report_metadata"] = report_meta
+
+    if db:
+        try:
+            from database.models import VerificationReport
+            report_entry = VerificationReport(
+                report_id=report_meta["report_id"],
+                report_hash=report_meta["sha256_hash"],
+                entity_address=address.lower(),
+                entity_type="wallet",
+                risk_score=final_score,
+                scan_timestamp=time.time(),
+                scan_depth=depth
+            )
+            db.add(report_entry)
+            db.commit()
+        except Exception as e:
+            print(f"[SCAN] Error saving to report DB: {e}")
+            db.rollback()
 
     return response_data

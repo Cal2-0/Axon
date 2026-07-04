@@ -438,3 +438,33 @@
 
 
 new super db of all crpto so we can check and compare some where wherei can see last update 
+Bulk report
+
+This is the weakest report.
+
+It currently feels like a batch receipt rather than an investigation summary.
+
+I would want:
+
+ranked entities
+why each is prioritized
+chain distribution
+failures
+recommended review order
+Counterparty section is underdeveloped.
+
+Right now I see mostly placeholders like:
+
+N/A
+default
+threat level
+
+I'd expect:
+
+interaction count
+first seen
+last seen
+total transferred
+known entity (if available)
+
+Those fields are what I would use operationally.

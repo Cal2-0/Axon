@@ -138,7 +138,7 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
                 Story.append(Paragraph("<b>THREAT DATABASE MATCHES</b>", styles["Heading2"]))
                 rows = []
                 for factor in risk.get("factors", []):
-                    rows.append(["Axon Engine", "Behavioral", "High", factor.get('reason'), "N/A"])
+                    rows.append(["Axon Engine", "Behavioral", "High", factor.get('reason'), "Chain Analysis"])
                 if rows:
                     Story.append(_build_table(["Threat Source", "Threat Category", "Confidence", "Evidence", "Reference"], rows, [80, 80, 60, 150, 60]))
                 Story.append(Spacer(1, 12))
@@ -209,7 +209,7 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
             if _is_valid(risk.get("factors")):
                 Story.append(Paragraph("<b>Scoring Breakdown:</b>", styles["Normal"]))
                 for factor in risk.get("factors", []):
-                    Story.append(Paragraph(f"- {factor.get('reason')} [Penalty: {factor.get('penalty', 0)}]", styles["Normal"]))
+                    Story.append(Paragraph(f"- {factor.get('reason')} ", styles["Normal"]))
             Story.append(Spacer(1, 12))
 
         elif report.entity_type == "contract":
@@ -280,7 +280,7 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
                     if isinstance(factor, str):
                         Story.append(Paragraph(f"- {factor}", styles["Normal"]))
                     else:
-                        Story.append(Paragraph(f"- {factor.get('reason')} [Penalty: {factor.get('penalty', 0)}]", styles["Normal"]))
+                        Story.append(Paragraph(f"- {factor.get('reason')} ", styles["Normal"]))
                 Story.append(Spacer(1, 12))
 
             # SECTION 9 - RISK SCORE BREAKDOWN
