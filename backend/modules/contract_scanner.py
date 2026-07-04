@@ -926,8 +926,6 @@ Use ALL of this evidence to form a comprehensive forensic assessment."""
 
         graph_edges.append({"source": frm, "target": to_addr, "value": value, "hash": tx.get("hash", "")})
 
-    import json
-    
     # Parse ABI
     abi_raw = etherscan.get("abi", "[]")
     try:

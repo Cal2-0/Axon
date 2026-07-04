@@ -141,15 +141,24 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
 
             # SECTION 7 - ASSET INVENTORY
             if _is_valid(raw.get("holdings")):
-                holdings = raw.get("holdings", [])
-                if len(holdings) > 0:
-                    Story.append(Paragraph("<b>SECTION 7 - ASSET INVENTORY</b>", styles["Heading2"]))
-                    rows = []
+                holdings = raw.get("holdings", {})
+                Story.append(Paragraph("<b>SECTION 7 - ASSET INVENTORY</b>", styles["Heading2"]))
+                rows = []
+                if isinstance(holdings, list):
                     for h in holdings:
-                        rows.append([h.get("chain", ""), h.get("balance", "")])
-                    if rows:
-                        Story.append(_build_table(["Chain", "Balance (Native)"], rows, [150, 150]))
-                    Story.append(Spacer(1, 12))
+                        if isinstance(h, dict):
+                            rows.append([h.get("chain", ""), h.get("balance", "")])
+                elif isinstance(holdings, dict):
+                    rows.append(["ERC-20 Tokens Detected", str(holdings.get("erc20_count", 0))])
+                    rows.append(["Forta Security Alerts", str(holdings.get("forta_alerts", 0))])
+                    flows = holdings.get("stablecoin_flows", {})
+                    if flows:
+                        rows.append(["USDT In/Out", f"{flows.get('usdt_in', 0):.0f} / {flows.get('usdt_out', 0):.0f}"])
+                        rows.append(["USDC In/Out", f"{flows.get('usdc_in', 0):.0f} / {flows.get('usdc_out', 0):.0f}"])
+                
+                if rows:
+                    Story.append(_build_table(["Asset Metric", "Value"], rows, [150, 150]))
+                Story.append(Spacer(1, 12))
 
             # SECTION 8 - THREAT INTELLIGENCE
             if osint and _is_valid(osint.get("corpus_match")):
