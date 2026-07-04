@@ -534,29 +534,33 @@ async def scan_wallet(address: str, db: Session, depth: str = "quick", case_id: 
     ).order_by(InvestigationLog.scan_timestamp.desc()).first()
 
     if recent_log and recent_log.raw_data:
-        cache_hours = 24 if depth == "quick" else 168 # 7 days
-        if (time.time() - recent_log.scan_timestamp) < cache_hours * 3600:
-            print(f"[SCAN] Returning cached {depth} scan for {address}")
-            if case_id and recent_log.case_id != case_id:
-                try:
-                    new_log = InvestigationLog(
-                        entity_address=recent_log.entity_address,
-                        entity_type=recent_log.entity_type,
-                        chain=recent_log.chain,
-                        scan_timestamp=time.time(),
-                        risk_score=recent_log.risk_score,
-                        entity_class=recent_log.entity_class,
-                        triggered_signals=recent_log.triggered_signals,
-                        scan_depth=recent_log.scan_depth,
-                        case_id=case_id,
-                        bulk_batch_id=recent_log.bulk_batch_id,
-                        raw_data=recent_log.raw_data
-                    )
-                    db.add(new_log)
-                    db.commit()
-                except Exception as e:
-                    print(f"[SCAN] Cache case link error: {e}")
-            return recent_log.raw_data
+        wallet_type = recent_log.raw_data.get("identity", {}).get("wallet_type", "Unknown") if isinstance(recent_log.raw_data, dict) else "Unknown"
+        if wallet_type != "Unknown":
+            cache_hours = 24 if depth == "quick" else 168 # 7 days
+            if (time.time() - recent_log.scan_timestamp) < cache_hours * 3600:
+                print(f"[SCAN] Returning cached {depth} scan for {address}")
+                if case_id and recent_log.case_id != case_id:
+                    try:
+                        new_log = InvestigationLog(
+                            entity_address=recent_log.entity_address,
+                            entity_type=recent_log.entity_type,
+                            chain=recent_log.chain,
+                            scan_timestamp=time.time(),
+                            risk_score=recent_log.risk_score,
+                            entity_class=recent_log.entity_class,
+                            triggered_signals=recent_log.triggered_signals,
+                            scan_depth=recent_log.scan_depth,
+                            case_id=case_id,
+                            bulk_batch_id=recent_log.bulk_batch_id,
+                            raw_data=recent_log.raw_data
+                        )
+                        db.add(new_log)
+                        db.commit()
+                    except Exception as e:
+                        print(f"[SCAN] Cache case link error: {e}")
+                return recent_log.raw_data
+        else:
+            print(f"[SCAN] Bypassing cache for {address} because it was a failed scan (wallet_type = Unknown)")
 
     # ── Step 1: Load Intelligence DB (Exchange + Mixer addresses) ─
     all_exchange_addrs, all_mixer_addrs = _load_known_addresses(db)
