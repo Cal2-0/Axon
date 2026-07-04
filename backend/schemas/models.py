@@ -101,6 +101,27 @@ class IntelStats(BaseModel):
     known_mixers: int
     threat_actors: int
 
+
+class AddressFormatModel(BaseModel):
+    id: int
+    chain: str
+    symbol: str
+    family: str
+    address_type: str
+    prefix: str
+    min_length: int
+    max_length: int
+    encoding: str
+    checksum: str
+    traceability: str
+    privacy_level: str
+    supported: str
+    notes: str
+    example: str
+
+    class Config:
+        from_attributes = True
+
 class InvestigationLogModel(BaseModel):
     id: int
     entity_address: str

@@ -7,7 +7,7 @@ load_dotenv()
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database.db import init_db
-from routers import scan, graph, intel, investigations, cases, logs, verify
+from routers import scan, graph, intel, investigations, cases, logs, verify, address_formats
 from modules.api_health import get_all_health
 
 app = FastAPI(
@@ -41,6 +41,7 @@ app.include_router(investigations.router, prefix="/investigations", tags=["Inves
 app.include_router(cases.router, prefix="/cases", tags=["Cases"])
 app.include_router(logs.router, prefix="/logs", tags=["Logs"])
 app.include_router(verify.router)
+app.include_router(address_formats.router, prefix="/address-formats", tags=["Address Formats"])
 
 @app.get("/health", tags=["System"])
 def health_check():

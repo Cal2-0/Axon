@@ -108,6 +108,16 @@ export const getIntelStats = async () => {
   return response.json();
 };
 
+export const getAddressFormats = async (query = '', family = '', supported = '') => {
+  const params = new URLSearchParams();
+  if (query) params.set('q', query);
+  if (family) params.set('family', family);
+  if (supported) params.set('supported', supported);
+  const response = await fetch(`${API_BASE}/address-formats/?${params}`);
+  if (!response.ok) throw new Error('Failed to fetch address formats');
+  return response.json();
+};
+
 export const bulkScan = async (addresses, caseId = null) => {
   const response = await fetch(`${API_BASE}/scan/bulk`, {
     method: 'POST',
