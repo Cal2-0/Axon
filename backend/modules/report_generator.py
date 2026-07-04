@@ -40,7 +40,10 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
     if report.entity_type == "bulk_batch":
         inv_log = db.query(InvestigationLog).filter(InvestigationLog.bulk_batch_id == report.entity_address).first()
     else:
-        inv_log = db.query(InvestigationLog).filter(InvestigationLog.case_id == report.report_id).first()
+        inv_log = db.query(InvestigationLog).filter(
+            InvestigationLog.entity_address == report.entity_address,
+            InvestigationLog.entity_type == report.entity_type
+        ).order_by(InvestigationLog.scan_timestamp.desc()).first()
 
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter)
