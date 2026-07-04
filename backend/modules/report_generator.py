@@ -78,7 +78,7 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
 
             # SECTION 1 - EVIDENCE INTEGRITY
             Story.append(Paragraph("<b>SECTION 1 - EVIDENCE INTEGRITY</b>", styles["Heading2"]))
-            Story.append(Paragraph(f"<b>SHA-256 Hash:</b> {inv_log.evidence_hash}", styles["Normal"]))
+            Story.append(Paragraph(f"<b>SHA-256 Hash:</b> {report.report_hash}", styles["Normal"]))
             Story.append(Paragraph("<b>Signed:</b> Engine v2.0 | Node Source: Primary Intel Node", styles["Normal"]))
             Story.append(Paragraph("<i>Hash mismatch = report tampered. Verify before court use.</i>", styles["Normal"]))
             Story.append(Spacer(1, 12))
@@ -201,7 +201,7 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
             
             # SECTION 1 - EVIDENCE INTEGRITY
             Story.append(Paragraph("<b>SECTION 1 - EVIDENCE INTEGRITY</b>", styles["Heading2"]))
-            Story.append(Paragraph(f"<b>SHA-256 Hash:</b> {inv_log.evidence_hash}", styles["Normal"]))
+            Story.append(Paragraph(f"<b>SHA-256 Hash:</b> {report.report_hash}", styles["Normal"]))
             Story.append(Paragraph("<b>Signed:</b> Engine v2.0 | Node Source: Primary Intel Node", styles["Normal"]))
             Story.append(Spacer(1, 12))
 
@@ -275,7 +275,7 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
             
             # SECTION 1 - MASTER EVIDENCE INTEGRITY
             Story.append(Paragraph("<b>SECTION 1 - MASTER EVIDENCE INTEGRITY</b>", styles["Heading2"]))
-            Story.append(Paragraph(f"<b>SHA-256 Hash:</b> {inv_log.evidence_hash}", styles["Normal"]))
+            Story.append(Paragraph(f"<b>SHA-256 Hash:</b> {report.report_hash}", styles["Normal"]))
             Story.append(Paragraph("<b>Signed:</b> Engine v2.0 | Node Source: Primary Intel Node", styles["Normal"]))
             Story.append(Spacer(1, 12))
 
