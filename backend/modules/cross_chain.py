@@ -2,6 +2,7 @@
 Axon Backend — Cross-Chain Holdings Service
 Fetches native balances across EVM chains using Etherscan v2 API.
 """
+import os
 import asyncio
 import httpx
 from modules.wallet_scorer import _get_etherscan_key
