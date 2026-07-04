@@ -37,8 +37,14 @@ from modules.demo_overrides import DEMO_OVERRIDES
 
 
 # ─── API KEY HELPERS ──────────────────────────────────────────────────────────
+import random
+
 def _get_etherscan_key():
-    return os.environ.get("ETHERSCAN_API_KEY", "")
+    keys = os.environ.get("ETHERSCAN_API_KEY", "")
+    if not keys:
+        return ""
+    key_list = [k.strip() for k in keys.split(",") if k.strip()]
+    return random.choice(key_list) if key_list else ""
 
 def _get_alchemy_key():
     return os.environ.get("ALCHEMY_API_KEY", "")
@@ -69,17 +75,28 @@ async def fetch_all_etherscan_data(client: httpx.AsyncClient, address: str, dept
         return {"eth_balance": "0", "tx_count": 0, "transactions": []}
 
     base = "https://api.etherscan.io/v2/api?chainid=1"
-    result = {"eth_balance": "0", "tx_count": 0, "transactions": [], "stablecoin_flows": {"usdt_in": 0, "usdt_out": 0, "usdc_in": 0, "usdc_out": 0}}
+    result = {"eth_balance": "0", "tx_count": 0, "transactions": [], "stablecoin_flows": {"usdt_in": 0, "usdt_out": 0, "usdc_in": 0, "usdc_out": 0}, "wallet_type": "Unknown", "balance_wei": "Unknown", "tx_count_sample": 0, "first_tx_date": None, "last_tx_date": None}
 
     try:
+        # Wallet Type
+        wt = await _etherscan_get(client, f"{base}&module=proxy&action=eth_getCode&address={address}&tag=latest&apikey={key}")
+        code = wt.get("result")
+        if isinstance(code, str):
+            result["wallet_type"] = "EOA" if (code == "0x" or code == "") else "Contract"
+        else:
+            result["wallet_type"] = str(wt.get("result", "Error fetching wallet type"))
+
         # Balance
         b = await _etherscan_get(client, f"{base}&module=account&action=balance&address={address}&tag=latest&apikey={key}")
         print(f"[ETHERSCAN] Balance response: status={b.get('status')}, result={str(b.get('result',''))[:40]}")
         if b.get("status") == "1":
             try:
                 result["eth_balance"] = f"{int(b['result']) / 10**18:.4f}"
+                result["balance_wei"] = str(b["result"])
             except (ValueError, TypeError):
-                pass
+                result["balance_wei"] = "Error parsing balance"
+        else:
+            result["balance_wei"] = str(b.get("result", "Error fetching balance"))
 
         await asyncio.sleep(0.4)
 
@@ -98,7 +115,7 @@ async def fetch_all_etherscan_data(client: httpx.AsyncClient, address: str, dept
         # Transaction list
         all_txs = []
         page = 1
-        offset = 200 if depth == "quick" else 1000
+        offset = 10 if depth == "quick" else 1000
         while True:
             tx_json = await _etherscan_get(client, f"{base}&module=account&action=txlist&address={address}&page={page}&offset={offset}&sort=desc&apikey={key}")
             print(f"[ETHERSCAN] TXList: status={tx_json.get('status')}, message={tx_json.get('message')}")
@@ -133,6 +150,11 @@ async def fetch_all_etherscan_data(client: httpx.AsyncClient, address: str, dept
                 tx["extracted_message"] = msg
 
         result["transactions"] = all_txs
+        result["tx_count_sample"] = len(all_txs)
+        if all_txs:
+            result["last_tx_date"] = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(int(all_txs[0].get("timeStamp", 0))))
+            result["first_tx_date"] = time.strftime('%Y-%m-%d %H:%M:%S', time.gmtime(int(all_txs[-1].get("timeStamp", 0))))
+        
         print(f"[ETHERSCAN] Fetched {len(result['transactions'])} transactions")
 
         await asyncio.sleep(0.4)
@@ -1163,6 +1185,11 @@ Use ALL of this evidence to form a comprehensive forensic assessment. Weigh beha
         "identity": {
             "address": address,
             "ens": osint_data.get("summary", {}).get("ens_name"),
+            "walletType": edata.get("wallet_type", "Unknown"),
+            "balanceWei": edata.get("balance_wei", "Unknown"),
+            "txCountSample": edata.get("tx_count_sample", 0),
+            "firstTxDate": edata.get("first_tx_date"),
+            "lastTxDate": edata.get("last_tx_date"),
             "label": wallet_db.label if wallet_db else "Unlabeled Wallet",
             "tag": label,
             "firstSeen": wallet_db.first_seen if wallet_db else first_seen,

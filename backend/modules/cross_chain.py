@@ -24,15 +24,15 @@ ALL_CG_IDS.add("solana")
 def detect_address_type(address: str) -> dict:
     addr = address.strip()
     if addr.startswith("0x") and len(addr) == 42:
-        return {"chain": "EVM", "type": "EVM"}
+        return {"chain": "EVM", "type": "EVM", "coin": "Ethereum / EVM Compatible", "explorer": f"https://etherscan.io/address/{addr}"}
     if addr.startswith("T") and len(addr) == 34:
-        return {"chain": "Tron", "type": "TRON"}
+        return {"chain": "Tron", "type": "TRON", "coin": "Tron (TRX)", "explorer": f"https://tronscan.org/#/address/{addr}"}
     # Solana is base58, length usually 43-44
     if len(addr) >= 40 and not addr.startswith("0x") and not addr.startswith("bc1"):
-        return {"chain": "Solana", "type": "SOLANA"}
+        return {"chain": "Solana", "type": "SOLANA", "coin": "Solana (SOL)", "explorer": f"https://solscan.io/account/{addr}"}
     if addr.startswith("1") or addr.startswith("3") or addr.startswith("bc1"):
-        return {"chain": "Bitcoin", "type": "BTC"}
-    return {"chain": "Data Not Available", "type": "UNKNOWN"}
+        return {"chain": "Bitcoin", "type": "BTC", "coin": "Bitcoin (BTC)", "explorer": f"https://www.blockchain.com/explorer/addresses/btc/{addr}"}
+    return {"chain": "Data Not Available", "type": "UNKNOWN", "coin": "Unknown", "explorer": "N/A"}
 
 async def fetch_btc_balance(client: httpx.AsyncClient, address: str) -> dict:
     try:
@@ -134,10 +134,15 @@ async def get_cross_chain_holdings(address: str) -> dict:
             key = _get_etherscan_key()
             if not key:
                 return {"error": "Missing Etherscan API key", "holdings": [], "total_net_worth_usd": 0, "total_net_worth_inr": 0}
-            balance_tasks = [
-                fetch_chain_balance(client, address, name, info, key)
-                for name, info in CHAINS.items()
-            ]
+            
+            # Fetch sequentially to avoid 5 req/s Etherscan rate limit
+            balance_results = []
+            for name, info in CHAINS.items():
+                res = await fetch_chain_balance(client, address, name, info, key)
+                balance_results.append(res)
+                await asyncio.sleep(0.2) # Rate limit protection
+                
+            balance_tasks = [] # Already fetched sequentially
             non_evm_note = "To scan Bitcoin or Solana holdings, enter the suspect's native BTC or SOL address directly into the search bar."
 
         elif addr_type == "BTC":
@@ -155,6 +160,9 @@ async def get_cross_chain_holdings(address: str) -> dict:
         results = await asyncio.gather(*balance_tasks, price_task, return_exceptions=True)
         
         balances = results[:-1]
+        if addr_type == "EVM":
+            balances = balance_results + list(balances)
+            
         prices = results[-1] if not isinstance(results[-1], Exception) else {}
 
     holdings = []

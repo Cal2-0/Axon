@@ -13,19 +13,23 @@
 
 ## The Problem
 
-The blockchain forensics industry is built on a fundamentally fragile assumption: **label lookup**. Commercial platforms like Chainalysis and TRM Labs identify threats by checking if a wallet address appears in a known-bad database. If it does, it's flagged. If it doesn't, it's "clean."
+The blockchain forensics industry is built on a fundamentally fragile assumption: **label lookup**. Commercial platforms identify threats by checking if a wallet address appears in a known-bad database. If it does, it's flagged. If it doesn't, it's "clean."
 
 This approach has two critical failure modes:
 1. **Zero-day wallets** — freshly generated exploit wallets have no history and pass every check.
 2. **Behavioral blindness** — a wallet exhibiting textbook money-laundering patterns (peel chains, mixer interactions, dormancy-then-spike) is rated "safe" simply because no one has labeled it yet.
 
-## The Solution
+## The AXON Solution
 
-**Axon** is an advanced behavioral forensics engine that answers one question before any interaction with a wallet or smart contract: ***Can I trust this?***
+AXON is an advanced behavioral forensics tool designed to identify on-chain threats dynamically. At its core is a proprietary **5-Stage Mathematical Analytical Engine** that evaluates raw on-chain data across 5 completely different behavioral vectors (A1-A5). 
 
-Instead of relying on static databases, Axon runs a proprietary **5-Layer Behavioral Forensic Engine** that analyzes *what an entity does on-chain* — its transaction rhythms, network topology, economic flow patterns, and threat intelligence footprint — before arriving at a defensible, auditable risk verdict.
+- **Universal Multi-Chain Support:** Automatically identifies and seamlessly queries EVM, Bitcoin, Solana, and TRON networks.
+- **Smart Contract Audits:** Implements static analysis (Slither), live protocol security (GoPlus), and brute-force 4-byte signature decoding for unverified smart contracts.
+- **Bulk Batch Processing:** Handles high-volume asynchronous queries for institutional and law enforcement compliance teams.
+- **Forensic PDF Engine:** Dynamically generates strictly formatted, legally-sound PDF reports containing cryptographic Evidence Integrity hashes.
 
-Every risk assessment is generated algorithmically from on-chain evidence. The database is confirmation, not proof.
+## Further Reading
+For a deep-dive into the proprietary 5-Stage Mathematical Model, Cross-Chain engine, and 12-Section PDF Architecture, please review the [TECHNICAL_LEARNING.md](./TECHNICAL_LEARNING.md) guide included in this repository.
 
 ---
 

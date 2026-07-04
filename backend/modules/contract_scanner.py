@@ -322,11 +322,23 @@ async def fetch_etherscan_source(client: httpx.AsyncClient, address: str) -> dic
     return {"source": "", "abi": "[]", "name": "Data Not Available", "compiler": "N/A", "proxy": False, "license": "Data Not Available"}
 
 
+import os
+import random
+
 async def fetch_goplus_security(client: httpx.AsyncClient, address: str) -> dict:
     """Fetch live token security indicators from GoPlus Labs."""
     url = f"https://api.gopluslabs.io/api/v1/token_security/1?contract_addresses={address.lower()}"
+    headers = {"User-Agent": "Axon/2.0"}
+    
+    goplus_keys_env = os.getenv("GOPLUS_API_KEY", "")
+    if goplus_keys_env:
+        key_list = [k.strip() for k in goplus_keys_env.split(",") if k.strip()]
+        if key_list:
+            goplus_key = random.choice(key_list)
+            headers["Authorization"] = f"Bearer {goplus_key}"
+        
     try:
-        res = await client.get(url)
+        res = await client.get(url, headers=headers, timeout=10.0)
         data = res.json()
         if data.get("code") == 1 and data.get("result"):
             token_data = data["result"].get(address.lower())
@@ -914,15 +926,43 @@ Use ALL of this evidence to form a comprehensive forensic assessment."""
 
         graph_edges.append({"source": frm, "target": to_addr, "value": value, "hash": tx.get("hash", "")})
 
-    defi_interactions = await decode_defi_interactions(tx_history)
+    import json
+    
+    # Parse ABI
+    abi_raw = etherscan.get("abi", "[]")
+    try:
+        if isinstance(abi_raw, str):
+            abi = json.loads(abi_raw)
+        else:
+            abi = abi_raw
+    except:
+        abi = []
 
-    # ═══════════════════════════════════════════════════════
-    # BUILD RESPONSE
-    # ═══════════════════════════════════════════════════════
-
+    # If ABI is empty, add 4byte decoded functions
+    if not abi and defi_interactions:
+        unique_sigs = set()
+        for inter in defi_interactions:
+            sig = inter.get("signature", "")
+            if sig and "Unknown Function" not in sig:
+                unique_sigs.add(sig)
+        
+        for sig in unique_sigs:
+            abi.append({
+                "type": "function",
+                "name": sig,
+                "inputs": [],
+                "stateMutability": "4byte decoded"
+            })
+            
     response_data = {
         "identity": {
             "address": address,
+            "ens": "Data Not Available",
+            "walletType": tx_data.get("wallet_type", "Contract"),
+            "balanceWei": tx_data.get("balance_wei", "Unknown"),
+            "txCountSample": tx_data.get("tx_count_sample", 0),
+            "firstTxDate": tx_data.get("first_tx_date"),
+            "lastTxDate": tx_data.get("last_tx_date"),
             "name": protocol_class["name"] if protocol_class["matched"] else name,
             "label": protocol_class["name"] if protocol_class["matched"] else name,
             "compiler": etherscan.get("compiler", "Data Not Available"),
@@ -980,7 +1020,7 @@ Use ALL of this evidence to form a comprehensive forensic assessment."""
             "checks": goplus_checks
         },
         "sourceCode": source_code,
-        "abi": etherscan.get("abi", "[]"),
+        "abi": abi,
         "slither": _simulate_slither_analysis(source_code),
         "evidence_context": ai_prompt,
         "graph_nodes": graph_nodes,
