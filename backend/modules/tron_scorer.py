@@ -6,7 +6,7 @@ import math
 from sqlalchemy.orm import Session
 from database.models import InvestigationLog, MaliciousWallet
 from modules.osint_scraper import run_osint_scan
-from modules.ai_analyst import generate_dual_quick_ratings
+from modules.ai_analyst import analyze_entity
 from modules.wallet_scorer import _compute_l5_deterministic, _compute_dormancy_persistence
 
 def _get_trongrid_key():
@@ -267,13 +267,26 @@ async def scan_tron_wallet(address: str, db: Session, depth: str = "quick", case
     label = "CRITICAL" if final_score >= 80 else "HIGH" if final_score >= 60 else "MEDIUM" if final_score >= 40 else "LOW"
 
     ai_prompt = f"Analyze TRX wallet {address}. Tx count: {total_tx_count}. Frozen energy: {frozen_energy}. Score: {final_score}. Entity Class: {entity_class}. Counterparties: {len(unique_counterparties)}."
-    dual_ratings = await generate_dual_quick_ratings(ai_prompt, entity_type="tron_wallet")
-    ai_verdict = dual_ratings.get("investigator_verdict", f"{label} RISK — Based on Tron patterns.")
+    ai_data = await analyze_entity(ai_prompt, depth=depth, entity_type="tron_wallet")
+    ai_verdict = ai_data.get("verdict", f"{label} RISK - Based on analysis.")
     
     total_usd_value = (tron_balance * tron_price) + usdt_balance
     if not osint_data.get("summary") or osint_data.get("summary") == "OSINT scan failed":
         osint_data["summary"] = f"AI Assessment: {ai_verdict}"
         
+    
+    # FIX GRAPH NODES
+    existing_node_ids = set(n["id"] for n in graph_nodes)
+    for edge in graph_edges:
+        src = edge["source"]
+        tgt = edge["target"]
+        if src not in existing_node_ids:
+            graph_nodes.append({"id": src, "label": src[:6]+"...", "type": "default", "risk": 10})
+            existing_node_ids.add(src)
+        if tgt not in existing_node_ids:
+            graph_nodes.append({"id": tgt, "label": tgt[:6]+"...", "type": "default", "risk": 10})
+            existing_node_ids.add(tgt)
+
     response_data = {
         "shortName": "TRX Wallet",
         "tag": label,
@@ -304,11 +317,19 @@ async def scan_tron_wallet(address: str, db: Session, depth: str = "quick", case
             "entityClass": entity_class,
             "factors": [{"reason": s[0], "icon": s[1], "layer": s[2], "penalty": 0} for s in signals] if signals else [{"reason": "Standard Tron behavior", "icon": "✅", "layer": "L1", "penalty": 0}],
             "analyticalSynthesis": {
-                "hypothesis": dual_ratings.get("ai_hypothesis", f"Tron analysis reveals {entity_class}."),
-                "mitre_tag": "T1565 Data Manipulation" if usdt_round_count > 5 else "N/A",
+                "rating": label,
+                "hypothesis": ai_data.get("hypothesis", ""),
+                "mitre_tag": ai_data.get("mitre_tag", ""),
                 "verdict": ai_verdict,
-                "engine_type": "tron"
-            }
+                "confidence": ai_data.get("confidence", None),
+                "consensus_level": ai_data.get("consensus_level", None),
+                "judge_reasoning": ai_data.get("judge_reasoning", None),
+                "prosecution_summary": ai_data.get("prosecution_summary", None),
+                "defense_summary": ai_data.get("defense_summary", None),
+                "engine_type": ai_data.get("engine_type", "single")
+            },
+            "aiAgentA": ai_data.get("agentA"),
+            "aiAgentB": ai_data.get("agentB")
         },
         "osint": osint_data,
         "exchange": {"detected": False, "findings": [], "summary": "No centralized exchange patterns confirmed"},

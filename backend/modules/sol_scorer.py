@@ -10,7 +10,7 @@ import math
 from sqlalchemy.orm import Session
 from database.models import InvestigationLog, MaliciousWallet
 from modules.osint_scraper import run_osint_scan
-from modules.ai_analyst import generate_dual_quick_ratings
+from modules.ai_analyst import analyze_entity
 from modules.wallet_scorer import _compute_l5_deterministic, _compute_dormancy_persistence
 
 def _get_helius_key():
@@ -268,13 +268,26 @@ async def scan_sol_wallet(address: str, db: Session, depth: str = "quick", case_
     label = "CRITICAL" if final_score >= 80 else "HIGH" if final_score >= 60 else "MEDIUM" if final_score >= 40 else "LOW"
 
     ai_prompt = f"Analyze SOL wallet {address}. PDA: {is_pda}. Tx count: {tx_count}. Errors: {errors}. Priority txs: {priority_fees_paid}. Score: {final_score}. Entity Class: {entity_class}."
-    dual_ratings = await generate_dual_quick_ratings(ai_prompt, entity_type="solana_wallet")
-    ai_verdict = dual_ratings.get("investigator_verdict", f"{label} RISK — Based on Solana patterns.")
+    ai_data = await analyze_entity(ai_prompt, depth=depth, entity_type="solana_wallet")
+    ai_verdict = ai_data.get("verdict", f"{label} RISK - Based on analysis.")
 
     total_usd_value = (sol_balance * sol_price) + usdc_balance + usdt_balance
     if not osint_data.get("summary") or osint_data.get("summary") == "OSINT scan failed":
         osint_data["summary"] = f"AI Assessment: {ai_verdict}"
         
+    
+    # FIX GRAPH NODES
+    existing_node_ids = set(n["id"] for n in graph_nodes)
+    for edge in graph_edges:
+        src = edge["source"]
+        tgt = edge["target"]
+        if src not in existing_node_ids:
+            graph_nodes.append({"id": src, "label": src[:6]+"...", "type": "default", "risk": 10})
+            existing_node_ids.add(src)
+        if tgt not in existing_node_ids:
+            graph_nodes.append({"id": tgt, "label": tgt[:6]+"...", "type": "default", "risk": 10})
+            existing_node_ids.add(tgt)
+
     response_data = {
         "shortName": "SOL Wallet",
         "tag": label,
@@ -305,11 +318,19 @@ async def scan_sol_wallet(address: str, db: Session, depth: str = "quick", case_
             "entityClass": entity_class,
             "factors": [{"reason": s[0], "icon": s[1], "layer": s[2], "penalty": 0} for s in signals] if signals else [{"reason": "Standard Solana behavior", "icon": "✅", "layer": "L1", "penalty": 0}],
             "analyticalSynthesis": {
-                "hypothesis": dual_ratings.get("ai_hypothesis", f"Solana analysis reveals {entity_class}."),
-                "mitre_tag": "T1114 Email Collection" if error_rate > 0.4 else "N/A",
+                "rating": label,
+                "hypothesis": ai_data.get("hypothesis", ""),
+                "mitre_tag": ai_data.get("mitre_tag", ""),
                 "verdict": ai_verdict,
-                "engine_type": "solana"
-            }
+                "confidence": ai_data.get("confidence", None),
+                "consensus_level": ai_data.get("consensus_level", None),
+                "judge_reasoning": ai_data.get("judge_reasoning", None),
+                "prosecution_summary": ai_data.get("prosecution_summary", None),
+                "defense_summary": ai_data.get("defense_summary", None),
+                "engine_type": ai_data.get("engine_type", "single")
+            },
+            "aiAgentA": ai_data.get("agentA"),
+            "aiAgentB": ai_data.get("agentB")
         },
         "osint": osint_data,
         "exchange": {"detected": False, "findings": [], "summary": "No centralized exchange patterns confirmed"},
