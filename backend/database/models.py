@@ -2,7 +2,8 @@
 Axon Backend — SQLAlchemy ORM Models
 4 tables: malicious_wallets, exchange_wallets, known_mixers, threat_actors
 """
-from sqlalchemy import Column, Integer, String, Float, Boolean, Text, JSON
+from sqlalchemy import Column, Integer, String, Float, Boolean, Text, JSON, DateTime
+from sqlalchemy.sql import func
 from database.db import Base
 
 
@@ -163,4 +164,27 @@ class CandidateEntity(Base):
     discovered_at = Column(Float, nullable=True)  # unix timestamp
     auto_detected = Column(Boolean, default=False)
     promoted_to_db = Column(Boolean, default=False)  # Track if promoted
+
+
+class AddressFormat(Base):
+    """Static cryptocurrency address format reference table."""
+    __tablename__ = "address_formats"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    chain = Column(String(100), nullable=False, index=True)
+    symbol = Column(String(20), nullable=False, index=True)
+    family = Column(String(80), nullable=False, index=True)
+    address_type = Column(String(120), nullable=False, index=True)
+    prefix = Column(String(80), default="")
+    min_length = Column(Integer, nullable=False)
+    max_length = Column(Integer, nullable=False)
+    encoding = Column(String(80), nullable=False)
+    checksum = Column(String(120), default="None")
+    traceability = Column(String(120), default="Public Blockchain")
+    privacy_level = Column(String(80), default="Transparent")
+    supported = Column(String(40), default="Unsupported", index=True)
+    notes = Column(Text, default="")
+    example = Column(String(220), default="")
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 

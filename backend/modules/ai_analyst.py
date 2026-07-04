@@ -24,6 +24,7 @@ import httpx
 import json
 import asyncio
 import random
+from typing import Optional
 
 # ─── MODEL REGISTRY ────────────────────────────────────────────────────────────
 MODELS = {
@@ -357,6 +358,64 @@ Respond with ONLY valid JSON with exactly these keys:
 # ═══════════════════════════════════════════════════════════════════════════════
 # UNKNOWN CHAIN RESOLUTION (AI Fallback)
 # ═══════════════════════════════════════════════════════════════════════════════
+
+async def generate_address_pattern_fallback(address: str) -> Optional[dict]:
+    """
+    AI fallback for addresses that fail deterministic checksum validation.
+    Uses pattern recognition only — runs after regex/checksum pipeline fails.
+    """
+    print(f"[AI_ANALYST] Running address pattern fallback for: {address[:16]}...")
+    system_prompt = (
+        "You are AXON's Address Intelligence Engine.\n\n"
+        "You are NOT guessing when deterministic validation already succeeded. "
+        "The deterministic engine FAILED on this address — your job is pattern "
+        "recognition to suggest the most likely address family based on prefix, "
+        "length, encoding, and known cryptocurrency address specifications.\n\n"
+        "Given a cryptocurrency address:\n"
+        "1. Analyze the syntax and prefix patterns.\n"
+        "2. Suggest the most likely address family.\n"
+        "3. List compatible blockchain networks if applicable.\n"
+        "4. Determine the likely address type.\n"
+        "5. Identify the likely encoding.\n"
+        "6. State whether checksum could not be verified (deterministic engine failed).\n"
+        "7. Determine whether AXON supports investigation (Bitcoin, Ethereum, Polygon, Solana, Tron = supported).\n"
+        "8. Produce investigator-friendly forensic notes.\n\n"
+        "Never invent on-chain activity. Never claim checksum passed if you did not verify it. "
+        "If multiple chains share the same format (e.g. EVM), explicitly state that the chain "
+        "cannot be determined from the address alone.\n"
+        "If the address is garbage or not cryptocurrency-related, set valid=false and family=Unrecognized.\n\n"
+        "Return ONLY JSON:\n"
+        "{\n"
+        '  "valid": true,\n'
+        '  "family": "Cardano",\n'
+        '  "possible_networks": ["Cardano"],\n'
+        '  "address_type": "Shelley",\n'
+        '  "encoding": "Bech32",\n'
+        '  "checksum": "Unverified",\n'
+        '  "length": 58,\n'
+        '  "prefix": "addr1",\n'
+        '  "supported": false,\n'
+        '  "forensic_notes": "...",\n'
+        '  "confidence": "AI Assisted"\n'
+        "}"
+    )
+    user_prompt = f"Address to analyze (deterministic validation failed):\n{address}"
+
+    result = await _call_api(
+        model=MODELS["fast"],
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        temperature=0.1,
+        max_tokens=400,
+    )
+
+    if not isinstance(result, dict) or "family" not in result:
+        return None
+    if result.get("family", "").lower() in ("unrecognized", "unknown", ""):
+        return None
+    result["confidence"] = "AI Assisted"
+    return result
+
 
 async def generate_coin_tiebreak_summary(candidates: list) -> str:
     """Uses a fast Analytical Engine model to write a 1-sentence factual summary of multi-chain activity."""

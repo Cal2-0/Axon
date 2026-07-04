@@ -321,7 +321,156 @@ function RiskMeter({ score, label }) {
   );
 }
 
-// ─── MAIN PAGE ────────────────────────────────────────────────────────────
+// ─── ADDRESS INTELLIGENCE CARD ────────────────────────────────────────────
+function AddressIntelligenceCard({ analysis, onLaunchInvestigation, loading }) {
+  if (!analysis) return null;
+
+  const isAiFallback = analysis.identification_method === 'ai_fallback';
+  const methodLabel = isAiFallback
+    ? 'AI Pattern Fallback'
+    : analysis.identification_method === 'deterministic'
+      ? 'Deterministic'
+      : (analysis.confidence || 'Checksum Validated');
+
+  const isValid = analysis.valid;
+  const label = isValid
+    ? `${analysis.family}${analysis.address_type && analysis.address_type !== analysis.family ? ` · ${analysis.address_type}` : ''}`
+    : 'Unrecognized Format';
+
+  const statusColor = !isValid ? 'text-red-400' : analysis.supported ? 'text-axon-green' : 'text-axon-orange';
+  const statusText = !isValid ? 'Invalid' : analysis.supported ? 'Supported' : 'Not Supported';
+
+  const detailRows = [
+    { label: 'Address Family', value: analysis.family },
+    { label: 'Address Type', value: analysis.address_type },
+    { label: 'Encoding', value: analysis.encoding },
+    { label: 'Checksum', value: analysis.checksum },
+    { label: 'Length', value: analysis.length },
+    analysis.prefix ? { label: 'Prefix', value: analysis.prefix } : null,
+    analysis.curve ? { label: 'Curve', value: analysis.curve } : null,
+    analysis.privacy ? { label: 'Privacy', value: analysis.privacy } : null,
+    analysis.traceability ? { label: 'Traceability', value: analysis.traceability } : null,
+  ].filter(Boolean);
+
+  const launchLabel = analysis.family === 'EVM Compatible'
+    ? 'Launch EVM Investigation'
+    : `Launch ${analysis.family} Investigation`;
+
+  return (
+    <div className="glass-panel p-6 border border-axon-cyan/30 animate-fade-in">
+      <div className="flex items-center justify-between mb-5 pb-4 border-b border-axon-border/50">
+        <div className="flex items-center gap-3">
+          <span className="text-xl">🔬</span>
+          <div>
+            <h3 className="text-lg font-bold text-white tracking-tight">Address Intelligence</h3>
+            <p className="text-[10px] font-mono text-axon-text-dim uppercase tracking-widest mt-0.5">
+              {isAiFallback ? 'Step 2: ' : 'Step 1: '}{methodLabel}
+              {analysis.deterministic_valid === false && ' · Checksum unverified'}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className={`px-2.5 py-1 text-[10px] font-mono font-bold rounded border ${isValid ? 'bg-axon-green/10 text-axon-green border-axon-green/30' : 'bg-red-500/10 text-red-400 border-red-500/30'}`}>
+            {isValid ? '✓ Format Valid' : '✗ Format Invalid'}
+          </span>
+          {isAiFallback && (
+            <span className="px-2.5 py-1 text-[10px] font-mono font-bold rounded border bg-axon-purple/10 text-axon-purple border-axon-purple/30">
+              AI Assisted
+            </span>
+          )}
+          <span className={`px-2.5 py-1 text-[10px] font-mono font-bold rounded border ${analysis.supported ? 'bg-axon-cyan/10 text-axon-cyan border-axon-cyan/30' : 'bg-axon-orange/10 text-axon-orange border-axon-orange/30'}`}>
+            {statusText}
+          </span>
+        </div>
+      </div>
+
+      <div className="mb-5">
+        <div className={`text-2xl font-bold font-mono ${statusColor}`}>{label}</div>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+        {detailRows.map(row => (
+          <div key={row.label} className="p-3 bg-axon-card rounded-lg border border-axon-border">
+            <div className="text-[10px] uppercase font-bold text-axon-text-dim mb-1">{row.label}</div>
+            <div className="text-sm font-mono text-white">{row.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {analysis.possible_networks?.length > 0 && (
+        <div className="mb-5">
+          <div className="text-[10px] uppercase font-bold text-axon-text-dim mb-2 tracking-widest">
+            {analysis.family === 'EVM Compatible' ? 'Possible Networks' : 'Detected Network'}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {analysis.possible_networks.map(net => (
+              <span key={net} className="px-2.5 py-1 text-xs font-mono bg-axon-bg border border-axon-border text-axon-cyan rounded">
+                ✓ {net}
+              </span>
+            ))}
+          </div>
+          {analysis.family === 'EVM Compatible' && (
+            <p className="text-[11px] text-axon-text-dim mt-2 italic">
+              Chain cannot be determined from the address alone — all EVM networks share this format.
+            </p>
+          )}
+        </div>
+      )}
+
+      {(analysis.axon_support?.supported?.length > 0 || analysis.axon_support?.coming_soon?.length > 0) && (
+        <div className="mb-5 p-4 bg-axon-bg rounded-lg border border-axon-border">
+          <div className="text-[10px] uppercase font-bold text-axon-text-dim mb-3 tracking-widest">AXON Support</div>
+          <div className="grid md:grid-cols-2 gap-4">
+            {analysis.axon_support.supported?.length > 0 && (
+              <div>
+                <div className="text-[10px] text-axon-green font-bold mb-1.5">Investigation Supported</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {analysis.axon_support.supported.map(net => (
+                    <span key={net} className="px-2 py-0.5 text-xs font-mono text-axon-green bg-axon-green/10 border border-axon-green/30 rounded">✓ {net}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {analysis.axon_support.coming_soon?.length > 0 && (
+              <div>
+                <div className="text-[10px] text-axon-orange font-bold mb-1.5">Coming Soon</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {analysis.axon_support.coming_soon.map(net => (
+                    <span key={net} className="px-2 py-0.5 text-xs font-mono text-axon-orange bg-axon-orange/10 border border-axon-orange/30 rounded">{net}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {analysis.forensic_notes && (
+        <div className="mb-5 p-4 bg-axon-cyan/5 rounded-lg border border-axon-cyan/20">
+          <div className="text-[10px] uppercase font-bold text-axon-cyan mb-2 tracking-widest">Forensic Notes</div>
+          <p className="text-sm text-axon-text-muted leading-relaxed">{analysis.forensic_notes}</p>
+        </div>
+      )}
+
+      {analysis.supported && onLaunchInvestigation && (
+        <button
+          type="button"
+          onClick={onLaunchInvestigation}
+          disabled={loading}
+          className="axon-button axon-button-primary w-full py-3.5 font-bold gap-2"
+        >
+          {loading ? (
+            <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" /></svg>
+          ) : (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+          )}
+          {launchLabel}
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function WalletInvestigation({ caseId }) {
   const [address, setAddress] = useState('');
   const [loading, setLoading] = useState(false);
@@ -349,8 +498,8 @@ export default function WalletInvestigation({ caseId }) {
   const [deepDiveError, setDeepDiveError] = useState('');
   const [deepDiveResult, setDeepDiveResult] = useState(null);
   const [reportHash, setReportHash] = useState(null);
-  const [isAiAnalyzingChain, setIsAiAnalyzingChain] = useState(false);
-  const [aiOneCardResult, setAiOneCardResult] = useState(null);
+  const [isFormatAnalyzing, setIsFormatAnalyzing] = useState(false);
+  const [formatAnalysis, setFormatAnalysis] = useState(null);
   const location = useLocation();
 
 
@@ -438,11 +587,27 @@ export default function WalletInvestigation({ caseId }) {
   const handleAnalyze = (e) => {
     if (e) e.preventDefault();
     if (!isValidAddress(address.trim())) return; // Prevent investigating unknown
-    setAiOneCardResult(null);
+    setFormatAnalysis(null);
     runAnalysis(address);
   };
 
-  
+  const handleFormatAnalyze = async (targetAddress = address) => {
+    if (!targetAddress || !targetAddress.trim()) return;
+    setIsFormatAnalyzing(true);
+    setFormatAnalysis(null);
+    try {
+      const { analyzeAddressFormat } = await import('../api/axon');
+      const info = await analyzeAddressFormat(targetAddress.trim());
+      setFormatAnalysis(info);
+      setChainData(info);
+    } catch (err) {
+      console.error(err);
+      alert('Address format analysis failed.');
+    } finally {
+      setIsFormatAnalyzing(false);
+    }
+  };
+
   const handleDeepDive = async () => {
     if (!result || !result.identity || !result.identity.address) return;
     setIsDeepDiveActive(true);
@@ -463,24 +628,6 @@ export default function WalletInvestigation({ caseId }) {
       setIsDeepDiveActive(false);
     }
   };
-
-  const handleAiChainAnalyze = async (targetAddress = address) => {
-    if (!targetAddress || !targetAddress.trim()) return;
-    setIsAiAnalyzingChain(true);
-    setAiOneCardResult(null);
-    try {
-      const { resolveChainAI } = await import('../api/axon');
-      const aiInfo = await resolveChainAI(targetAddress.trim());
-      setAiOneCardResult(aiInfo);
-      setChainData(aiInfo); // Also update the main display if it's there
-    } catch (err) {
-      console.error(err);
-      alert('AI Chain Analysis failed.');
-    } finally {
-      setIsAiAnalyzingChain(false);
-    }
-  };
-
 
   const handleExport = () => {
     const json = JSON.stringify(result, null, 2);
@@ -524,21 +671,21 @@ export default function WalletInvestigation({ caseId }) {
         <div className="flex flex-col md:flex-row gap-4 items-start md:items-end">
           <SmartAddressInput
             value={address}
-            onChange={(val) => { setAddress(val); setAiOneCardResult(null); }}
+            onChange={(val) => { setAddress(val); setFormatAnalysis(null); }}
             onSubmit={handleAnalyze}
             loading={loading}
             placeholder="0x... or search by name (e.g. Vitalik, Tornado, Binance)"
           />
           <div className="flex gap-2">
-            <button type="button" onClick={() => handleAiChainAnalyze(address)} disabled={isAiAnalyzingChain || !address.trim()} className="axon-button px-6 py-3.5 min-w-[140px] font-bold bg-axon-purple/20 border border-axon-purple/50 text-axon-purple hover:bg-axon-purple hover:text-white transition-colors whitespace-nowrap">
-              {isAiAnalyzingChain ? (
+            <button type="button" onClick={() => handleFormatAnalyze(address)} disabled={isFormatAnalyzing || !address.trim()} className="axon-button px-6 py-3.5 min-w-[160px] font-bold bg-axon-cyan/10 border border-axon-cyan/40 text-axon-cyan hover:bg-axon-cyan hover:text-axon-bg transition-colors whitespace-nowrap">
+              {isFormatAnalyzing ? (
                 <svg className="animate-spin w-5 h-5 inline mr-2" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
               ) : (
-                <svg className="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                <svg className="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" /></svg>
               )}
-              Which Coin?
+              Analyze Format
             </button>
-            <button type="submit" disabled={loading || !address.trim() || !isValidAddress(address.trim())} className="axon-button axon-button-primary px-8 py-3.5 min-w-[160px] font-bold" id="wallet-analyze-btn" title={!isValidAddress(address.trim()) && address.trim() ? "Invalid Format. Click 'Which Coin?' to identify." : ""}>
+            <button type="submit" disabled={loading || !address.trim() || !isValidAddress(address.trim())} className="axon-button axon-button-primary px-8 py-3.5 min-w-[160px] font-bold" id="wallet-analyze-btn" title={!isValidAddress(address.trim()) && address.trim() ? "Invalid format. Click 'Analyze Format' to inspect the address specification." : ""}>
               {loading ? (
                 <>
                   <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
@@ -568,35 +715,13 @@ export default function WalletInvestigation({ caseId }) {
         </div>
       </form>
 
-      {/* Simple Analytical Engine Card Result */}
-      {aiOneCardResult && (
-        <div className="glass-panel p-6 border border-axon-purple/40 animate-fade-in bg-gradient-to-r from-axon-bg to-axon-purple/5">
-          <div className="flex items-center gap-3 mb-2">
-            <span className="text-xl">🤖</span>
-            <h3 className="text-lg font-bold text-white tracking-tight">AI Coin Identification</h3>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-            <div className="p-3 bg-axon-card rounded-lg border border-axon-border">
-              <div className="text-[10px] uppercase font-bold text-axon-text-dim mb-1">Most Likely Crypto</div>
-              <div className="text-base font-mono text-axon-cyan font-bold">{aiOneCardResult.candidates?.[0]?.chain || 'Data Not Available'}</div>
-              <div className="text-[10px] text-axon-text-dim mt-1">Confidence: {aiOneCardResult.candidates?.[0]?.confidence ? (aiOneCardResult.candidates[0].confidence * 100).toFixed(0) : '0'}%</div>
-            </div>
-            {aiOneCardResult.candidates?.[0]?.explorer_url && (
-              <div className="p-3 bg-axon-card rounded-lg border border-axon-border">
-                <div className="text-[10px] uppercase font-bold text-axon-text-dim mb-1">Explorer Link</div>
-                <a href={aiOneCardResult.candidates[0].explorer_url} target="_blank" rel="noreferrer" className="text-base font-medium text-axon-purple hover:underline truncate block">
-                  {String(aiOneCardResult.candidates[0].explorer_url).replace(/^https?:\/\//, '')}
-                </a>
-              </div>
-            )}
-            {aiOneCardResult.ai_summary && (
-              <div className="p-3 bg-axon-card rounded-lg border border-axon-border md:col-span-1">
-                <div className="text-[10px] uppercase font-bold text-axon-text-dim mb-1">Analytical Engine Summary</div>
-                <div className="text-xs text-white leading-relaxed">{aiOneCardResult.ai_summary}</div>
-              </div>
-            )}
-          </div>
-        </div>
+      {/* Address Intelligence Result */}
+      {formatAnalysis && (
+        <AddressIntelligenceCard
+          analysis={formatAnalysis}
+          loading={loading}
+          onLaunchInvestigation={formatAnalysis.supported ? () => runAnalysis(address) : null}
+        />
       )}
 
       {/* Loading State */}
@@ -669,9 +794,9 @@ export default function WalletInvestigation({ caseId }) {
                   : result.identity.tag === 'EXTERNAL' ? 'bg-axon-orange/20 text-axon-orange border-axon-orange/40'
                   : 'bg-axon-cyan/20 text-axon-cyan border-axon-cyan/40'
                 }`}>{result.identity.tag}</span>
-                {(chainData?.candidates?.[0]?.chain || chainData?.chain) && (
+                {(chainData?.family || chainData?.candidates?.[0]?.chain || chainData?.chain) && (
                   <span className="shrink-0 px-2 py-0.5 text-[10px] font-bold font-mono tracking-widest text-axon-orange bg-axon-orange/10 border border-axon-orange/30 rounded uppercase">
-                    CHAIN: {chainData.candidates?.[0]?.chain || chainData.chain}
+                    {chainData.family === 'EVM Compatible' ? 'EVM' : (chainData.family || chainData.candidates?.[0]?.chain || chainData.chain)}
                   </span>
                 )}
                 {result.identity.entityClass && (
@@ -694,17 +819,17 @@ export default function WalletInvestigation({ caseId }) {
                    )}
                  </div>
               )}
-              {chainData && (chainData.candidates?.[0]?.chain || chainData.chain) === 'Data Not Available' && (
+              {chainData && !chainData.valid && (
                 <div className="mt-2">
-                  <button onClick={handleAiChainAnalyze} disabled={isAiAnalyzingChain} className="axon-button text-xs px-4 py-2 gap-1.5 bg-blue-600/20 border-blue-500/50 text-blue-400 hover:bg-blue-600 hover:text-white transition-colors">
-                    {isAiAnalyzingChain ? (
+                  <button onClick={() => handleFormatAnalyze(result.identity.address)} disabled={isFormatAnalyzing} className="axon-button text-xs px-4 py-2 gap-1.5 bg-axon-cyan/10 border-axon-cyan/40 text-axon-cyan hover:bg-axon-cyan hover:text-axon-bg transition-colors">
+                    {isFormatAnalyzing ? (
                       <svg className="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                     ) : (
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
                     )}
-                    {isAiAnalyzingChain ? 'Analyzing...' : 'AI Analyze Unknown Chain'}
+                    {isFormatAnalyzing ? 'Analyzing...' : 'Analyze Address Format'}
                   </button>
-                  <p className="text-[10px] text-axon-text-dim mt-1.5">Run a small Analytical Engine analysis to tell what crypto is most likely and find the official website.</p>
+                  <p className="text-[10px] text-axon-text-dim mt-1.5">Run deterministic format analysis to identify the address specification.</p>
                 </div>
               )}
             </div>

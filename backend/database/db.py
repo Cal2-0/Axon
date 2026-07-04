@@ -37,6 +37,9 @@ def init_db():
     """Create all tables if they don't exist."""
     from database.models import (
         MaliciousWallet, ExchangeWallet, KnownMixer, ThreatActor,
-        InvestigationLog, VerificationReport, Case, CaseEntity, CaseNote, CandidateEntity
+        InvestigationLog, VerificationReport, Case, CaseEntity, CaseNote, CandidateEntity,
+        AddressFormat
     )  # noqa: F401
     Base.metadata.create_all(bind=engine)
+    from modules.address_format_reference import seed_address_formats
+    seed_address_formats()

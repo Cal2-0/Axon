@@ -12,6 +12,7 @@ from modules.btc_scorer import scan_btc_wallet
 from modules.sol_scorer import scan_sol_wallet
 from modules.tron_scorer import scan_tron_wallet
 from modules.coin_identifier import resolve_chain_identity
+from modules.clustering import build_bulk_intelligence
 from database.models import InvestigationLog, VerificationReport
 import httpx
 import hashlib
@@ -31,20 +32,26 @@ async def _is_contract(address: str) -> bool:
 async def _process_address(address: str, db: Session, semaphore: asyncio.Semaphore, batch_id: str, case_id: int = None):
     async with semaphore:
         try:
-            # Detect chain
             identity = await resolve_chain_identity(address)
-            resolution = identity.get("resolution", "")
-            
+            if not identity.get("valid"):
+                return {"address": address, "status": "error", "error": "Unrecognized address format"}
+
+            family = identity.get("family", "")
             result = None
-            if resolution in ("single_deterministic", "single_existence_confirmed", "multi_chain_active"):
-                # Use the primary/first candidate chain
-                chain = identity["candidates"][0]["chain"].lower()
-            elif resolution == "unresolved_ambiguous" and identity.get("candidates") and identity["candidates"][0]["tier"] == "C":
-                # Fallback to Ethereum if EVM address has no balance on probed chains
+
+            if family == "Bitcoin":
+                chain = "bitcoin"
+            elif family == "Solana":
+                chain = "solana"
+            elif family == "Tron":
+                chain = "tron"
+            elif family == "EVM Compatible":
                 chain = "ethereum"
+            elif family in ("Litecoin", "Dogecoin"):
+                return {"address": address, "status": "error", "error": f"Unsupported Chain ({family})"}
             else:
-                return {"address": address, "status": "error", "error": "Unrecognized or unresolved address format"}
-                
+                return {"address": address, "status": "error", "error": "Unrecognized address format"}
+
             if chain == "bitcoin":
                 result = await scan_btc_wallet(address, db, depth="quick", case_id=case_id)
             elif chain == "solana":
@@ -127,6 +134,9 @@ async def run_bulk_scan(addresses: list, db: Session, case_id: int = None) -> di
         r["data"]["exchange_exposure"] = exchange_exposure
             
     print(f"[BULK SCAN] Batch {batch_id} complete. Success: {len(successful)}, Failed: {len(failed)}")
+    
+    # ── NEW: Post-Processing Intelligence Layer ──
+    intelligence = build_bulk_intelligence(successful)
             
     response_data = {
         "bulk_batch_id": batch_id,
@@ -136,7 +146,8 @@ async def run_bulk_scan(addresses: list, db: Session, case_id: int = None) -> di
         "failed": len(failed),
         "summary": summary,
         "results": successful,
-        "errors": failed
+        "errors": failed,
+        "intelligence": intelligence
     }
 
     # Generate master verification report for the bulk run

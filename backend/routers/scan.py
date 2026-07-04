@@ -79,8 +79,8 @@ async def post_scan_bulk(req: BulkScanRequest, db: Session = Depends(get_db)):
 @router.get("/chain-resolution/{address}")
 async def get_chain_resolution(address: str):
     """
-    Determines the blockchain for a given wallet address using deterministic regex,
-    cryptographic checksums, live EVM RPC probes, and AI tie-breakers for multi-chain ambiguity.
+    Deterministic address format analysis with optional AI pattern fallback.
+    Step 1: regex + checksum validation. Step 2 (if step 1 fails): OpenRouter/Groq pattern recognition.
     """
     from modules.coin_identifier import resolve_chain_identity
     return await resolve_chain_identity(address)
