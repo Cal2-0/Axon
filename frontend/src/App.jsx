@@ -4,6 +4,7 @@ import Overview from './pages/Overview';
 import WalletInvestigation from './pages/WalletInvestigation';
 import ContractInvestigation from './pages/ContractInvestigation';
 import IntelligenceDatabases from './pages/IntelligenceDatabases';
+import AddressIntelligence from './pages/AddressIntelligence';
 import NotFound from './pages/NotFound';
 import BulkInvestigation from './pages/BulkInvestigation';
 import Cases from './pages/Cases';
@@ -206,6 +207,13 @@ function AppLayout() {
             Intelligence Databases
           </NavLink>
 
+          <NavLink to="/address-intelligence" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+            <svg className="w-4 h-4 shrink-0 text-axon-cyan" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            </svg>
+            Address Reference
+          </NavLink>
+
           {/* Future */}
           <div className="text-[10px] font-bold text-axon-text-dim uppercase tracking-widest mb-2 px-3 pt-5">Future</div>
 
@@ -271,6 +279,7 @@ function AppLayout() {
             <Route path="/logs" element={<Logs />} />
             <Route path="/verify" element={<VerifyReport />} />
             <Route path="/intel" element={<IntelligenceDatabases />} />
+            <Route path="/address-intelligence" element={<AddressIntelligence />} />
             <Route path="/cases" element={<Cases />} />
             <Route path="/cases/:caseId" element={<CaseDashboard />} />
             {/* Legacy redirects */}
