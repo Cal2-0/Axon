@@ -170,6 +170,20 @@ async def run_bulk_scan(addresses: list, db: Session, case_id: int = None) -> di
             scan_depth="quick"
         )
         db.add(report_entry)
+        
+        # Save InvestigationLog for the bulk batch so we can generate PDFs
+        bulk_log = InvestigationLog(
+            entity_address=batch_id,
+            entity_type="bulk_batch",
+            chain="mixed",
+            scan_timestamp=time.time(),
+            risk_score=max_risk,
+            scan_depth="quick",
+            raw_data=response_data,
+            case_id=case_id
+        )
+        db.add(bulk_log)
+        
         db.commit()
     except Exception as e:
         print(f"[BULK] Error saving verification report: {e}")

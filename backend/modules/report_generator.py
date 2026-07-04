@@ -3,7 +3,7 @@ import time
 from sqlalchemy.orm import Session
 from database.models import VerificationReport, InvestigationLog
 from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib import colors
 from modules.cross_chain import detect_address_type
@@ -38,7 +38,10 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
 
     inv_log = None
     if report.entity_type == "bulk_batch":
-        inv_log = db.query(InvestigationLog).filter(InvestigationLog.bulk_batch_id == report.entity_address).first()
+        inv_log = db.query(InvestigationLog).filter(
+            InvestigationLog.entity_address == report.entity_address,
+            InvestigationLog.entity_type == "bulk_batch"
+        ).first()
     else:
         inv_log = db.query(InvestigationLog).filter(
             InvestigationLog.entity_address == report.entity_address,

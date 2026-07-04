@@ -936,7 +936,7 @@ Use ALL of this evidence to form a comprehensive forensic assessment."""
     except:
         abi = []
         
-    defi_interactions = decode_defi_interactions(etherscan.get("normal_txs", []))
+    defi_interactions = await decode_defi_interactions(etherscan.get("normal_txs", []))
 
     # If ABI is empty, add 4byte decoded functions
     if not abi and defi_interactions:

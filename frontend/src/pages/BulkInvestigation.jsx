@@ -262,11 +262,12 @@ export default function BulkInvestigation({ caseId }) {
               {/* Master Report Button */}
               <button 
                 onClick={async () => {
-                  if (!report || !report.report_id) {
+                  const r_id = report?.report_metadata?.report_id;
+                  if (!r_id) {
                     alert("Report ID not found. Ensure you have run a scan first.");
                     return;
                   }
-                  window.open(`${import.meta.env.VITE_API_URL || 'http://127.0.0.1:8001'}/scan/report/${report.report_id}/pdf`, "_blank");
+                  window.open(`${import.meta.env.VITE_API_URL || 'http://127.0.0.1:8001'}/scan/report/${r_id}/pdf`, "_blank");
                 }} 
                 className="axon-button px-4 py-2 text-xs border-purple-500/30 text-purple-400 hover:bg-purple-500 hover:text-white"
               >

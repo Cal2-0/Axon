@@ -435,3 +435,6 @@
 ### [DONE] Intelligence Database (13,000+ entities)
 # Malicious wallets, exchange addresses, known mixers,
 # OFAC sanctions list, protocol reputation engine
+
+
+new super db of all crpto so we can check and compare some where wherei can see last update 
