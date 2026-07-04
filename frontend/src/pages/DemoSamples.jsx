@@ -61,7 +61,11 @@ const SAMPLES = [
   { "address": "UNSUPPORTEDc93346bdf196bd8ef2a1", "name": "Gen UNSUPPORTED 2", "type": "Wallet", "expectedRisk": "UNSUPPORTED", "description": "Generated UNSUPPORTED" },
   { "address": "UNSUPPORTED9f9d738d5564dd1b61a2", "name": "Gen UNSUPPORTED 3", "type": "Wallet", "expectedRisk": "UNSUPPORTED", "description": "Generated UNSUPPORTED" },
   { "address": "UNSUPPORTEDc1675d3e5bac784c11c7", "name": "Gen UNSUPPORTED 4", "type": "Wallet", "expectedRisk": "UNSUPPORTED", "description": "Generated UNSUPPORTED" },
-  { "address": "UNSUPPORTEDb8ca28d952968f0381f5", "name": "Gen UNSUPPORTED 5", "type": "Wallet", "expectedRisk": "UNSUPPORTED", "description": "Generated UNSUPPORTED" }
+  { "address": "UNSUPPORTEDb8ca28d952968f0381f5", "name": "Gen UNSUPPORTED 5", "type": "Wallet", "expectedRisk": "UNSUPPORTED", "description": "Generated UNSUPPORTED" },
+  { "address": "0x12D66f87A04A9E220743712cE6d9bB1B5616B8Fc", "name": "Tornado Cash Router", "type": "Contract", "expectedRisk": "CRITICAL", "description": "OFAC Sanctioned Privacy Mixer. Should instantly flag as CRITICAL." },
+  { "address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", "name": "Wrapped Ether (WETH)", "type": "Contract", "expectedRisk": "LOW", "description": "Blue-chip DeFi protocol. Hardcoded to skip AI parsing to save tokens and ensure 0 false-positives." },
+  { "address": "0x4B16c5dE96EB2117bBE5fd171E4d203624B014aa", "name": "Binance-Peg Tokens", "type": "Contract", "expectedRisk": "LOW", "description": "Exchange infrastructure. Safe and low risk." },
+  { "address": "0x8589427373D6D84E98730D7795D8f6f8731FDA16", "name": "1inch V5 Router", "type": "Contract", "expectedRisk": "LOW", "description": "DEX Aggregator router. Extremely high transaction volume but completely benign." }
 ];
 
 const STORY_1 = `OPERATION: MIDNIGHT SWEEP
