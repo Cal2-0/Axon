@@ -342,3 +342,29 @@ Without API keys, Tier 1 (deterministic) still works fully. Tier 2 (AI fallback)
 - [ ] Enable Base / Optimism / Arbitrum investigation (currently "Coming Soon")
 - [ ] Optional on-chain activity probe for EVM chain disambiguation (separate from format analysis)
 
+
+
+## 6. XDR-Style Bulk Investigation Dashboard
+The Bulk Scanner was fully redesigned from a simple list into a premium Extended Detection and Response (XDR) interface.
+- **Priority Queue:** Sorts targets automatically by Risk Score (Critical → Low), giving investigators an immediate triage list.
+- **Similarity Matrix:** A mathematical intersection table that compares all wallets in the batch against each other to find behavioral overlaps (e.g., Wallet A and Wallet B share 3 signals).
+- **D3 Network Graph:** Renders a force-directed layout showing relationships between the scanned entities, prioritizing high-risk connections.
+- **Determinism over AI:** The intelligence generated is purely mathematical, based on intersection of signals and risk scores, completely replacing unstructured LLM generation for bulk summaries.
+
+## 7. Cryptographic Report Verification (Tamper-Proof PDFs)
+To ensure reports can be used as legal evidence, AXON generates tamper-proof PDF hashes:
+1. **Deterministic Data Hashing:** Before generating the PDF, the _scorer.py modules dump the raw JSON payload with sorted keys and hash it via SHA-256.
+2. **Server-Side Storage:** This hash, along with a UUID-based Report ID and the scan parameters, is saved immutably to the VerificationReport table in the database.
+3. **Evidence Matching:** When a PDF is exported, the exact Report ID and SHA-256 Hash are printed on the first page. An investigator can input that Report ID into AXON's 'Verify Report' portal to confirm the database hash matches the document hash, proving the PDF was not altered post-generation.
+
+## 8. AXON Demo Entity Dataset
+To demonstrate the engine's capabilities without relying on basic or overused wallets, AXON features a curated Demo Dataset (DemoSamples.jsx):
+- Features 50+ real-world blockchain entities including the Nomad Bridge Exploiter, Lazarus Group wallets, Silk Road hackers, and OFAC-sanctioned mixers.
+- Spans 4 core investigation scenarios (Critical Threats, Benign Whales, Exploit Investigation, Compliance Baseline).
+- Includes unsupported address formats (Litecoin, Dash, Ripple) to explicitly demonstrate AXON's failure-handling and format-identification circuit breakers.
+
+## 9. Address Intelligence Reference Database
+As detailed in db.md, AXON now contains a fully local Address Intelligence Reference module:
+- Replaces the legacy 'Which Coin' AI guesser with deterministic regex and checksum validation.
+- Powered by a static ddress_formats table deployed via SQLAlchemy on startup.
+- Supports offline, immediate validation of Base58, Bech32, and Hex strings without needing external API calls.
