@@ -534,8 +534,8 @@ async def scan_wallet(address: str, db: Session, depth: str = "quick", case_id: 
     ).order_by(InvestigationLog.scan_timestamp.desc()).first()
 
     if recent_log and recent_log.raw_data:
-        wallet_type = recent_log.raw_data.get("identity", {}).get("wallet_type", "Unknown") if isinstance(recent_log.raw_data, dict) else "Unknown"
-        if wallet_type != "Unknown":
+        wallet_type = recent_log.raw_data.get("identity", {}).get("walletType", "Unknown") if isinstance(recent_log.raw_data, dict) else "Unknown"
+        if wallet_type in ("EOA", "Contract"):
             cache_hours = 24 if depth == "quick" else 168 # 7 days
             if (time.time() - recent_log.scan_timestamp) < cache_hours * 3600:
                 print(f"[SCAN] Returning cached {depth} scan for {address}")

@@ -157,12 +157,15 @@ async def probe_evm_activity(address: str, candidates: List[Dict]) -> List[Dict]
         return candidates
 
     async with httpx.AsyncClient(timeout=10.0) as client:
-        tasks = []
+        results = []
         for c in evm_chains:
             chain_info = CHAINS[c["chain"]]
-            tasks.append(fetch_chain_balance(client, address, c["chain"], chain_info, key))
-        
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+            try:
+                res = await fetch_chain_balance(client, address, c["chain"], chain_info, key)
+                results.append(res)
+            except Exception as e:
+                results.append(e)
+            await asyncio.sleep(0.3) # Rate limit protection
     
     active_chains = []
     for res, c in zip(results, evm_chains):
