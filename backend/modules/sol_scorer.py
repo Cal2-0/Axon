@@ -266,55 +266,55 @@ async def scan_sol_wallet(address: str, db: Session, depth: str = "quick", case_
     final_score = min(max(final_score, 0), 100)
 
 
-        # --- DEMO OVERRIDES ---
+    # --- DEMO OVERRIDES ---
 
 
-        try:
+    try:
 
 
-            from modules.demo_overrides import DEMO_OVERRIDES
+        from modules.demo_overrides import DEMO_OVERRIDES
 
 
-            if address.lower() in DEMO_OVERRIDES:
+        if address.lower() in DEMO_OVERRIDES:
 
 
-                expected_risk = DEMO_OVERRIDES[address.lower()]['expectedRisk']
+            expected_risk = DEMO_OVERRIDES[address.lower()]['expectedRisk']
 
 
-                if expected_risk == "CRITICAL":
+            if expected_risk == "CRITICAL":
 
 
-                    final_score = max(80, final_score)
+                final_score = max(80, final_score)
 
 
-                elif expected_risk == "HIGH":
+            elif expected_risk == "HIGH":
 
 
-                    final_score = max(60, final_score)
+                final_score = max(60, final_score)
 
 
-                elif expected_risk == "MEDIUM":
+            elif expected_risk == "MEDIUM":
 
 
-                    final_score = max(40, final_score)
+                final_score = max(40, final_score)
 
 
-                elif expected_risk == "LOW":
+            elif expected_risk == "LOW":
 
 
-                    final_score = min(39, final_score)
+                final_score = min(39, final_score)
 
 
-                entity_class = DEMO_OVERRIDES[address.lower()]['name']
+            entity_class = DEMO_OVERRIDES[address.lower()]['name']
 
 
-                signals.append((f"DEMO MATCH: {entity_class}", "🎯", "L4"))
+            signals.append((f"DEMO MATCH: {entity_class}", "🎯", "L4"))
 
 
-        except ImportError:
+    except ImportError:
 
 
-            pass
+        pass
 
 
     label = "CRITICAL" if final_score >= 80 else "HIGH" if final_score >= 60 else "MEDIUM" if final_score >= 40 else "LOW"
