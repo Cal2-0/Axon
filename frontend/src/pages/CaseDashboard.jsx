@@ -160,7 +160,7 @@ ${reportHash ? `SHA-256 PROOF: ${reportHash}` : ''}
                   onClick={() => window.open(`${API_BASE}/cases/${caseId}/pdf`, '_blank')}
                   className="px-4 py-2 text-sm font-bold bg-blue-500/10 border border-blue-500/30 text-blue-400 hover:bg-blue-500 hover:text-white rounded-lg transition-all flex items-center gap-1.5"
                 >
-                  ⬇ Download PDF
+                  ⬇ Download Master PDF
                 </button>
                 <button
                   onClick={handleDownload}
@@ -536,12 +536,20 @@ export default function CaseDashboard() {
         
         <div className="flex items-center gap-2 flex-wrap">
           {activeTab === 'overview' && caseLogs.length > 0 && (
-            <button
-              onClick={() => setShowReport(true)}
-              className="px-4 py-2 text-sm font-bold bg-gradient-to-r from-blue-600/20 to-purple-600/20 border border-blue-500/40 text-blue-400 hover:from-blue-600 hover:to-purple-600 hover:text-white rounded-lg transition-all flex items-center gap-2"
-            >
-              <span>⚖️</span> Generate Master PDF & Report
-            </button>
+            <>
+              <button
+                onClick={() => window.open(`${API_BASE}/cases/${caseId}/pdf`, '_blank')}
+                className="px-4 py-2 text-sm font-bold bg-gradient-to-r from-purple-600/20 to-pink-600/20 border border-purple-500/40 text-purple-400 hover:from-purple-600 hover:to-pink-600 hover:text-white rounded-lg transition-all flex items-center gap-2"
+              >
+                <span>⚖️</span> Download Master PDF
+              </button>
+              <button
+                onClick={() => setShowReport(true)}
+                className="px-4 py-2 text-sm font-bold bg-gradient-to-r from-blue-600/20 to-cyan-600/20 border border-blue-500/40 text-blue-400 hover:from-blue-600 hover:to-cyan-600 hover:text-white rounded-lg transition-all flex items-center gap-2"
+              >
+                <span>🧠</span> Generate AI Case Data
+              </button>
+            </>
           )}
           {tabs.map(tab => (
             <button
