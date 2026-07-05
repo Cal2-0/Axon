@@ -12,7 +12,7 @@ import CaseDashboard from './pages/CaseDashboard';
 import Logs from './pages/Logs';
 import DemoSamples from './pages/DemoSamples';
 import VerifyReport from './pages/VerifyReport';
-
+import { checkApiHealth } from './api/axon';
 // ─── AXON LOGO COMPONENT (Minimal Bond-Style X) ─────────────────────────────
 function AxonLogo({ size = 36 }) {
   return (
@@ -111,11 +111,17 @@ function AppLayout() {
   useEffect(() => {
     const fetchHealth = async () => {
       try {
-        const { checkApiHealth } = await import('./api/axon');
         const data = await checkApiHealth();
         setApiHealth(data);
       } catch (err) {
         console.error("Failed to fetch API health:", err);
+        setApiHealth({
+          Etherscan: false,
+          Alchemy: false,
+          GoPlus: false,
+          DefiLlama: false,
+          Groq: false
+        });
       }
     };
     fetchHealth();

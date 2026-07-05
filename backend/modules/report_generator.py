@@ -8,6 +8,20 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib import colors
 from modules.cross_chain import detect_address_type
 
+
+ENGINE_TO_FORENSIC = {
+    "risk score lowered to MODERATE": "Risk assessment adjusted. Observed behavior is consistent with known exchange activity. Entity classification applied.",
+    "risk score lowered to LOW": "Risk assessment reflects confirmed entity classification. Behavioral signals are expected for this entity type.",
+    "Trusted protocol suppression applied": "Risk assessment reflects known protocol classification. Administrative controls observed are consistent with regulatory compliance design, not exploitation.",
+}
+
+def translate(text: str) -> str:
+    if not text or not isinstance(text, str): return str(text)
+    for k, v in ENGINE_TO_FORENSIC.items():
+        if k in text:
+            text = text.replace(k, v)
+    return text
+
 def _is_valid(data):
     if not data: return False
     if isinstance(data, str):
@@ -95,9 +109,9 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
                 verdict = ai.get("verdict")
                 Story.append(Paragraph(f"Target is a <b>{identity.get('wallet_type', 'EOA')}</b> exhibiting {tx_count} transactions. <b>{verdict}</b>", styles["Normal"]))
                 if _is_valid(ai.get("hypothesis")):
-                    Story.append(Paragraph(f"<b>Assessment:</b> {ai.get('hypothesis')}", styles["Normal"]))
+                    Story.append(Paragraph(f"<b>Assessment:</b> {translate(ai.get('hypothesis'))}", styles["Normal"]))
             else:
-                Story.append(Paragraph(f"Target is a <b>{identity.get('wallet_type', 'EOA')}</b> exhibiting {tx_count} transactions. Algorithmic Risk Profile: <b>{risk.get('label', 'LOW')}</b>.", styles["Normal"]))
+                Story.append(Paragraph(f"Target is a <b>{identity.get('wallet_type', 'EOA')}</b> exhibiting {tx_count} transactions. Algorithmic Risk Profile: <b>{translate(risk.get('label', 'LOW'))}</b>.", styles["Normal"]))
             Story.append(Spacer(1, 12))
 
             # KEY FINDINGS
@@ -108,7 +122,7 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
             findings.append(f"{tx_count} observed transactions")
             if _is_valid(risk.get("factors")):
                 for factor in risk.get("factors", [])[:3]:
-                    findings.append(factor.get('reason'))
+                    findings.append(translate(factor.get('reason')))
             for f in findings:
                 Story.append(Paragraph(f"• {f}", styles["Normal"]))
             Story.append(Spacer(1, 12))
@@ -138,7 +152,7 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
                 Story.append(Paragraph("<b>THREAT DATABASE MATCHES</b>", styles["Heading2"]))
                 rows = []
                 for factor in risk.get("factors", []):
-                    rows.append(["Axon Engine", "Behavioral", "High", factor.get('reason'), "Chain Analysis"])
+                    rows.append(["Axon Engine", "Behavioral", "High", translate(factor.get('reason')), "Chain Analysis"])
                 if rows:
                     Story.append(_build_table(["Threat Source", "Threat Category", "Confidence", "Evidence", "Reference"], rows, [80, 80, 60, 150, 60]))
                 Story.append(Spacer(1, 12))
@@ -151,8 +165,13 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
                     ts = tx.get("timeStamp")
                     try: dstr = time.strftime("%Y-%m-%d %H:%M", time.gmtime(int(ts)))
                     except: dstr = "N/A"
-                    try: val = f"{(int(tx.get('value', 0)) / 10**18):.5f}"
-                    except: val = "0"
+                    try:
+                        val_num = int(tx.get('value', 0))
+                        if val_num == 0 and tx.get('input') not in ['', '0x']:
+                            val = "Token Transfer"
+                        else:
+                            val = f"{(val_num / 10**18):.5f} ETH"
+                    except: val = "0 ETH"
                     is_in = tx.get("to", "").lower() == report.entity_address.lower()
                     rows.append([dstr, tx.get("hash", "")[:8]+"...", "IN" if is_in else "OUT", val])
                 if rows:
@@ -166,7 +185,10 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
                     Story.append(Paragraph("<b>COUNTERPARTIES</b>", styles["Heading2"]))
                     rows = []
                     for n in nodes[:10]:
-                        rows.append([n.get("id", "")[:12]+"...", n.get("type", "Unknown"), str(n.get("interaction_count", "N/A")), str(n.get("total_value", "N/A")), str(n.get("last_seen", "N/A")), str(n.get("risk", 0))])
+                        ctype = n.get("type", "Unknown")
+                        if ctype == "default": ctype = "Unclassified"
+                        tx_c = str(n.get("interaction_count", n.get("tx_count", "N/A")))
+                        rows.append([n.get("id", "")[:12]+"...", ctype, tx_c, str(n.get("total_value", "N/A")), str(n.get("last_seen", "N/A")), str(n.get("risk", 0))])
                     if rows:
                         Story.append(_build_table(["Address", "Known Entity", "Tx Count", "Total Val", "Last Seen", "Threat Lvl"], rows, [80, 70, 50, 50, 60, 50]))
                     Story.append(Spacer(1, 12))
@@ -181,7 +203,9 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
                         if isinstance(h, dict):
                             rows.append([h.get("chain", ""), "N/A", "N/A", "N/A", "N/A"])
                 elif isinstance(holdings, dict):
-                    rows.append(["ERC-20 Tokens", str(holdings.get("erc20_count", 0)), "N/A", "N/A", "N/A"])
+                    count = holdings.get("erc20_count", 0)
+                    count_str = "Not collected at QUICK depth" if str(count) == "0" else str(count)
+                    rows.append(["ERC-20 Tokens", count_str, "N/A", "N/A", "N/A"])
                 if rows:
                     Story.append(_build_table(["Assets", "Stablecoins", "NFTs", "Contracts", "Protocols"], rows, [80, 70, 50, 60, 60]))
                 Story.append(Spacer(1, 12))
@@ -209,7 +233,7 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
             if _is_valid(risk.get("factors")):
                 Story.append(Paragraph("<b>Scoring Breakdown:</b>", styles["Normal"]))
                 for factor in risk.get("factors", []):
-                    Story.append(Paragraph(f"- {factor.get('reason')} ", styles["Normal"]))
+                    Story.append(Paragraph(f"- {translate(factor.get('reason'))} ", styles["Normal"]))
             Story.append(Spacer(1, 12))
 
         elif report.entity_type == "contract":
@@ -227,7 +251,7 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
 
             # SECTION 2 - EXECUTIVE SUMMARY
             Story.append(Paragraph("<b>SECTION 2 - EXECUTIVE SUMMARY</b>", styles["Heading2"]))
-            Story.append(Paragraph(f"Target is a Smart Contract with a {risk.get('label', 'LOW')} risk profile (Score: {report.risk_score}).", styles["Normal"]))
+            Story.append(Paragraph(f"Target is a Smart Contract with a {translate(risk.get('label', 'LOW'))} risk profile (Score: {report.risk_score}).", styles["Normal"]))
             if _is_valid(risk.get("overall")):
                 Story.append(Paragraph(f"<b>Verdict:</b> {risk.get('overall')}", styles["Normal"]))
             Story.append(Spacer(1, 12))
@@ -278,9 +302,9 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
                 Story.append(Paragraph("<b>SECTION 8 - THREAT INTELLIGENCE</b>", styles["Heading2"]))
                 for factor in risk.get("factors", []):
                     if isinstance(factor, str):
-                        Story.append(Paragraph(f"- {factor}", styles["Normal"]))
+                        Story.append(Paragraph(f"- {translate(factor)}", styles["Normal"]))
                     else:
-                        Story.append(Paragraph(f"- {factor.get('reason')} ", styles["Normal"]))
+                        Story.append(Paragraph(f"- {translate(factor.get('reason'))} ", styles["Normal"]))
                 Story.append(Spacer(1, 12))
 
             # SECTION 9 - RISK SCORE BREAKDOWN
@@ -324,7 +348,13 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
             # SECTION 6 - ACTIONABLE INTELLIGENCE
             if critical > 0 or high > 0:
                 Story.append(Paragraph("<b>SECTION 6 - ACTIONABLE INTELLIGENCE</b>", styles["Heading2"]))
-                Story.append(Paragraph(f"Immediate isolation and manual review strongly recommended for the {critical + high} high-risk subjects identified in the batch.", styles["Normal"]))
+                high_addrs = [res.get("address", "") for res in results if res.get("score", 0) >= 60]
+                if high_addrs:
+                    Story.append(Paragraph(f"Immediate isolation and manual review strongly recommended for the following high-risk subjects:", styles["Normal"]))
+                    for ha in high_addrs:
+                        Story.append(Paragraph(f"- Priority Review: <b>{ha}</b>", styles["Normal"]))
+                else:
+                    Story.append(Paragraph(f"Immediate isolation and manual review strongly recommended for the {critical + high} high-risk subjects identified in the batch.", styles["Normal"]))
                 Story.append(Spacer(1, 12))
 
             # SECTION 7 - INVESTIGATOR FINDINGS

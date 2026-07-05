@@ -1,25 +1,25 @@
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-from dotenv import load_dotenv
-load_dotenv()
 import asyncio
+import os
+import sys
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from database.db import SessionLocal
 from modules.bulk_scanner import run_bulk_scan
 
-async def test():
+async def main():
     db = SessionLocal()
-    targets = [
-        "0x27182842E098f60e3D576794A5bFFb0777E025d3",
-        "0x11111112542D85B3ef694E05771c2dCCff4fAa26",
-        "TDqsqm7ZfU5Sg4bFz2VjH9o2m74CqR56kY",
-        "3txp4vRoCGJym3xR7yCVPFHoCNxv4Twseo"
+    addrs = [
+        "JUP6LkbZbjS1jKKuapdHHy74zcZ3tLUZoi5NtSe4q9",
+        "TXLAQ63Xg1N4ZckPuKMvzW7C5EmLKEqcdj",
+        "addr1qx2fxv2umyhttkxyxp8x0dlpdt3k6cung5pxj3jh6ydzer"
     ]
     try:
-        res = await run_bulk_scan(targets, db, case_id=1)
-        print("Done")
+        res = await run_bulk_scan(addrs, db)
+        print("Success:", res["summary"])
     except Exception as e:
+        print("Crash:", type(e).__name__, str(e))
         import traceback
         traceback.print_exc()
 
-asyncio.run(test())
+if __name__ == "__main__":
+    asyncio.run(main())
