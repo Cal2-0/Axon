@@ -91,11 +91,17 @@ def _get_volume(result: dict) -> float:
 
 
 def _get_tx_count(result: dict) -> int:
-    return result.get("data", {}).get("identity", {}).get("txCount", 0) or 0
+    val = result.get("data", {}).get("identity", {}).get("txCount", 0)
+    if isinstance(val, int): return val
+    try: return int(val)
+    except: return 0
 
 
 def _get_counterparty_count(result: dict) -> int:
-    return result.get("data", {}).get("identity", {}).get("uniqueCounterparties", 0) or 0
+    val = result.get("data", {}).get("identity", {}).get("uniqueCounterparties", 0)
+    if isinstance(val, int): return val
+    try: return int(val)
+    except: return 0
 
 
 def _has_mixer(result: dict) -> bool:
