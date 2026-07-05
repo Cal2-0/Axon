@@ -345,6 +345,38 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
                     Story.append(_build_table(["Address", "Network", "Risk Label", "Score"], rows, [100, 100, 60, 40]))
                 Story.append(Spacer(1, 12))
 
+            # SECTION 4 - PRIORITY INVESTIGATION QUEUE
+            intel = raw.get("intelligence", {})
+            priority_queue = intel.get("priority_queue", [])
+            if priority_queue:
+                Story.append(Paragraph("<b>SECTION 4 - PRIORITY INVESTIGATION QUEUE</b>", styles["Heading2"]))
+                rows = []
+                for item in priority_queue[:15]:
+                    rows.append([
+                        item.get("address", "")[:12] + "...",
+                        str(item.get("score", 0)),
+                        item.get("reason", "")[:40]
+                    ])
+                if rows:
+                    Story.append(_build_table(["Target Address", "Risk Score", "Primary Indicator"], rows, [100, 60, 200]))
+                Story.append(Spacer(1, 12))
+
+            # SECTION 5 - NETWORK CONNECTIONS / OVERLAP MATRIX
+            similarity = intel.get("similarity_matrix", [])
+            if similarity:
+                Story.append(Paragraph("<b>SECTION 5 - NETWORK CONNECTIONS / OVERLAP MATRIX</b>", styles["Heading2"]))
+                rows = []
+                for sim in similarity[:15]:
+                    rows.append([
+                        sim.get("source", "")[:10] + "...",
+                        sim.get("target", "")[:10] + "...",
+                        f"{sim.get('score', 0):.2f}%",
+                        sim.get("shared_counterparty", "")[:10] + "..."
+                    ])
+                if rows:
+                    Story.append(_build_table(["Subject A", "Subject B", "Similarity", "Shared Node"], rows, [90, 90, 80, 90]))
+                Story.append(Spacer(1, 12))
+
             # SECTION 6 - ACTIONABLE INTELLIGENCE
             if critical > 0 or high > 0:
                 Story.append(Paragraph("<b>SECTION 6 - ACTIONABLE INTELLIGENCE</b>", styles["Heading2"]))
@@ -429,6 +461,41 @@ def generate_case_pdf_report(case_id: int, db: Session) -> bytes:
             ])
         if rows:
             Story.append(_build_table(["Address", "Type", "Label", "Risk Score"], rows, [100, 80, 140, 60]))
+        Story.append(Spacer(1, 12))
+
+    # SECTION 3 - CRITICAL VULNERABILITIES & KEY FINDINGS
+    Story.append(Paragraph("<b>SECTION 3 - CRITICAL VULNERABILITIES & KEY FINDINGS</b>", styles["Heading2"]))
+    findings = []
+    import json
+    for log in logs:
+        signals = []
+        try:
+            if isinstance(log.triggered_signals, str):
+                signals = json.loads(log.triggered_signals)
+            elif isinstance(log.triggered_signals, list):
+                signals = log.triggered_signals
+        except: pass
+        
+        for sig in signals:
+            reason = sig.get("reason", "") if isinstance(sig, dict) else str(sig)
+            if reason:
+                findings.append(f"{log.entity_address[:12]}... : {reason}")
+    
+    if findings:
+        for f in findings[:10]:
+            Story.append(Paragraph(f"- {f}", styles["Normal"]))
+    else:
+        Story.append(Paragraph("No critical signals triggered across case entities.", styles["Normal"]))
+    Story.append(Spacer(1, 12))
+    
+    # SECTION 4 - CASE NOTES
+    from database.models import CaseNote
+    notes = db.query(CaseNote).filter(CaseNote.case_id == case_id).order_by(CaseNote.created_at.asc()).all()
+    if notes:
+        Story.append(Paragraph("<b>SECTION 4 - INVESTIGATOR NOTES</b>", styles["Heading2"]))
+        for note in notes:
+            note_time = time.strftime("%Y-%m-%d %H:%M", time.gmtime(note.created_at))
+            Story.append(Paragraph(f"<b>[{note_time}]</b>: {note.content}", styles["Normal"]))
         Story.append(Spacer(1, 12))
 
     doc.build(Story)
