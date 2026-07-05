@@ -5,6 +5,7 @@ import WalletInvestigation from './WalletInvestigation';
 import ContractInvestigation from './ContractInvestigation';
 import BulkInvestigation from './BulkInvestigation';
 import { formatINR } from '../utils/indianFormat';
+import { downloadMasterCasePDF } from '../utils/pdfExport';
 
 // ─── RISK BADGE ──────────────────────────────────────────────────────────────
 function RiskPill({ score }) {
@@ -154,12 +155,20 @@ ${reportHash ? `SHA-256 PROOF: ${reportHash}` : ''}
           </div>
           <div className="flex items-center gap-2">
             {report && (
-              <button
-                onClick={handleDownload}
-                className="px-4 py-2 text-sm font-bold bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500 hover:text-white rounded-lg transition-all"
-              >
-                ⬇ Download .txt
-              </button>
+              <>
+                <button
+                  onClick={() => downloadMasterCasePDF(report)}
+                  className="px-4 py-2 text-sm font-bold bg-blue-500/10 border border-blue-500/30 text-blue-400 hover:bg-blue-500 hover:text-white rounded-lg transition-all flex items-center gap-1.5"
+                >
+                  ⬇ Download PDF
+                </button>
+                <button
+                  onClick={handleDownload}
+                  className="px-4 py-2 text-sm font-bold bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500 hover:text-white rounded-lg transition-all"
+                >
+                  ⬇ Download .txt
+                </button>
+              </>
             )}
             <button onClick={onClose} className="p-2 text-gray-500 hover:text-white transition-colors rounded-lg hover:bg-[#1e293b]">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

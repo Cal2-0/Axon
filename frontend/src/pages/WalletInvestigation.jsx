@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import GraphView from '../components/GraphView';
 import SmartAddressInput, { isValidAddress } from '../components/SmartAddressInput';
 import { downloadWalletPDF } from '../utils/pdfExport';
+import { API_BASE } from '../api/axon';
 import { formatINR, formatIndian } from '../utils/indianFormat';
 import TemporalHeatmap from '../components/TemporalHeatmap';
 
@@ -646,7 +647,7 @@ export default function WalletInvestigation({ caseId }) {
       return;
     }
     const reportId = result.report_metadata.report_id;
-    window.open(`${import.meta.env.VITE_API_URL || 'http://127.0.0.1:8001'}/scan/report/${reportId}/pdf`, "_blank");
+    window.open(`${API_BASE}/scan/report/${reportId}/pdf`, "_blank");
   };
 
   return (

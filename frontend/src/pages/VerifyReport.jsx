@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { API_BASE } from '../api/axon';
 
 export default function VerifyReport() {
   const [reportId, setReportId] = useState('');
@@ -16,9 +17,7 @@ export default function VerifyReport() {
     setResult(null);
 
     try {
-      // In development, target the local backend port 8001
-      const API_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8001';
-      const response = await fetch(`${API_URL}/verify/${encodeURIComponent(reportId.trim())}`);
+      const response = await fetch(`${API_BASE}/verify/${encodeURIComponent(reportId.trim())}`);
       const data = await response.json();
 
       if (!response.ok) {

@@ -771,6 +771,182 @@ export async function downloadBulkPDF(report) {
   _triggerPDFDownload(html, `AXON-${caseId}-Bulk-Report`);
 }
 
+export async function downloadMasterCasePDF(report) {
+  if (!report) return;
+
+  const caseId = report.case_number || `CASE-${report.case_id}`;
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+  const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+
+  const docHash = "VERIFIABLE-AI-DOSSIER";
+  const ai = report.ai_report || {};
+  const score = report.stats?.average_risk || 0;
+  const riskColor = score >= 80 ? '#dc2626' : score >= 60 ? '#ea580c' : score >= 40 ? '#ca8a04' : '#16a34a';
+  const riskBg = score >= 80 ? '#fef2f2' : score >= 60 ? '#fff7ed' : score >= 40 ? '#fefce8' : '#f0fdf4';
+
+  const findingsHTML = (ai.key_findings || []).map((f, i) => `
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:10px;margin-bottom:6px;font-size:11px;">
+      <span style="color:#0284c7;font-family:'Courier New',monospace;font-weight:bold;margin-right:8px;">#${i + 1}</span>
+      ${_esc(f)}
+    </div>
+  `).join('');
+
+  const entitiesHTML = (report.entities || []).map((e, i) => {
+    const eScore = e.risk_score || 0;
+    const eColor = eScore >= 80 ? '#dc2626' : eScore >= 60 ? '#ea580c' : eScore >= 40 ? '#ca8a04' : '#16a34a';
+    return `
+      <tr>
+        <td style="font-family:'Courier New',monospace;color:#64748b;">${i + 1}</td>
+        <td style="font-family:'Courier New',monospace;font-weight:600;color:#0284c7;">${_esc(e.address)}</td>
+        <td><span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:9px;font-weight:700;border:1px solid #e2e8f0;background:#f8fafc;">${_esc(e.type?.toUpperCase() || 'WALLET')}</span></td>
+        <td>${_esc(e.class || 'N/A')}</td>
+        <td><span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:9px;font-weight:700;color:${eColor};border:1px solid ${eColor}30;background:${eColor}10">${eScore}/100</span></td>
+        <td>${_esc(e.chain || 'ETH')}</td>
+        <td style="font-family:'Courier New',monospace;color:#64748b;">${_esc(e.scanned_at || '')}</td>
+      </tr>
+    `;
+  }).join('');
+
+  const actionsHTML = (ai.recommended_actions || []).map((a, i) => `
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:10px;margin-bottom:6px;font-size:11px;color:#1e293b;">
+      <span style="color:#16a34a;font-weight:bold;margin-right:8px;">▸</span>
+      ${_esc(a)}
+    </div>
+  `).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AXON Master Case Report — ${caseId}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', sans-serif; background: #fff; color: #1e293b; font-size: 12px; line-height: 1.6; }
+  .page { max-width: 800px; margin: 0 auto; padding: 40px 48px; }
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .page { padding: 20px 28px; }
+    @page { margin: 0.5in; size: A4; }
+  }
+  .cls-banner { text-align: center; padding: 6px 0; font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 3px; color: #dc2626; border-bottom: 2px solid #fecaca; background: #fef2f2; }
+  h1 { font-size: 20px; font-weight: 800; color: #0f172a; margin-bottom: 4px; }
+  h2 { font-size: 14px; font-weight: 700; color: #0f172a; text-transform: uppercase; letter-spacing: 0.08em; margin: 24px 0 12px; padding-bottom: 6px; border-bottom: 2px solid #e2e8f0; display: flex; align-items: center; gap: 8px; }
+  h2 .bar { width: 4px; height: 18px; border-radius: 2px; }
+  h3 { font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.06em; margin: 16px 0 8px; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+  .grid4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; }
+  .cell { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; }
+  .cell .label { font-size: 9px; color: #64748b; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 2px; font-family: 'JetBrains Mono', monospace; }
+  .cell .val { font-size: 12px; color: #0f172a; font-weight: 600; word-break: break-all; }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 12px; }
+  th { text-align: left; padding: 6px 10px; font-size: 9px; color: #64748b; text-transform: uppercase; letter-spacing: 0.06em; font-family: 'JetBrains Mono', monospace; border-bottom: 2px solid #e2e8f0; background: #f8fafc; }
+  td { padding: 6px 10px; border-bottom: 1px solid #f1f5f9; color: #334155; vertical-align: top; }
+  .verdict-box { background: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #0284c7; border-radius: 0 6px 6px 0; padding: 16px 20px; margin: 12px 0; }
+  .risk-box { background: ${riskBg}; border: 2px solid ${riskColor}20; border-radius: 8px; padding: 20px; text-align: center; }
+  .footer { border-top: 2px solid #e2e8f0; padding-top: 16px; margin-top: 24px; }
+  .footer p { font-size: 9px; color: #94a3b8; line-height: 1.5; }
+  .page-break { page-break-before: always; }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="cls-banner">CONFIDENTIAL — AXON BLOCKCHAIN INTELLIGENCE — FOR AUTHORIZED RECIPIENTS ONLY</div>
+  <div style="padding:24px 0;border-bottom:2px solid #e2e8f0">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <div style="width:28px;height:28px;border-radius:6px;background:#0f172a;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:800">A</div>
+          <span style="font-size:18px;font-weight:800;letter-spacing:0.2em;color:#0f172a">AXON</span>
+        </div>
+        <div class="mono" style="font-size:9px;color:#64748b;letter-spacing:0.15em">BLOCKCHAIN FORENSIC INTELLIGENCE PLATFORM</div>
+      </div>
+      <div style="text-align:right">
+        <span style="display:inline-block;padding:3px 12px;border-radius:4px;font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;margin-bottom:4px;">${ai.report_classification || 'CONFIDENTIAL'}</span>
+        <div class="mono" style="font-size:8px;color:#94a3b8;text-transform:uppercase;">INTEGRITY PROOF</div>
+        <div class="mono" style="font-size:9px;color:#64748b;max-width:200px;word-break:break-all;">${docHash}</div>
+      </div>
+    </div>
+    <h1>Master Case Forensic Intelligence Report</h1>
+    <p style="color:#64748b;font-size:12px;margin-bottom:16px">Multi-entity intelligence synthesis, threat classification, and network flow analysis.</p>
+    <div class="grid4">
+      <div class="cell"><div class="label">Case Ref</div><div class="val mono" style="color:#0284c7;font-size:11px">${caseId}</div></div>
+      <div class="cell"><div class="label">Date</div><div class="val">${dateStr}</div></div>
+      <div class="cell"><div class="label">Time</div><div class="val mono">${timeStr}</div></div>
+      <div class="cell"><div class="label">Status</div><div class="val" style="color:#16a34a">FINAL</div></div>
+    </div>
+  </div>
+
+  <h2><span class="bar" style="background:#0284c7"></span>1. Executive Summary</h2>
+  <div style="display:flex;gap:20px">
+    <div class="risk-box" style="flex-shrink:0;width:150px">
+      <div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px">Average Risk</div>
+      <div class="mono" style="font-size:44px;font-weight:800;color:${riskColor};line-height:1">${score}</div>
+      <div style="font-size:10px;color:#64748b">/100</div>
+      <div style="width:100%;height:6px;background:#e2e8f0;border-radius:3px;margin-top:10px;overflow:hidden"><div style="width:${score}%;height:100%;border-radius:3px;background:${riskColor}"></div></div>
+      <div class="mono" style="font-size:11px;font-weight:700;color:${riskColor};margin-top:6px;letter-spacing:0.15em">${ai.case_classification || 'N/A'}</div>
+    </div>
+    <div style="flex:1">
+      <div class="grid4" style="margin-bottom:12px">
+        <div class="cell"><div class="label">Title</div><div class="val" style="font-size:11px;color:#0284c7">${_esc(report.case_title || 'N/A')}</div></div>
+        <div class="cell"><div class="label">Category</div><div class="val">${_esc(report.case_category || 'General')}</div></div>
+        <div class="cell"><div class="label">Priority</div><div class="val" style="color:#dc2626">${_esc(report.case_priority || 'P2')}</div></div>
+        <div class="cell"><div class="label">Total Subjects</div><div class="val">${report.stats?.total_entities || 0}</div></div>
+      </div>
+      <div class="verdict-box">
+        <div style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:2px">Executive Verdict Summary</div>
+        <p style="font-size:12px;color:#0f172a;font-weight:700">${_esc(ai.executive_summary || 'No summary available.')}</p>
+      </div>
+    </div>
+  </div>
+
+  <h2><span class="bar" style="background:#0284c7"></span>2. Multi-Entity Roster</h2>
+  <table>
+    <thead>
+      <tr>
+        <th style="width:30px">#</th>
+        <th>Address</th>
+        <th style="width:60px">Type</th>
+        <th>Class</th>
+        <th style="width:60px">Risk</th>
+        <th style="width:50px">Chain</th>
+        <th>Scanned At</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${entitiesHTML}
+    </tbody>
+  </table>
+
+  <h2><span class="bar" style="background:#dc2626"></span>3. Forensic Analysis Summary</h2>
+  <div class="grid3" style="margin-bottom:12px">
+    <div class="cell"><div class="label">Threat Assessment</div><div class="val" style="font-size:11px;font-weight:normal;color:#334155;line-height:1.5;">${_esc(ai.threat_assessment || 'N/A')}</div></div>
+    <div class="cell"><div class="label">Money Flow Analysis</div><div class="val" style="font-size:11px;font-weight:normal;color:#334155;line-height:1.5;">${_esc(ai.money_flow_analysis || 'N/A')}</div></div>
+    <div class="cell"><div class="label">Legal Implications</div><div class="val" style="font-size:11px;font-weight:normal;color:#334155;line-height:1.5;">${_esc(ai.legal_implications || 'N/A')}</div></div>
+  </div>
+
+  ${findingsHTML ? `<h3>3.1 Key Findings</h3><div style="margin-bottom:12px">${findingsHTML}</div>` : ''}
+
+  ${actionsHTML ? `
+  <h2><span class="bar" style="background:#16a34a"></span>4. Recommended Enforcement Actions</h2>
+  <div style="margin-bottom:12px">${actionsHTML}</div>` : ''}
+
+  <div class="footer">
+    <p><strong style="color:#64748b">DISCLAIMER:</strong> This master report was generated by AXON v2.0 Case Management System with Groq AI synthesis. Findings should be independently verified before use in legal proceedings.</p>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+      <span class="mono" style="font-size:8px;color:#94a3b8">AXON BLOCKCHAIN INTELLIGENCE v2.0</span>
+      <span class="mono" style="font-size:8px;color:#94a3b8">Case ${caseId} · END OF REPORT</span>
+    </div>
+  </div>
+  <div class="cls-banner" style="border-top:2px solid #fecaca;border-bottom:none;margin-top:16px">CONFIDENTIAL — AXON BLOCKCHAIN INTELLIGENCE — FOR AUTHORIZED RECIPIENTS ONLY</div>
+</div></body></html>`;
+
+  _triggerPDFDownload(html, `AXON-${caseId}-Master-Report`);
+}
+
 // ─── INTERNAL HELPERS ─────────────────────────────────────────────────────────
 
 /** HTML-escape a string to prevent XSS in the generated document. */

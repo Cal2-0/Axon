@@ -4,6 +4,7 @@ import SmartAddressInput, { isValidAddress } from '../components/SmartAddressInp
 import ContractForensicReport from '../components/ContractForensicReport';
 import GraphView from '../components/GraphView';
 import { downloadContractPDF } from '../utils/pdfExport';
+import { API_BASE } from '../api/axon';
 // ─── HELPERS ───────────────────────────────────────────────────────────────
 function CopyButton({ text }) {
   const [copied, setCopied] = useState(false);
@@ -171,7 +172,7 @@ export default function ContractInvestigation({ caseId }) {
       return;
     }
     const reportId = result.report_metadata.report_id;
-    window.open(`${import.meta.env.VITE_API_URL || 'http://127.0.0.1:8001'}/scan/report/${reportId}/pdf`, "_blank");
+    window.open(`${API_BASE}/scan/report/${reportId}/pdf`, "_blank");
   };
 
   return (

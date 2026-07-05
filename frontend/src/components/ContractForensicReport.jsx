@@ -1,4 +1,5 @@
 import React, { useRef } from 'react';
+import { API_BASE } from '../api/axon';
 
 // ─── CONTRACT FORENSIC INTELLIGENCE REPORT ──────────────────────────────────
 // National forensic digital lab standard — smart contract security audit format
@@ -86,7 +87,7 @@ export default function ContractForensicReport({ result, onClose }) {
               alert("Report ID not found.");
               return;
             }
-            window.open(`${import.meta.env.VITE_API_URL || 'http://127.0.0.1:8001'}/scan/report/${result.report_metadata.report_id}/pdf`, "_blank");
+            window.open(`${API_BASE}/scan/report/${result.report_metadata.report_id}/pdf`, "_blank");
           }} className="axon-button text-xs px-4 py-2 gap-1.5 bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500 hover:text-white">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
             📄 Download Final PDF
