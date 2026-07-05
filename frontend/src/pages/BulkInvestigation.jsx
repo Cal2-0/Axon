@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { bulkScan, API_BASE } from '../api/axon';
 import { useNavigate } from 'react-router-dom';
+import { downloadBulkPDF } from '../utils/pdfExport';
 import * as d3 from 'd3';
 import { 
   ShieldAlert, Activity, Zap, Users, Share2, Target, GitPullRequest, 
@@ -324,7 +325,7 @@ export default function BulkInvestigation({ caseId }) {
           <button onClick={() => setReport(null)} className="px-4 py-2 bg-[#1e293b] hover:bg-gray-700 text-white rounded-lg text-xs font-bold transition-all shadow-md">
             New Batch
           </button>
-          <button onClick={() => window.open(`${API_BASE}/scan/report/${report.report_metadata.report_id}/pdf`, "_blank")} className="px-4 py-2 bg-purple-600/20 text-purple-400 border border-purple-500/30 hover:bg-purple-600 hover:text-white rounded-lg text-xs font-bold transition-all shadow-md">
+          <button onClick={() => downloadBulkPDF(report)} className="px-4 py-2 bg-purple-600/20 text-purple-400 border border-purple-500/30 hover:bg-purple-600 hover:text-white rounded-lg text-xs font-bold transition-all shadow-md">
             Export Master PDF
           </button>
         </div>
