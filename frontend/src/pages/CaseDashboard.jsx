@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { getCase, getCaseLogs, generateMasterReport, updateCase, deleteCase, removeCaseEntity, addCaseNote, getCaseTimeline } from '../api/axon';
+import { getCase, getCaseLogs, generateMasterReport, updateCase, deleteCase, removeCaseEntity, addCaseNote, getCaseTimeline, API_BASE } from '../api/axon';
 import WalletInvestigation from './WalletInvestigation';
 import ContractInvestigation from './ContractInvestigation';
 import BulkInvestigation from './BulkInvestigation';
@@ -157,7 +157,7 @@ ${reportHash ? `SHA-256 PROOF: ${reportHash}` : ''}
             {report && (
               <>
                 <button
-                  onClick={() => downloadMasterCasePDF(report)}
+                  onClick={() => window.open(`${API_BASE}/cases/${caseId}/pdf`, '_blank')}
                   className="px-4 py-2 text-sm font-bold bg-blue-500/10 border border-blue-500/30 text-blue-400 hover:bg-blue-500 hover:text-white rounded-lg transition-all flex items-center gap-1.5"
                 >
                   ⬇ Download PDF

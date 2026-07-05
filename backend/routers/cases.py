@@ -424,6 +424,21 @@ Generate a structured court-ready forensic report. Respond ONLY in valid JSON wi
     }
 
 
+@router.get("/{case_id}/pdf")
+async def get_case_pdf(case_id: int, db: Session = Depends(get_db)):
+    """
+    Downloads a Verifiable Master Case Dossier PDF for a given case.
+    """
+    from fastapi.responses import Response
+    from modules.report_generator import generate_case_pdf_report
+    try:
+        pdf_bytes = generate_case_pdf_report(case_id, db)
+        return Response(content=pdf_bytes, media_type="application/pdf", headers={"Content-Disposition": f"attachment; filename=AXON_Case_{case_id}.pdf"})
+    except ValueError as e:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail=str(e))
+
+
 @router.post("/{case_id}/notes")
 def add_case_note(case_id: int, req: CreateNoteRequest, db: Session = Depends(get_db)):
     case = db.query(Case).filter(Case.id == case_id).first()

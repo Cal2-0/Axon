@@ -371,3 +371,65 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
 
     doc.build(Story)
     return buffer.getvalue()
+
+def generate_case_pdf_report(case_id: int, db: Session) -> bytes:
+    from database.models import Case, InvestigationLog
+    case = db.query(Case).filter(Case.id == case_id).first()
+    if not case:
+        raise ValueError(f"Case {case_id} not found in database.")
+
+    logs = db.query(InvestigationLog).filter(InvestigationLog.case_id == case_id).order_by(InvestigationLog.risk_score.desc()).all()
+
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter)
+    styles = getSampleStyleSheet()
+    Story = []
+
+    # COVER BLOCK
+    Story.append(Paragraph("<b>AXON - Verifiable Master Case Dossier</b>", styles["Title"]))
+    Story.append(Spacer(1, 12))
+    
+    timestamp_str = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(case.created_at))
+    Story.append(Paragraph(f"<b>Case ID:</b> {case.case_number}", styles["Normal"]))
+    Story.append(Paragraph(f"<b>Case Title:</b> {case.title}", styles["Normal"]))
+    Story.append(Paragraph(f"<b>Category:</b> {case.category or 'General'}", styles["Normal"]))
+    Story.append(Paragraph(f"<b>Priority:</b> {case.priority or 'P2'}", styles["Normal"]))
+    Story.append(Paragraph(f"<b>Timestamp:</b> {timestamp_str}", styles["Normal"]))
+    Story.append(Spacer(1, 16))
+
+    # SECTION 1 - CASE SUMMARY
+    Story.append(Paragraph("<b>SECTION 1 - CASE SUMMARY</b>", styles["Heading2"]))
+    if case.description:
+        Story.append(Paragraph(case.description, styles["Normal"]))
+    Story.append(Spacer(1, 8))
+    
+    total = len(logs)
+    critical = sum(1 for l in logs if l.risk_score >= 80)
+    high = sum(1 for l in logs if 60 <= l.risk_score < 80)
+    Story.append(Paragraph(f"<b>Total Entities Analyzed:</b> {total}", styles["Normal"]))
+    Story.append(Paragraph(f"<b>Critical Risk Profiles:</b> {critical}", styles["Normal"]))
+    Story.append(Paragraph(f"<b>High Risk Profiles:</b> {high}", styles["Normal"]))
+    Story.append(Spacer(1, 12))
+
+    # SECTION 2 - ENTITY REGISTRY
+    if logs:
+        Story.append(Paragraph("<b>SECTION 2 - ENTITY REGISTRY</b>", styles["Heading2"]))
+        rows = []
+        for log in logs:
+            label = "Unknown"
+            if log.raw_data and isinstance(log.raw_data, dict):
+                identity = log.raw_data.get("identity", {})
+                if isinstance(identity, dict):
+                    label = identity.get("label", "Unknown")
+            rows.append([
+                log.entity_address[:12] + "...",
+                log.entity_type.upper(),
+                label[:20],
+                str(log.risk_score)
+            ])
+        if rows:
+            Story.append(_build_table(["Address", "Type", "Label", "Risk Score"], rows, [100, 80, 140, 60]))
+        Story.append(Spacer(1, 12))
+
+    doc.build(Story)
+    return buffer.getvalue()
