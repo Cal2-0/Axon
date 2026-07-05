@@ -540,7 +540,7 @@ export default function CaseDashboard() {
               onClick={() => setShowReport(true)}
               className="px-4 py-2 text-sm font-bold bg-gradient-to-r from-blue-600/20 to-purple-600/20 border border-blue-500/40 text-blue-400 hover:from-blue-600 hover:to-purple-600 hover:text-white rounded-lg transition-all flex items-center gap-2"
             >
-              <span>⚖️</span> Generate Master Report
+              <span>⚖️</span> Generate Master PDF & Report
             </button>
           )}
           {tabs.map(tab => (
