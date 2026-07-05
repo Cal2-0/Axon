@@ -212,11 +212,15 @@ React dashboard with all investigation views, D3 graph visualization, Netlify/Re
 - Real-World Demo Data Integration
 
 ### Phase 5 — Court-Ready Digital Forensics `100%`
-- Terminology Overhaul: Purged "AI" and subjective Risk terms for defensible forensic language.
-- Evidence Confidence & Source Attribution: Every finding lists explicit Confidence (High/Medium) and Source.
-- Environmental Metadata: Embedded PDF blocks locking in Engine version, DB date, and Node Source.
-- Etherscan Escape Hatch: Automated UTF-8 extraction of ransom/taunt messages from 0-value transactions.
-- Bulk Triage Matrix: Instant Boolean flags (Mixer/Exchange exposure) injected into bulk batch scans.
+- **Terminology Overhaul**: Purged "AI" and subjective Risk terms for defensible forensic language.
+- **Evidence Confidence & Source Attribution**: Every finding lists explicit Confidence (High/Medium) and Source.
+- **Environmental Metadata**: Embedded PDF blocks locking in Engine version, DB date, and Node Source.
+- **Etherscan Escape Hatch**: Automated UTF-8 extraction of ransom/taunt messages from 0-value transactions.
+- **Bulk Triage Matrix**: Instant Boolean flags (Mixer/Exchange exposure) injected into bulk batch scans.
+- **Verifiable Backend PDF Engine**: Completely decoupled from frontend HTML rendering, generating strictly formatted ReportLab PDFs directly from the backend for Wallet, Contract, Bulk Batch, and Master Case Dossiers.
+- **Bulk Investigation Overlap Matrix**: Injects a high-priority triage queue and a Network Connections/Similarity Matrix directly into the Bulk Batch PDF export.
+- **Case Dossier Synthesis**: Extracts and aggregates critical vulnerabilities, key findings, and manual investigator notes across all entities in a case into a single master PDF.
+- **Streamlined Dashboard UX**: Refined Case Dashboard workflows, separating direct PDF downloads from on-screen AI Data Generation.
 
 ---
 
