@@ -13,7 +13,7 @@
  * Generate and download a PDF dossier for a wallet scan result.
  * @param {Object} result - The full wallet scan result object
  */
-export async function downloadWalletPDF(result) {
+export async function downloadWalletPDF(result, forceHtml = true) {
   if (!result) return;
 
   const caseId = result.report_metadata?.report_id || `AXN-${Date.now().toString(36).toUpperCase().slice(0, 6)}-${result.identity.address.slice(2, 8).toUpperCase()}`;
@@ -493,11 +493,11 @@ export async function downloadWalletPDF(result) {
 </html>`;
 
   // ── Trigger PDF Download via hidden iframe + print ──
-  _triggerPDFDownload(html, `AXON-${caseId}-Wallet-Report`);
+  _triggerPDFDownload(html, `AXON-${caseId}-Wallet-Report`, forceHtml);
 }
 
 
-export async function downloadContractPDF(result) {
+export async function downloadContractPDF(result, forceHtml = true) {
   if (!result) return;
 
   const caseId = result.report_metadata?.report_id || `AXN-${Date.now().toString(36).toUpperCase().slice(0, 6)}-${(result.identity?.address || '000000').slice(2, 8).toUpperCase()}`;
@@ -643,10 +643,10 @@ export async function downloadContractPDF(result) {
   <div class="cls-banner" style="border-top:2px solid #fecaca;border-bottom:none;margin-top:16px">CONFIDENTIAL — AXON BLOCKCHAIN INTELLIGENCE — FOR AUTHORIZED RECIPIENTS ONLY</div>
 </div></body></html>`;
 
-  _triggerPDFDownload(html, `AXON-${caseId}-Contract-Report`);
+  _triggerPDFDownload(html, `AXON-${caseId}-Contract-Report`, forceHtml);
 }
 
-export async function downloadBulkPDF(report) {
+export async function downloadBulkPDF(report, forceHtml = true) {
   if (!report) return;
 
   const caseId = report.report_metadata?.report_id || `AXON-B-${Date.now().toString(36).toUpperCase().slice(0, 6)}-${report.bulk_batch_id.slice(0, 8)}`;
@@ -924,10 +924,10 @@ export async function downloadBulkPDF(report) {
   <div class="cls-banner" style="border-top:2px solid #fecaca;border-bottom:none;margin-top:16px">CONFIDENTIAL — AXON BLOCKCHAIN INTELLIGENCE — FOR AUTHORIZED RECIPIENTS ONLY</div>
 </div></body></html>`;
 
-  _triggerPDFDownload(html, `AXON-${caseId}-Bulk-Report`);
+  _triggerPDFDownload(html, `AXON-${caseId}-Bulk-Report`, forceHtml);
 }
 
-export async function downloadMasterCasePDF(report) {
+export async function downloadMasterCasePDF(report, forceHtml = true) {
   if (!report) return;
 
   const caseId = report.case_number || `CASE-${report.case_id}`;
@@ -1149,7 +1149,7 @@ export async function downloadMasterCasePDF(report) {
   <div class="cls-banner" style="border-top:2px solid #fecaca;border-bottom:none;margin-top:16px">CONFIDENTIAL — AXON BLOCKCHAIN INTELLIGENCE — FOR AUTHORIZED RECIPIENTS ONLY</div>
 </div></body></html>`;
 
-  _triggerPDFDownload(html, `AXON-${caseId}-Master-Report`);
+  _triggerPDFDownload(html, `AXON-${caseId}-Master-Report`, forceHtml);
 }
 
 // ─── INTERNAL HELPERS ─────────────────────────────────────────────────────────
@@ -1165,7 +1165,18 @@ function _esc(str) {
  * browser's native Save as PDF dialog. This works on all deployed sites
  * without needing any server-side PDF generation or npm packages.
  */
-function _triggerPDFDownload(html, filename) {
+function _triggerPDFDownload(html, filename, forceHtml = true) {
+  if (forceHtml) {
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${filename}.html`;
+    a.click();
+    URL.revokeObjectURL(url);
+    return;
+  }
+
   const printWindow = window.open('', '_blank');
   if (!printWindow) {
     // Popup blocked — fallback to blob download

@@ -326,8 +326,15 @@ export default function BulkInvestigation({ caseId }) {
           <button onClick={() => setReport(null)} className="px-4 py-2 bg-[#1e293b] hover:bg-gray-700 text-white rounded-lg text-xs font-bold transition-all shadow-md">
             New Batch
           </button>
-          <button onClick={async () => {
-            await downloadBulkPDF(report);
+          <button onClick={() => downloadBulkPDF(report, true)} className="px-4 py-2 bg-cyan-600/20 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-600 hover:text-white rounded-lg text-xs font-bold transition-all shadow-md mr-2">
+            Download HTML Dossier
+          </button>
+          <button onClick={() => {
+            if (report?.report_metadata?.report_id) {
+              window.open(`${API_BASE}/scan/report/${report.report_metadata.report_id}/pdf`, "_blank");
+            } else {
+              alert("Report ID not available for this batch.");
+            }
           }} className="px-4 py-2 bg-purple-600/20 text-purple-400 border border-purple-500/30 hover:bg-purple-600 hover:text-white rounded-lg text-xs font-bold transition-all shadow-md">
             Export Master PDF
           </button>

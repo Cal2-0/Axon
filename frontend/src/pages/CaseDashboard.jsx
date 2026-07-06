@@ -157,7 +157,13 @@ ${reportHash ? `SHA-256 PROOF: ${reportHash}` : ''}
             {report && (
               <>
                 <button
-                  onClick={async () => await downloadMasterCasePDF(caseData)}
+                  onClick={() => downloadMasterCasePDF(caseData, true)}
+                  className="px-4 py-2 text-sm font-bold bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500 hover:text-white rounded-lg transition-all flex items-center gap-1.5 mr-2"
+                >
+                  🌐 Download HTML Dossier
+                </button>
+                <button
+                  onClick={() => window.open(`${API_BASE}/cases/${caseId}/pdf`, '_blank')}
                   className="px-4 py-2 text-sm font-bold bg-blue-500/10 border border-blue-500/30 text-blue-400 hover:bg-blue-500 hover:text-white rounded-lg transition-all flex items-center gap-1.5"
                 >
                   ⬇ Download Master PDF
