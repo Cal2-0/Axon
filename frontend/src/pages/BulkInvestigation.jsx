@@ -151,7 +151,7 @@ export default function BulkInvestigation({ caseId }) {
   const [loading, setLoading] = useState(false);
   const [report, setReport] = useState(null);
   const [reportHash, setReportHash] = useState(null);
-  const [activeTab, setActiveTab] = useState('summary');
+  const [activeTab, setActiveTab] = useState('targets');
   const [failedChainNames, setFailedChainNames] = useState({});
   const navigate = useNavigate();
 
@@ -176,7 +176,7 @@ export default function BulkInvestigation({ caseId }) {
 
     setLoading(true);
     setReport(null);
-    setActiveTab('summary');
+    setActiveTab('targets');
 
     try {
       const targetCaseId = caseId || (inputCaseId ? parseInt(inputCaseId) : null);
@@ -297,6 +297,7 @@ export default function BulkInvestigation({ caseId }) {
   const accentColor = isRed ? 'red' : isOrange ? 'orange' : 'blue';
 
   const TABS = [
+    { id: 'targets', icon: <List className="w-4 h-4"/>, label: 'Target Grid' },
     { id: 'summary', icon: <Activity className="w-4 h-4"/>, label: 'Investigation Summary' },
     { id: 'priority', icon: <AlertTriangle className="w-4 h-4"/>, label: 'Priority Queue' },
     { id: 'graph', icon: <Share2 className="w-4 h-4"/>, label: 'Relationship Graph' },
@@ -325,38 +326,12 @@ export default function BulkInvestigation({ caseId }) {
           <button onClick={() => setReport(null)} className="px-4 py-2 bg-[#1e293b] hover:bg-gray-700 text-white rounded-lg text-xs font-bold transition-all shadow-md">
             New Batch
           </button>
-          <button onClick={() => {
-            if (report?.report_metadata?.report_id) {
-              window.open(`${API_BASE}/scan/report/${report.report_metadata.report_id}/pdf`, "_blank");
-            } else {
-              alert("Report ID not available for this batch.");
-            }
+          <button onClick={async () => {
+            await downloadBulkPDF(report);
           }} className="px-4 py-2 bg-purple-600/20 text-purple-400 border border-purple-500/30 hover:bg-purple-600 hover:text-white rounded-lg text-xs font-bold transition-all shadow-md">
             Export Master PDF
           </button>
         </div>
-      </div>
-
-      {/* Persistent Top 5 Strip */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-        {Object.entries(intelligence.top5 || {}).map(([key, list]) => {
-          if (!list || list.length === 0) return null;
-          const target = list[0];
-          const titles = {
-            highest_risk: "Highest Risk",
-            highest_volume: "Highest Volume",
-            most_active: "Most Active",
-            most_connected: "Most Connected",
-            most_valuable: "Highest Balance"
-          };
-          return (
-            <div key={key} className="bg-[#090b14] border border-[#1e293b]/60 rounded-xl p-4 shadow-md flex flex-col justify-between cursor-pointer hover:border-blue-500/50 transition-colors" onClick={() => navigate(`/wallet?address=${target.address}`)}>
-              <div className="text-[10px] text-gray-500 uppercase tracking-widest font-bold mb-2">{titles[key]}</div>
-              <div className="font-mono text-xs text-blue-400 break-all mb-1">{target.address.slice(0,12)}...{target.address.slice(-4)}</div>
-              <div className="text-sm font-bold text-white truncate">{target.label}</div>
-            </div>
-          );
-        })}
       </div>
 
       {/* Main Tabbed Interface */}
@@ -383,7 +358,55 @@ export default function BulkInvestigation({ caseId }) {
         {/* Tab Content Area */}
         <div className="p-6 md:p-8 min-h-[600px]">
           
-          {/* TAB 1: SUMMARY */}
+                    {/* TAB 0: TARGET GRID */}
+          {activeTab === 'targets' && (
+            <div className="animate-fade-in">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold text-white">Submitted Targets</h2>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {results.map((target, idx) => {
+                  const riskScore = target.data?.risk?.score || 0;
+                  const riskColor = riskScore >= 60 ? 'red' : riskScore >= 20 ? 'yellow' : 'green';
+                  const label = target.data?.identity?.label || "Unlabeled Wallet";
+                  
+                  // For the coin chip, checking if it failed in formatting or using default ETH
+                  const coinName = failedChainNames[target.address] || 'Ethereum (ETH)';
+                  
+                  return (
+                    <div key={idx} className="bg-[#05080f] border border-[#1e293b] rounded-xl p-5 hover:border-[#3b82f6]/50 transition-colors shadow-lg flex flex-col justify-between h-full">
+                      <div>
+                        <div className="flex justify-between items-start mb-3">
+                          <div className="font-mono text-[#38bdf8] text-sm break-all">{target.address.slice(0,12)}...{target.address.slice(-6)}</div>
+                          <div className={`px-2 py-1 rounded text-xs font-bold font-mono bg-${riskColor}-500/10 text-${riskColor}-500 border border-${riskColor}-500/20`}>
+                            {riskScore}/100
+                          </div>
+                        </div>
+                        
+                        <div className="text-sm text-gray-300 font-semibold mb-1 truncate">{label}</div>
+                        
+                        <div className="inline-block px-2 py-1 bg-[#1e293b]/50 border border-[#334155] rounded text-[10px] text-gray-400 font-mono uppercase tracking-widest mt-2 mb-4">
+                          {coinName}
+                        </div>
+                      </div>
+                      
+                      <button 
+                        onClick={() => {
+                          const route = `/wallet?address=${target.address}${report.case_id ? `&case_id=${report.case_id}` : ''}`;
+                          navigate(route);
+                        }}
+                        className="w-full py-2.5 bg-[#1e293b] hover:bg-blue-600 text-white rounded-lg text-xs font-bold uppercase tracking-widest transition-colors flex items-center justify-center gap-2"
+                      >
+                        <Search className="w-4 h-4"/> Deep Analyze
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+{/* TAB 1: SUMMARY */}
           {activeTab === 'summary' && (
             <div className="space-y-8 animate-fade-in">
               <div className={`p-6 rounded-2xl border ${isRed ? 'bg-red-900/10 border-red-500/30' : isOrange ? 'bg-orange-900/10 border-orange-500/30' : 'bg-blue-900/10 border-blue-500/30'} flex items-start gap-4 shadow-lg`}>

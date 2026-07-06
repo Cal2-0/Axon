@@ -167,12 +167,7 @@ export default function ContractInvestigation({ caseId }) {
   };
 
   const handleDownloadCoC = async () => {
-    if (!result || !result.report_metadata || !result.report_metadata.report_id) {
-      alert("Report ID not found. Ensure you have run a scan first.");
-      return;
-    }
-    const reportId = result.report_metadata.report_id;
-    window.open(`${API_BASE}/scan/report/${reportId}/pdf`, "_blank");
+    await downloadContractPDF(result);
   };
 
   return (
