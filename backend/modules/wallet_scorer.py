@@ -30,6 +30,7 @@ import json as json_module
 from collections import Counter
 from sqlalchemy.orm import Session
 from database.models import MaliciousWallet, ExchangeWallet, KnownMixer
+from database.db import run_sync
 from modules.ai_analyst import generate_summary, analyze_entity, generate_dual_quick_ratings
 from modules.osint_scraper import run_osint_scan
 from modules.defi_decoder import decode_defi_interactions
@@ -114,21 +115,29 @@ async def fetch_all_etherscan_data(client: httpx.AsyncClient, address: str, dept
 
         # Transaction list
         all_txs = []
-        page = 1
-        offset = 10 if depth == "quick" else 1000
-        while True:
-            tx_json = await _etherscan_get(client, f"{base}&module=account&action=txlist&address={address}&page={page}&offset={offset}&sort=desc&apikey={key}")
-            print(f"[ETHERSCAN] TXList: status={tx_json.get('status')}, message={tx_json.get('message')}")
-            
+        if depth == "quick":
+            pages_to_fetch = [1]
+            offset = 10
+        else:
+            offset = 100
+            total_txs = min(result.get("tx_count", 0), 1000)
+            num_pages = math.ceil(total_txs / offset) if total_txs > 0 else 1
+            num_pages = min(max(num_pages, 1), 10)  # max 10 pages
+            pages_to_fetch = list(range(1, num_pages + 1))
+
+        async def fetch_page(p):
+            url = f"{base}&module=account&action=txlist&address={address}&page={p}&offset={offset}&sort=desc&apikey={key}"
+            await asyncio.sleep(0.2 * p)  # simple token bucket / rate limiter spread
+            return await _etherscan_get(client, url)
+
+        page_results = await asyncio.gather(*[fetch_page(p) for p in pages_to_fetch])
+        for tx_json in page_results:
             res_list = tx_json.get("result")
             if isinstance(res_list, list) and len(res_list) > 0:
                 all_txs.extend(res_list)
-                if depth == "quick" or len(res_list) < offset or len(all_txs) >= 1000:
-                    break
-                page += 1
-                await asyncio.sleep(0.4)
-            else:
-                break
+        
+        all_txs.sort(key=lambda x: int(x.get("timeStamp", 0)), reverse=True)
+        all_txs = all_txs[:1000]
         
         import binascii
         def _extract_message(hex_input: str) -> str:
@@ -189,25 +198,26 @@ async def fetch_all_etherscan_data(client: httpx.AsyncClient, address: str, dept
     return result
 
 
-async def fetch_alchemy_tokens(client: httpx.AsyncClient, address: str) -> list:
+async def fetch_alchemy_tokens(client: httpx.AsyncClient, address: str) -> list | None:
     """Fetch ERC-20 token balances using Alchemy."""
     key = _get_alchemy_key()
     if not key:
-        return []
+        return None
     url = f"https://eth-mainnet.g.alchemy.com/v2/{key}"
     payload = {"jsonrpc": "2.0", "method": "alchemy_getTokenBalances", "params": [address, "erc20"], "id": 42}
     try:
-        res = await client.post(url, json=payload)
+        res = await client.post(url, json=payload, timeout=5.0)
         data = res.json()
         if "error" in data:
-            return []
+            return None
         tokens = [t for t in data.get("result", {}).get("tokenBalances", []) if int(t.get("tokenBalance", "0"), 16) > 0]
-        return tokens[:10]
-    except:
-        return []
+        return tokens
+    except Exception as e:
+        print(f"[FETCH_ERROR] Alchemy tokens failed: {e}")
+        return None
 
 
-async def fetch_forta_alerts(client: httpx.AsyncClient, address: str) -> int:
+async def fetch_forta_alerts(client: httpx.AsyncClient, address: str) -> int | None:
     """Fetch recent threat alerts from Forta Network."""
     url = "https://api.forta.network/graphql"
     query = """query GetAlerts($address: String!) {
@@ -219,8 +229,9 @@ async def fetch_forta_alerts(client: httpx.AsyncClient, address: str) -> int:
         res = await client.post(url, json={"query": query, "variables": {"address": address.lower()}}, timeout=5.0)
         data = res.json()
         return len(data.get("data", {}).get("alerts", {}).get("alerts", []))
-    except:
-        return 0
+    except Exception as e:
+        print(f"[FETCH_ERROR] Forta alerts failed: {e}")
+        return None
 
 
 async def fetch_eth_price(client: httpx.AsyncClient) -> float:
@@ -527,11 +538,14 @@ async def scan_wallet(address: str, db: Session, depth: str = "quick", case_id: 
     print(f"{'='*60}")
 
     # --- Cache Check ---
-    recent_log = db.query(InvestigationLog).filter(
-        InvestigationLog.entity_address.ilike(address),
-        InvestigationLog.entity_type == "wallet",
-        InvestigationLog.scan_depth == depth
-    ).order_by(InvestigationLog.scan_timestamp.desc()).first()
+    def _fetch_recent_log():
+        return db.query(InvestigationLog).filter(
+            InvestigationLog.entity_address.ilike(address),
+            InvestigationLog.entity_type == "wallet",
+            InvestigationLog.scan_depth == depth
+        ).order_by(InvestigationLog.scan_timestamp.desc()).first()
+
+    recent_log = await run_sync(_fetch_recent_log)
 
     if recent_log and recent_log.raw_data:
         wallet_type = recent_log.raw_data.get("identity", {}).get("walletType", "Unknown") if isinstance(recent_log.raw_data, dict) else "Unknown"
@@ -554,8 +568,10 @@ async def scan_wallet(address: str, db: Session, depth: str = "quick", case_id: 
                             bulk_batch_id=recent_log.bulk_batch_id,
                             raw_data=recent_log.raw_data
                         )
-                        db.add(new_log)
-                        db.commit()
+                        def _save_cache():
+                            db.add(new_log)
+                            db.commit()
+                        await run_sync(_save_cache)
                     except Exception as e:
                         print(f"[SCAN] Cache case link error: {e}")
                 return recent_log.raw_data
@@ -563,7 +579,7 @@ async def scan_wallet(address: str, db: Session, depth: str = "quick", case_id: 
             print(f"[SCAN] Bypassing cache for {address} because it was a failed scan (wallet_type = Unknown)")
 
     # ── Step 1: Load Intelligence DB (Exchange + Mixer addresses) ─
-    all_exchange_addrs, all_mixer_addrs = _load_known_addresses(db)
+    all_exchange_addrs, all_mixer_addrs = await run_sync(_load_known_addresses, db)
 
     # ── Step 2: Parallel Data Fetch ──────────────────────────────
     async with httpx.AsyncClient(timeout=45.0) as client:
@@ -582,10 +598,10 @@ async def scan_wallet(address: str, db: Session, depth: str = "quick", case_id: 
         etherscan_result = {"eth_balance": "0", "tx_count": 0, "transactions": [], "stablecoin_flows": {}, "wallet_type": "Unknown", "balance_wei": "Unknown", "tx_count_sample": 0, "first_tx_date": None, "last_tx_date": None}
     if isinstance(alchemy_tokens, Exception):
         _collection_errors.append(f"Alchemy: {type(alchemy_tokens).__name__}")
-        alchemy_tokens = []
+        alchemy_tokens = None
     if isinstance(forta_count, Exception):
         _collection_errors.append(f"Forta: {type(forta_count).__name__}")
-        forta_count = 0
+        forta_count = None
     if isinstance(eth_price, Exception):
         _collection_errors.append(f"CoinGecko: {type(eth_price).__name__}")
         eth_price = 3500.0
@@ -608,7 +624,9 @@ async def scan_wallet(address: str, db: Session, depth: str = "quick", case_id: 
     print(f"[SCAN] ETH Balance: {eth_balance_str} | TXs: {tx_count} | Forta: {forta_count}")
 
     # ── Step 3: DB Lookup ─────────────────────────────────────────
-    wallet_db = db.query(MaliciousWallet).filter(MaliciousWallet.address.ilike(address)).first()
+    def _fetch_wallet_db():
+        return db.query(MaliciousWallet).filter(MaliciousWallet.address.ilike(address)).first()
+    wallet_db = await run_sync(_fetch_wallet_db)
     print(f"[SCAN] DB match: {wallet_db.label if wallet_db else 'None'}")
 
     # ── Step 4: Parse Transaction History ────────────────────────
@@ -697,12 +715,13 @@ async def scan_wallet(address: str, db: Session, depth: str = "quick", case_id: 
     if all_counterparties:
         try:
             cp_list = list(all_counterparties)
+            def _fetch_batch(batch_list):
+                return db.query(MaliciousWallet).filter(MaliciousWallet.address.in_(batch_list)).all()
+
             # Query in batches of 500 to avoid SQL limits
             for i in range(0, len(cp_list), 500):
                 batch = cp_list[i:i+500]
-                bad_wallets = db.query(MaliciousWallet).filter(
-                    MaliciousWallet.address.in_(batch)
-                ).all()
+                bad_wallets = await run_sync(_fetch_batch, batch)
                 for w in bad_wallets:
                     known_bad_map[w.address.lower()] = w
         except Exception as e:
@@ -896,9 +915,11 @@ async def scan_wallet(address: str, db: Session, depth: str = "quick", case_id: 
             l4 = 100
             signals.append(("OFAC SANCTIONED ENTITY — legally designated threat actor", "🚫", "L4", "High", "Threat DB"))
 
-    if forta_count > 0:
+    if forta_count is not None and forta_count > 0:
         l4 = max(l4, min(forta_count * 25, 90))
         signals.append(("Forta Network: {} real-time malicious alert(s) triggered".format(forta_count), "🚨", "L4", "High", "Forta Network"))
+    elif forta_count is None:
+        signals.append(("Forta Network: API Unavailable (Partial Data)", "⚠️", "L4", "None", "Forta Network"))
 
     # Mixer interactions (full DB, not just hardcoded 7)
     mixer_interactions = sum(1 for tx in tx_history
@@ -1257,7 +1278,7 @@ Use ALL of this evidence to form a comprehensive forensic assessment. Weigh beha
             "githubMentions": osint_data.get("details", {}).get("github_mentions", []),
             "redditMentions": osint_data.get("details", {}).get("reddit_mentions", []),
             "aliases": [wallet_db.label] if wallet_db else [],
-            "walletMentions": forta_count * 2
+            "walletMentions": (forta_count * 2) if forta_count is not None else "Data Not Available"
         },
         "exchange": {
             "detected": exchange_overlap_count > 0,
@@ -1278,14 +1299,14 @@ Use ALL of this evidence to form a comprehensive forensic assessment. Weigh beha
         "graph": {
             "nodes": graph_nodes,
             "edges": graph_edges,
-            "tokens": alchemy_tokens,
+            "tokens": alchemy_tokens if alchemy_tokens is not None else [],
             "osint": osint_data,
             "defi_interactions": defi_interactions[:20] # Return top 20 decoded txs
         },
         "signals": signals,
         "holdings": {
-            "erc20_count": len(alchemy_tokens),
-            "forta_alerts": forta_count,
+            "erc20_count": len(alchemy_tokens) if alchemy_tokens is not None else "Data Not Available",
+            "forta_alerts": forta_count if forta_count is not None else "Data Not Available",
             "stablecoin_flows": etherscan_result.get("stablecoin_flows", {})
         },
         "temporal_activity": temporal_activity,
@@ -1351,7 +1372,9 @@ Use ALL of this evidence to form a comprehensive forensic assessment. Weigh beha
                 status="pending"
             )
             # Avoid inserting duplicates
-            existing = db.query(CandidateEntity).filter_by(address=address.lower()).first()
+            def _check_candidate():
+                return db.query(CandidateEntity).filter_by(address=address.lower()).first()
+            existing = await run_sync(_check_candidate)
             if not existing:
                 db.add(candidate)
 
@@ -1380,17 +1403,22 @@ Use ALL of this evidence to form a comprehensive forensic assessment. Weigh beha
                     source="axon-auto-detect",
                     confidence=final_score,
                 )
-                existing_threat = db.query(MaliciousWallet).filter_by(address=address.lower()).first()
-                if not existing_threat:
-                    db.add(new_threat)
+                def _check_and_add_threat():
+                    existing_threat = db.query(MaliciousWallet).filter_by(address=address.lower()).first()
+                    if not existing_threat:
+                        db.add(new_threat)
+                        return True
+                    return False
+                added = await run_sync(_check_and_add_threat)
+                if added:
                     print(f"[SCAN] AUTO-LEARNED: {address} added to MaliciousWallet DB (score={final_score}, class={entity_class})")
             except Exception as e:
                 print(f"[SCAN] Auto-learn error: {e}")
                 
-        db.commit()
+        await run_sync(db.commit)
     except Exception as e:
         print(f"[SCAN] Error saving to investigation_log: {e}")
-        db.rollback()
+        await run_sync(db.rollback)
 
     return response_data
 

@@ -75,13 +75,15 @@ async def _process_address(address: str, db: Session, semaphore: asyncio.Semapho
                 InvestigationLog.entity_address.ilike(address)
             ).order_by(InvestigationLog.scan_timestamp.desc()).first()
             
+            entity_type = "unknown"
             if log:
                 log.bulk_batch_id = batch_id
                 if case_id is not None:
                     log.case_id = case_id
                 db.commit()
+                entity_type = log.entity_type
                 
-            return {"address": address, "status": "success", "data": result}
+            return {"address": address, "status": "success", "data": result, "entity_type": entity_type}
         except Exception as e:
             print(f"[BULK] Error scanning {address}: {e}")
             return {"address": address, "status": "error", "error": str(e)}

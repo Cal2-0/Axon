@@ -222,6 +222,11 @@ React dashboard with all investigation views, D3 graph visualization, Netlify/Re
 - **Case Dossier Synthesis**: Extracts and aggregates critical vulnerabilities, key findings, and manual investigator notes across all entities in a case into a single master PDF.
 - **Streamlined Dashboard UX**: Refined Case Dashboard workflows, separating direct PDF downloads from on-screen AI Data Generation.
 
+### Phase 6 — Architecture & Concurrency Remediation `100%`
+- **Asynchronous Database Boundaries**: Implemented a targeted `run_sync` executor wrapper to offload blocking SQLAlchemy operations (e.g., synchronous `.in_()` batch queries) from the main `asyncio` event loop.
+- **Concurrent API Fetching**: Resolved severe pagination bottlenecks by migrating sequential Etherscan fetch loops to concurrent `asyncio.gather` requests, significantly dropping API resolution times for heavy targets.
+- **Bulk Target Visualizations**: Improved the Bulk Scanner Dashboard UI to dynamically render Tailwind risk-color mappings and properly distinguish between Entity types directly within the interface.
+
 ---
 
 <p align="center"><em>Built by Calvin Dsouza </em></p>

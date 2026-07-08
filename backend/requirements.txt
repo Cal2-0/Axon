@@ -12,3 +12,5 @@ bech32
 eth-utils
 pycryptodome
 reportlab
+aiosqlite
+asyncpg

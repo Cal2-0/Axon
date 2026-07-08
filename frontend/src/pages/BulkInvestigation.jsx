@@ -374,26 +374,44 @@ export default function BulkInvestigation({ caseId }) {
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {results.map((target, idx) => {
                   const riskScore = target.data?.risk?.score || 0;
-                  const riskColor = riskScore >= 60 ? 'red' : riskScore >= 20 ? 'yellow' : 'green';
-                  const label = target.data?.identity?.label || "Unlabeled Wallet";
+                  const riskColor = riskScore >= 80 ? 'red' : riskScore >= 60 ? 'orange' : riskScore >= 40 ? 'yellow' : 'green';
+                  const entityType = target.entity_type || (target.data?.type === 'contract' ? 'contract' : 'wallet');
+                  const defaultLabel = entityType === 'contract' ? "Unlabeled Contract" : "Unlabeled Wallet";
+                  const label = target.data?.identity?.label || defaultLabel;
                   
                   // For the coin chip, checking if it failed in formatting or using default ETH
                   const coinName = failedChainNames[target.address] || 'Ethereum (ETH)';
                   
+                  const colorMap = {
+                    red: "hover:border-red-500/50 bg-red-500/10 text-red-500 border-red-500/20",
+                    orange: "hover:border-orange-500/50 bg-orange-500/10 text-orange-500 border-orange-500/20",
+                    yellow: "hover:border-yellow-500/50 bg-yellow-500/10 text-yellow-500 border-yellow-500/20",
+                    green: "hover:border-green-500/50 bg-green-500/10 text-green-500 border-green-500/20",
+                  };
+                  
+                  const cClasses = colorMap[riskColor];
+                  const hoverBorder = cClasses.split(" ")[0];
+                  const pillClasses = cClasses.split(" ").slice(1).join(" ");
+                  
                   return (
-                    <div key={idx} className="bg-[#05080f] border border-[#1e293b] rounded-xl p-5 hover:border-[#3b82f6]/50 transition-colors shadow-lg flex flex-col justify-between h-full">
+                    <div key={idx} className={`bg-[#05080f] border border-[#1e293b] rounded-xl p-5 ${hoverBorder} transition-colors shadow-lg flex flex-col justify-between h-full`}>
                       <div>
                         <div className="flex justify-between items-start mb-3">
                           <div className="font-mono text-[#38bdf8] text-sm break-all">{target.address.slice(0,12)}...{target.address.slice(-6)}</div>
-                          <div className={`px-2 py-1 rounded text-xs font-bold font-mono bg-${riskColor}-500/10 text-${riskColor}-500 border border-${riskColor}-500/20`}>
+                          <div className={`px-2 py-1 rounded text-xs font-bold font-mono border ${pillClasses}`}>
                             {riskScore}/100
                           </div>
                         </div>
                         
                         <div className="text-sm text-gray-300 font-semibold mb-1 truncate">{label}</div>
                         
-                        <div className="inline-block px-2 py-1 bg-[#1e293b]/50 border border-[#334155] rounded text-[10px] text-gray-400 font-mono uppercase tracking-widest mt-2 mb-4">
-                          {coinName}
+                        <div className="flex gap-2 mt-2 mb-4">
+                          <div className="inline-block px-2 py-1 bg-[#1e293b]/50 border border-[#334155] rounded text-[10px] text-gray-400 font-mono uppercase tracking-widest">
+                            {coinName}
+                          </div>
+                          <div className={`inline-block px-2 py-1 bg-[#1e293b]/50 border rounded text-[10px] font-mono uppercase tracking-widest ${entityType === 'contract' ? 'text-purple-400 border-purple-500/30' : 'text-[#22d3ee] border-[#22d3ee]/30'}`}>
+                            {entityType}
+                          </div>
                         </div>
                       </div>
                       

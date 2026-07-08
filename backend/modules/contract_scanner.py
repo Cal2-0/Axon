@@ -47,6 +47,7 @@ import time
 import hashlib
 from sqlalchemy.orm import Session
 from database.models import MaliciousWallet, ExchangeWallet, KnownMixer, InvestigationLog, CandidateEntity
+from database.db import run_sync
 from modules.wallet_scorer import fetch_forta_alerts, fetch_all_etherscan_data, _load_known_addresses
 from modules.ai_analyst import generate_summary, analyze_entity, generate_dual_quick_ratings
 from modules.defi_decoder import decode_defi_interactions
@@ -362,11 +363,13 @@ async def scan_contract(address: str, db: Session, depth: str = "quick", case_id
     from database.models import InvestigationLog, CandidateEntity, VerificationReport
     
     # --- Cache Check ---
-    recent_log = db.query(InvestigationLog).filter(
-        InvestigationLog.entity_address.ilike(address),
-        InvestigationLog.entity_type == "contract",
-        InvestigationLog.scan_depth == depth
-    ).order_by(InvestigationLog.scan_timestamp.desc()).first()
+    def _fetch_recent_log():
+        return db.query(InvestigationLog).filter(
+            InvestigationLog.entity_address.ilike(address),
+            InvestigationLog.entity_type == "contract",
+            InvestigationLog.scan_depth == depth
+        ).order_by(InvestigationLog.scan_timestamp.desc()).first()
+    recent_log = await run_sync(_fetch_recent_log)
 
     if recent_log and recent_log.raw_data:
         cache_hours = 24 if depth == "quick" else 168 # 7 days
@@ -387,13 +390,15 @@ async def scan_contract(address: str, db: Session, depth: str = "quick", case_id
                         bulk_batch_id=recent_log.bulk_batch_id,
                         raw_data=recent_log.raw_data
                     )
-                    db.add(new_log)
-                    db.commit()
+                    def _save_cache():
+                        db.add(new_log)
+                        db.commit()
+                    await run_sync(_save_cache)
                 except Exception as e:
                     print(f"[SCAN] Cache case link error: {e}")
             return recent_log.raw_data
     # ── Step 0: Load Intelligence DB ─────────────────────
-    all_exchange_addrs, all_mixer_addrs = _load_known_addresses(db)
+    all_exchange_addrs, all_mixer_addrs = await run_sync(_load_known_addresses, db)
 
     # ── Step 1: Parallel Data Fetch ──────────────────────
     async with httpx.AsyncClient(timeout=45.0) as client:
@@ -413,7 +418,7 @@ async def scan_contract(address: str, db: Session, depth: str = "quick", case_id
         print(f"[CONTRACT] GoPlus failed: {goplus}")
         goplus = {}
     if isinstance(forta_count, Exception):
-        forta_count = 0
+        forta_count = None
     if isinstance(tx_data, Exception):
         tx_data = {"tx_count": 0, "transactions": []}
 
@@ -430,7 +435,9 @@ async def scan_contract(address: str, db: Session, depth: str = "quick", case_id
     source_code = etherscan.get("source", "")
 
     # DB threat intelligence lookup
-    wallet = db.query(MaliciousWallet).filter(MaliciousWallet.address.ilike(address)).first()
+    def _fetch_wallet():
+        return db.query(MaliciousWallet).filter(MaliciousWallet.address.ilike(address)).first()
+    wallet = await run_sync(_fetch_wallet)
     name_lower = name.lower()
 
     # GoPlus numeric values
@@ -475,11 +482,12 @@ async def scan_contract(address: str, db: Session, depth: str = "quick", case_id
     if all_counterparties:
         try:
             cp_list = list(all_counterparties)
+            def _fetch_batch(batch_list):
+                return db.query(MaliciousWallet).filter(MaliciousWallet.address.in_(batch_list)).all()
+
             for i in range(0, len(cp_list), 500):
                 batch = cp_list[i:i+500]
-                bad_wallets = db.query(MaliciousWallet).filter(
-                    MaliciousWallet.address.in_(batch)
-                ).all()
+                bad_wallets = await run_sync(_fetch_batch, batch)
                 for w in bad_wallets:
                     known_bad_map[w.address.lower()] = w
         except Exception as e:
@@ -633,9 +641,11 @@ async def scan_contract(address: str, db: Session, depth: str = "quick", case_id
         signals.append("Sanctioned privacy protocol keyword match")
 
     # 5d. Forta Network alerts
-    if forta_count > 0:
+    if forta_count is not None and forta_count > 0:
         axis["A5"] = max(axis["A5"], min(forta_count * 25, 90))
         signals.append(f"Forta Network: {forta_count} malicious alert(s)")
+    elif forta_count is None:
+        signals.append("Forta Network: API Unavailable (Partial Data)")
 
     # 5e. Known mixer contract from DB (not just name matching)
     if is_known_mixer:
@@ -1084,40 +1094,47 @@ Use ALL of this evidence to form a comprehensive forensic assessment."""
                 status="pending"
             )
             # Avoid inserting duplicates
-            existing = db.query(CandidateEntity).filter_by(address=address.lower()).first()
+            def _check_candidate():
+                return db.query(CandidateEntity).filter_by(address=address.lower()).first()
+            existing = await run_sync(_check_candidate)
             if not existing:
                 db.add(candidate)
 
         # ── Auto-Learn: Promote CRITICAL contract findings to MaliciousWallet DB ──
         if final_score >= 80:
             try:
-                existing_threat = db.query(MaliciousWallet).filter_by(address=address.lower()).first()
-                if not existing_threat:
-                    new_threat = MaliciousWallet(
-                        address=address.lower(),
-                        label=f"Auto-Detected Contract: {protocol_class['name'] if protocol_class['matched'] else name}",
-                        category="Malicious Contract",
-                        chain="ETH",
-                        amount_usd="Data Not Available",
-                        threat_level="CRITICAL" if final_score >= 90 else "HIGH",
-                        sanctioned=protocol_class.get("category") == "SANCTIONED",
-                        risk_score=final_score,
-                        description=f"Auto-detected by Axon contract scanner. Protocol: {protocol_class['category']}. "
-                                   f"A1={axis['A1']}, A2={axis['A2']}, A3={axis['A3']}, A4={axis['A4']}, A5={axis['A5']}. "
-                                   f"Top signals: {', '.join(signals[:3])}",
-                        tags=["auto-detected", "contract", protocol_class.get("category", "unknown").lower()],
-                        source="axon-auto-detect",
-                        confidence=final_score,
-                    )
-                    db.add(new_threat)
+                def _check_and_add_threat():
+                    existing_threat = db.query(MaliciousWallet).filter_by(address=address.lower()).first()
+                    if not existing_threat:
+                        new_threat = MaliciousWallet(
+                            address=address.lower(),
+                            label=f"Auto-Detected Contract: {protocol_class['name'] if protocol_class['matched'] else name}",
+                            category="Malicious Contract",
+                            chain="ETH",
+                            amount_usd="Data Not Available",
+                            threat_level="CRITICAL" if final_score >= 90 else "HIGH",
+                            sanctioned=protocol_class.get("category") == "SANCTIONED",
+                            risk_score=final_score,
+                            description=f"Auto-detected by Axon contract scanner. Protocol: {protocol_class['category']}. "
+                                       f"A1={axis['A1']}, A2={axis['A2']}, A3={axis['A3']}, A4={axis['A4']}, A5={axis['A5']}. "
+                                       f"Top signals: {', '.join(signals[:3])}",
+                            tags=["auto-detected", "contract", protocol_class.get("category", "unknown").lower()],
+                            source="axon-auto-detect",
+                            confidence=final_score,
+                        )
+                        db.add(new_threat)
+                        return True
+                    return False
+                added = await run_sync(_check_and_add_threat)
+                if added:
                     print(f"[CONTRACT] AUTO-LEARNED: {address} added to MaliciousWallet DB (score={final_score}, proto={protocol_class['category']})")
             except Exception as e:
                 print(f"[CONTRACT] Auto-learn error: {e}")
                 
-        db.commit()
+        await run_sync(db.commit)
     except Exception as e:
         print(f"[SCAN] Error saving to investigation_log: {e}")
-        db.rollback()
+        await run_sync(db.rollback)
 
     return response_data
 

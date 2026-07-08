@@ -32,6 +32,14 @@ def get_db():
     finally:
         db.close()
 
+import asyncio
+from functools import partial
+
+async def run_sync(func, *args, **kwargs):
+    """Run a synchronous function in the asyncio threadpool executor."""
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(None, partial(func, *args, **kwargs))
+
 
 def init_db():
     """Create all tables if they don't exist."""
