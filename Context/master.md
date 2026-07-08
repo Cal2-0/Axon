@@ -126,3 +126,8 @@ Any development, maintenance, or feature expansion on AXON must adhere to the fo
 
 ## 8. Real-World Asset Testing Bank
 AXON includes a built-in demo dataset (`DemoSamples.jsx`) populated with historical, real-world threats for algorithm testing, spanning from **Lazarus Group** and **Tornado Cash Routers** to **Binance Hot Wallets** and **Benign Whales (vitalik.eth)**. It also includes unsupported formats (Litecoin, Dash) to explicitly demonstrate AXON's failure-handling and identification circuit breakers in a safe environment.
+
+---
+
+## 9. Technical Deep-Dive Documentation
+For an exhaustive, step-by-step breakdown of how each core engine operates (Wallet Analysis, Contract Auditing, OSINT Sweeps, Bulk Cases, Report Hashes, and the Dual-Mode AI), please reference the [AXON Deep Technical Explainer](./AXON_Deep_Technical_Explainer.md) file. This supplemental master document serves as the ultimate engineering guide for the internal state of the 5-Stage Mathematical Engine.

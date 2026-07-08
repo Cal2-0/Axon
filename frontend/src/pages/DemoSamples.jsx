@@ -449,7 +449,7 @@ export default function DemoSamples() {
   };
 
   const handleAnalyze = (type, address) => {
-    if (type.toLowerCase() === 'wallet' || activeTab === "Bitcoin" || activeTab === "Other Chains") {
+    if (type.toLowerCase() === 'wallet' || activeTab !== "Ethereum Wallets") {
       navigate(`/wallet?address=${address}`);
     } else {
       navigate(`/contract?address=${address}`);
