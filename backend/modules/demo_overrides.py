@@ -1,27 +1,38 @@
 DEMO_OVERRIDES = {
-    # CRITICAL
+    # ETH
+    "0xc8a65fadf0e0ddaf421f28feab69bf6e2e589963": {"expectedRisk": "CRITICAL", "name": "Poly Network Exploiter", "type": "Wallet"},
+    "0xae2fc483527b8ef99eb5d9b44875f005ba1fae13": {"expectedRisk": "HIGH", "name": "Jaredfromsubway.eth", "type": "Wallet"},
+    "0x8575b2dbbd7608a1629adaa952aba74bcc5381bf": {"expectedRisk": "MEDIUM", "name": "Pranksy (NFT Whale)", "type": "Wallet"},
+    "0x28c6c06298d514db089934071355e5743bf21d60": {"expectedRisk": "LOW", "name": "Binance Hot Wallet 14", "type": "Wallet"},
+    "0xde0b295669a9fd93d5f28d9ec85e40f4cb697bae": {"expectedRisk": "LOW", "name": "Ethereum Foundation", "type": "Wallet"},
+    "0x0248f752802b2cfb4373cc0c3bc3964429385c26": {"expectedRisk": "CRITICAL", "name": "Wintermute Exploiter", "type": "Wallet"},
     "0x56d8b635a7c88fd1104d23d632af40c1c3aac4e3": {"expectedRisk": "CRITICAL", "name": "Nomad Bridge Exploiter", "type": "Wallet"},
-    "0x75a77dbdeab6e384d0e5cae2b70072d56ee140e6": {"expectedRisk": "CRITICAL", "name": "Lazarus Group Sub-wallet", "type": "Wallet"},
-    "1ez69snzzmepmzx3wpezmktrcbf2gpnq55": {"expectedRisk": "CRITICAL", "name": "Silk Road Hacker", "type": "Wallet"},
+    
+    # Contracts
+    "0xdac17f958d2ee523a2206206994597c13d831ec7": {"expectedRisk": "LOW", "name": "USDT Token Contract", "type": "Contract"},
+    "0x7a250d5630b4cf539739df2c5dacb4c659f2488d": {"expectedRisk": "LOW", "name": "Uniswap V2 Router", "type": "Contract"},
+    "0x1111111254eeb25477b68fb85ed929f73a960582": {"expectedRisk": "MEDIUM", "name": "1inch v5 Aggregator", "type": "Contract"},
+    "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599": {"expectedRisk": "LOW", "name": "Wrapped BTC", "type": "Contract"},
+    
+    # BTC
+    "1feexv6bahbrozp9lsqcw86wxu945h39y": {"expectedRisk": "CRITICAL", "name": "Mt Gox Hacker (Historic)", "type": "Wallet"},
+    "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh": {"expectedRisk": "LOW", "name": "Binance Hot Wallet", "type": "Wallet"},
+    "34xp4vrocgjym3xr7ycvpfhocnxv4twseo": {"expectedRisk": "LOW", "name": "Binance Cold Storage", "type": "Wallet"},
+    "1p5zedwtktfgxqjzphgwpujt6ndx2j83a3": {"expectedRisk": "MEDIUM", "name": "Legacy Mega Whale", "type": "Wallet"},
+    
+    # SOL
     "9wzdxwbbmcg8zxcbjhte5ptxe7xht4flbcgt9m4p2sqj": {"expectedRisk": "CRITICAL", "name": "FTX Drainer (SOL)", "type": "Wallet"},
+    "jup6lkbzbjs1jkkwapdh67y95y1gycaxn3rdz16ej": {"expectedRisk": "LOW", "name": "Jupiter Aggregator", "type": "Contract"},
+    "tokenkegqfezyinwajbnbgkpfxcwubvf9ss623vq5da": {"expectedRisk": "LOW", "name": "SPL Token Program", "type": "Contract"},
+    "epjfwdd5aufqssqem2qn1xzybapc8g4weggkzwytdt1v": {"expectedRisk": "LOW", "name": "USDC Coin", "type": "Contract"},
+    
+    # TRON
+    "tr7nhqjekqxgtci8q8zy4pl8otszgjlj6t": {"expectedRisk": "LOW", "name": "Tether (USDT) Contract", "type": "Contract"},
+    "tn3w4h6rk2ce4vx9ynfqhwkennhjoxb3m9": {"expectedRisk": "LOW", "name": "Binance Hot Wallet", "type": "Wallet"},
+    "taun6fwrnwwmaeqycckffc7wymbas6cbix": {"expectedRisk": "LOW", "name": "Binance Cold", "type": "Wallet"},
+    "te2rzosv3wfk99w6j9unnz4vlfxyoxvrwp": {"expectedRisk": "LOW", "name": "Justin Sun Wallet", "type": "Wallet"},
 
-    # HIGH
-    "0x27182842e098f60e3d576794a5bffb0777e025d3": {"expectedRisk": "HIGH", "name": "Euler Finance Exploiter", "type": "Contract"},
-    "0x11111112542d85b3ef69ae05771c2dccff4faa26": {"expectedRisk": "HIGH", "name": "Flash Loan Arbitrage Bot", "type": "Wallet"},
-    "tdqsqm7zfu55g4bfz2vjh9o2m74cqr56ky": {"expectedRisk": "HIGH", "name": "Offshore High-Risk Exchange", "type": "Wallet"},
-    "34xp4vrocgjym3xr7ycvpfhocnxv4twseo": {"expectedRisk": "HIGH", "name": "Darknet Mixer Associate", "type": "Wallet"},
-
-    # MEDIUM
-    "0x000000000000084e91743124a982076c59f10084": {"expectedRisk": "MEDIUM", "name": "MEV Bot", "type": "Wallet"},
-    "0x888888888889c00c67689029d7856aac106a6c11": {"expectedRisk": "MEDIUM", "name": "Retail Wallet (Mixer Exposure)", "type": "Wallet"},
-    "tokenkegqfezyinwajbnbgkpfxcwubvf9ss623vq5da": {"expectedRisk": "MEDIUM", "name": "Solana Unverified DApp", "type": "Contract"},
-    "1a1zp1ep5qgefi2dmptftl5slmv7divfna": {"expectedRisk": "MEDIUM", "name": "Genesis Block", "type": "Wallet"},
-
-    # LOW
-    "0xd8da6bf26964af9d7eed9e03e53415d37aa96045": {"expectedRisk": "LOW", "name": "Vitalik Buterin", "type": "Wallet"},
-    "0x71660c4005ba85c37ccec55d0c4493e66fe775d3": {"expectedRisk": "LOW", "name": "Coinbase Hot Wallet", "type": "Wallet"},
-    "te2rzosv3wfk99w6j9unnz4vlfxyoxvrwp": {"expectedRisk": "LOW", "name": "Justin Sun", "type": "Wallet"},
-    "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh": {"expectedRisk": "LOW", "name": "Binance Cold Storage", "type": "Wallet"},
+    # Generics / Overrides for Testing
     "0xcbea92e4da7e61877107b1294fd2515b08425f44": {"expectedRisk": "CRITICAL", "name": "Gen CRITICAL 0", "type": "Wallet"},
     "0xcff443dc697203f1654b222f04c25b8de1d070b8": {"expectedRisk": "CRITICAL", "name": "Gen CRITICAL 1", "type": "Wallet"},
     "5dgk7njayem9mj1l86yehxnggl93fkyqvd6mrqptwatb": {"expectedRisk": "CRITICAL", "name": "Gen CRITICAL 2", "type": "Wallet"},

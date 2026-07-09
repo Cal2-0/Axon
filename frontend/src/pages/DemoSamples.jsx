@@ -64,60 +64,32 @@ const DATASETS = {
   ],
   "Ethereum Contracts": [
     {
-      "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-      "name": "USDC Token Contract",
+      "address": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+      "name": "USDT Token Contract",
       "type": "Contract",
       "expectedRisk": "LOW",
       "description": "Core DeFi infrastructure. Tests static analysis on massive verified proxies."
     },
     {
-      "address": "0xE592427A0AEce92De3Edee1F18E0157C05861564",
-      "name": "Uniswap V3 Router",
+      "address": "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
+      "name": "Uniswap V2 Router",
       "type": "Contract",
       "expectedRisk": "LOW",
       "description": "Heavily used DEX router. Good for topology tests."
     },
     {
-      "address": "0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D",
-      "name": "Bored Ape Yacht Club",
-      "type": "Contract",
-      "expectedRisk": "LOW",
-      "description": "Blue-chip NFT contract to test ERC721 parsing."
-    },
-    {
-      "address": "0x958892b4a0512b28Faa3c30ea50814f1dceCe1F3",
-      "name": "MakerDAO (MKR) Token",
-      "type": "Contract",
-      "expectedRisk": "LOW",
-      "description": "Classic DAO governance token."
-    },
-    {
-      "address": "0xcEe284F754E854890e311e3280bBc73E0Fd53A04",
-      "name": "Arbitrum ERC20 Bridge",
+      "address": "0x1111111254EEB25477B68fb85Ed929f73A960582",
+      "name": "1inch v5 Aggregator",
       "type": "Contract",
       "expectedRisk": "MEDIUM",
-      "description": "Massive value locked, complex access control. Targets bridge heuristic tests."
+      "description": "Complex router with intricate call paths."
     },
     {
-      "address": "0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2",
-      "name": "Aave V3 Pool",
+      "address": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+      "name": "Wrapped BTC",
       "type": "Contract",
       "expectedRisk": "LOW",
-      "description": "Lending protocol core contract."
-    },
-    {
-      "address": "0x3E5c63644E683549055b9Be8653de26E0B4CD36E",
-      "name": "Gnosis Safe Proxy",
-      "type": "Contract",
-      "expectedRisk": "MEDIUM",
-      "description": "Multisig testing. Often used by both legitimate treasuries and hackers."
-    },
-    {
-      "address": "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
-      "name": "Lido stETH",
-      "type": "Contract",
-      "expectedRisk": "LOW",
-      "description": "Liquid staking protocol proxy."
+      "description": "Cross-chain wrapped asset."
     }
   ],
   "Bitcoin": [
@@ -129,53 +101,25 @@ const DATASETS = {
       "description": "Ancient legacy address holding ~79,956 BTC tied to the Mt. Gox theft."
     },
     {
-      "address": "bc1qa5wkgaew2dkv56kfvj49j0av5nml45x9ek9hz6",
-      "name": "Silk Road DOJ Seizure",
-      "type": "Wallet",
-      "expectedRisk": "HIGH",
-      "description": "Government seized funds. High volume movement tests."
-    },
-    {
       "address": "34xp4vRoCGJym3xR7yCVPFHoCNxv4Twseo",
       "name": "Binance Cold Storage",
       "type": "Wallet",
       "expectedRisk": "LOW",
-      "description": "Massive P2SH cold wallet."
-    },
-    {
-      "address": "bc1ql49ydapnjafl5t2cp9zpt76fytz855etg0c872",
-      "name": "Bitfinex Hack Associated",
-      "type": "Wallet",
-      "expectedRisk": "CRITICAL",
-      "description": "Stolen funds staging wallet."
+      "description": "Massive P2SH cold wallet with immense volume."
     },
     {
       "address": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
       "name": "Binance Hot Wallet",
       "type": "Wallet",
       "expectedRisk": "LOW",
-      "description": "Active SegWit exchange wallet."
+      "description": "Active SegWit exchange wallet with constant txs."
     },
     {
       "address": "1P5ZEDWTKTFGxQjZphgWPUJt6NDX2j83a3",
-      "name": "Unknown Mega Whale",
+      "name": "Legacy Mega Whale",
       "type": "Wallet",
       "expectedRisk": "MEDIUM",
-      "description": "Dormant legacy address that suddenly moved large amounts."
-    },
-    {
-      "address": "bc1p8vt8ddx2j5tw9pxmthc4v88402g0v36g6pztnh8q7g43m8q2v5as0s79td",
-      "name": "Taproot Whale",
-      "type": "Wallet",
-      "expectedRisk": "LOW",
-      "description": "Modern Taproot usage testing."
-    },
-    {
-      "address": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
-      "name": "Satoshi Genesis",
-      "type": "Wallet",
-      "expectedRisk": "MEDIUM",
-      "description": "Receives constant dusting attacks."
+      "description": "Legacy address that occasionally moves large amounts."
     }
   ],
   "Solana": [
@@ -194,27 +138,6 @@ const DATASETS = {
       "description": "Major DeFi program on Solana."
     },
     {
-      "address": "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",
-      "name": "Marinade Staked SOL",
-      "type": "Contract",
-      "expectedRisk": "LOW",
-      "description": "Liquid staking token mint."
-    },
-    {
-      "address": "5tzFkiKscXHK5ZXCGbXZcmAzB6t3V3dBCM8zR5vNq2sY",
-      "name": "Raydium Liquidity Pool",
-      "type": "Contract",
-      "expectedRisk": "MEDIUM",
-      "description": "High frequency trading and MEV interaction testing."
-    },
-    {
-      "address": "5Q544fKrCoe6n8zzkR8L47LdZ6zQh6f3qB8s1UjL4bF",
-      "name": "Binance Hot Wallet",
-      "type": "Wallet",
-      "expectedRisk": "LOW",
-      "description": "Major exchange liquidity."
-    },
-    {
       "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
       "name": "SPL Token Program",
       "type": "Contract",
@@ -222,27 +145,34 @@ const DATASETS = {
       "description": "System program testing."
     },
     {
-      "address": "HxRELUQfvvjToVbacjz9YQ8H9qU6x9yM3F4hB2F6b72Q",
-      "name": "Wintermute Trading",
-      "type": "Wallet",
-      "expectedRisk": "MEDIUM",
-      "description": "High volume market maker."
-    },
-    {
-      "address": "3yFwqXBkV8Nm7tXF9rQ5z7qP6E5tG8yF9ZJ5bK4wZ8cT",
-      "name": "High Frequency Trader",
-      "type": "Wallet",
-      "expectedRisk": "HIGH",
-      "description": "Potential wash trading or wash bot."
+      "address": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      "name": "USDC Coin",
+      "type": "Contract",
+      "expectedRisk": "LOW",
+      "description": "Major stablecoin contract on Solana."
     }
   ],
   "TRON": [
     {
-      "address": "TQn9Y2khEsLJW1ChVWFMSMeRDow5KcbLSE",
+      "address": "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
       "name": "Tether (USDT) Contract",
       "type": "Contract",
       "expectedRisk": "LOW",
       "description": "The most active contract on TRON."
+    },
+    {
+      "address": "TN3W4H6rK2ce4vX9YnFQHwKENnHjoxb3m9",
+      "name": "Binance Hot Wallet",
+      "type": "Wallet",
+      "expectedRisk": "LOW",
+      "description": "High volume exchange wallet."
+    },
+    {
+      "address": "TAUN6FwrnwwmaEqYcckffC7wYmbaS6cBiX",
+      "name": "Binance Cold",
+      "type": "Wallet",
+      "expectedRisk": "LOW",
+      "description": "Large exchange storage."
     },
     {
       "address": "TE2RzoSV3wFK99w6J9UnnZ4vLfXYoxvRwP",
@@ -250,48 +180,6 @@ const DATASETS = {
       "type": "Wallet",
       "expectedRisk": "LOW",
       "description": "High net worth, public figure."
-    },
-    {
-      "address": "T9yD14Nj9j7xAB4dbGeiX9h8unkKzP9v3U",
-      "name": "Binance Hot Wallet",
-      "type": "Wallet",
-      "expectedRisk": "LOW",
-      "description": "Exchange testing."
-    },
-    {
-      "address": "THPvaUhoh2Qn2y9THCZML3H815jhZMo5iF",
-      "name": "SunSwap V2 Router",
-      "type": "Contract",
-      "expectedRisk": "LOW",
-      "description": "DEX testing."
-    },
-    {
-      "address": "TDqsqm7ZfU55g4bFz2VjH9o2m74CqR56kY",
-      "name": "Offshore/High-Risk Casino",
-      "type": "Wallet",
-      "expectedRisk": "HIGH",
-      "description": "Suspected gambling or unregulated mixing."
-    },
-    {
-      "address": "TWeA6X9vYwZb6rVz4wXz9XbZb6rVz4wXz9",
-      "name": "Malicious Phishing",
-      "type": "Contract",
-      "expectedRisk": "CRITICAL",
-      "description": "Fake USDT approval scam contract."
-    },
-    {
-      "address": "TV6MuMXfmLbBqPZvBHdwFsDnQeVfnmiuSi",
-      "name": "Huobi Cold Storage",
-      "type": "Wallet",
-      "expectedRisk": "LOW",
-      "description": "Exchange cold wallet."
-    },
-    {
-      "address": "TYDzsYUEpvnYw9h5GkL9Z2nZ3pZQ8Z4XvQ",
-      "name": "High Volume OTC Desk",
-      "type": "Wallet",
-      "expectedRisk": "MEDIUM",
-      "description": "Unregistered OTC trading behavior."
     }
   ],
   "Other Chains": [
@@ -389,55 +277,42 @@ const DATASETS = {
   ]
 };
 
-const STORY_1 = `OPERATION: MIDNIGHT SWEEP
-=========================
-
-Analysts have intercepted suspicious cross-chain movements targeting DeFi liquidity pools. We suspect threat actors are utilizing privacy mixers to launder exploited funds.
-
-Please run these 4 targets through the Bulk Scanner immediately to assess the threat level and classify the entities before the funds are dispersed.
-
+const STORY_1 = `OP: MIDNIGHT SWEEP
+Targeting DeFi privacy mixers. Evaluate threat level.
 Targets:
-0xde0B295669a9FD93d5F28D9Ec85E40f4cb697BAe (Foundation)
-0x8575B2Dbbd7608A1629aDAA952abA74Bcc5381BF (NFT Whale)
-0xC8a65Fadf0e0dDAf421F28FEAb69Bf6E2E589963 (Exploiter)`;
+0xde0B295669a9FD93d5F28D9Ec85E40f4cb697BAe
+0xC8a65Fadf0e0dDAf421F28FEAb69Bf6E2E589963`;
 
-const STORY_2 = `MULTI-CHAIN WHALE WATCHING: ROUTINE CHECK
-=========================================
-
-During routine intelligence gathering, we identified massive addresses shifting liquidity across exchange infrastructure and decentralized aggregators.
-
-We need to verify if these are simply legitimate whale movements or if there is malicious intent hidden in the transaction topology. Process these through the Bulk Scanner to test the engine's chain-agnostic capabilities.
-
+const STORY_2 = `OP: WHALE WATCHING
+Assess legitimate vs malicious topology.
 Targets:
-0x28C6c06298d514Db089934071355E5743bf21d60 (Exchange)
-0xE592427A0AEce92De3Edee1F18E0157C05861564 (Contract)
-1P5ZEDWTKTFGxQjZphgWPUJt6NDX2j83a3 (Whale)
-0xde0B295669a9FD93d5F28D9Ec85E40f4cb697BAe (User)`;
+0x28C6c06298d514Db089934071355E5743bf21d60
+0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D`;
 
-const STORY_3 = `CROSS-CHAIN EVALUATION
-======================
-
-Verify multi-chain identity resolution across these distinct ecosystem networks.
-
+const STORY_3 = `CROSS-CHAIN EVAL
+Multi-chain attribution testing.
 Targets:
-0xae2Fc483527B8EF99EB5D9B44875F005ba1FaE13 (ETH)
-bc1ql49ydapnjafl5t2cp9zpt76fytz855etg0c872 (BTC)
-JUP6LkbZbjS1jKKwapdH67y95Y1GyCAXN3Rdz16eJ (SOL)
-TDqsqm7ZfU55g4bFz2VjH9o2m74CqR56kY (TRX)
-rEb8TK3gBgk5auZkwc6sHnwrGVJH8DuaLh (XRP)`;
+0xae2Fc483527B8EF99EB5D9B44875F005ba1FaE13
+bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh
+TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t`;
 
-const STORY_4 = `SIMULATED EXPLOIT INVESTIGATION
-===============================
-
-Trace forensic mapping capabilities in an active incident. Evaluate origin, suspect, pathway, and destination.
-
+const STORY_4 = `EXPLOIT SIMULATION
+Trace forensic paths.
 Targets:
-0x267be1C1D684F78cb4F6a176C4911b741E4Ffdc0 (Origin)
-0x0248f752802b2cfb4373cc0c3bc3964429385c26 (Suspect)
-0xcEe284F754E854890e311e3280bBc73E0Fd53A04 (Pathway)
-0x888888888889c00c67689029d7856aac106a6c11 (Intermediary)
-0xBC4CA0EdA7647A8aB7C2061c2E118A18a936f13D (Victim)
-0x8589427373D6D84E98730D7795D8f6f8731FDA16 (Destination)`;
+0x0248f752802b2cfb4373cc0c3bc3964429385c26
+0x1111111254EEB25477B68fb85Ed929f73A960582`;
+
+const STORY_5 = `EXCHANGE LAUNDERING
+Tracking cash out paths.
+Targets:
+TN3W4H6rK2ce4vX9YnFQHwKENnHjoxb3m9
+bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh`;
+
+const STORY_6 = `CONTRACT ANALYSIS
+Reviewing high-volume DeFi programs.
+Targets:
+0xdAC17F958D2ee523a2206206994597C13D831ec7
+TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`;
 
 export default function DemoSamples() {
   const navigate = useNavigate();
@@ -449,10 +324,10 @@ export default function DemoSamples() {
   };
 
   const handleAnalyze = (type, address) => {
-    if (type.toLowerCase() === 'wallet' || activeTab !== "Ethereum Wallets") {
-      navigate(`/wallet?address=${address}`);
-    } else {
+    if (type.toLowerCase() === 'contract') {
       navigate(`/contract?address=${address}`);
+    } else {
+      navigate(`/wallet?address=${address}`);
     }
   };
 
@@ -488,12 +363,14 @@ export default function DemoSamples() {
           <Layers className="w-6 h-6 text-purple-400" />
           Bulk Scan Scenarios
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[
             { title: "Triage Assessment", text: STORY_1, icon: <ShieldAlert className="w-5 h-5 text-red-400" /> },
             { title: "Mixed Role Detection", text: STORY_2, icon: <RefreshCw className="w-5 h-5 text-blue-400" /> },
             { title: "Cross-Chain Eval", text: STORY_3, icon: <Cpu className="w-5 h-5 text-purple-400" /> },
-            { title: "Simulated Exploit", text: STORY_4, icon: <Zap className="w-5 h-5 text-yellow-400" /> }
+            { title: "Simulated Exploit", text: STORY_4, icon: <Zap className="w-5 h-5 text-yellow-400" /> },
+            { title: "Exchange Laundering", text: STORY_5, icon: <Activity className="w-5 h-5 text-green-400" /> },
+            { title: "Contract Analysis", text: STORY_6, icon: <Layers className="w-5 h-5 text-orange-400" /> }
           ].map((story, i) => (
             <div key={i} className="bg-[#0f1423] hover:bg-[#13192b] border border-[#1e293b] hover:border-blue-500/30 transition-all rounded-2xl p-6 relative group flex flex-col h-full shadow-lg">
               <div className="flex justify-between items-center mb-4">
