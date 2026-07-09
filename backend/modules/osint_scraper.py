@@ -1,3 +1,6 @@
+import warnings
+warnings.filterwarnings("ignore", category=RuntimeWarning, module="duckduckgo_search")
+
 import asyncio
 import httpx
 from duckduckgo_search import DDGS
