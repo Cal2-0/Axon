@@ -13,6 +13,7 @@ import Logs from './pages/Logs';
 import DemoSamples from './pages/DemoSamples';
 import VerifyReport from './pages/VerifyReport';
 import { checkApiHealth } from './api/axon';
+import ErrorBoundary from './components/ErrorBoundary';
 // ─── AXON LOGO COMPONENT (Minimal Bond-Style X) ─────────────────────────────
 function AxonLogo({ size = 36 }) {
   return (
@@ -94,9 +95,6 @@ function MetricsBar() {
         <span>{new Date().toLocaleTimeString()}</span>
       </div>
     </div>
-  );
-}
-
 // ─── MAIN APP ────────────────────────────────────────────────────────────────
 function AppLayout() {
   const location = useLocation();
@@ -275,23 +273,25 @@ function AppLayout() {
 
         {/* Page Content */}
         <main className="flex-1 overflow-y-auto p-8 relative">
-          <Routes>
-            <Route path="/" element={<Navigate to="/wallet" replace />} />
-            <Route path="/overview" element={<Overview />} />
-            <Route path="/demo" element={<DemoSamples />} />
-            <Route path="/wallet" element={<WalletInvestigation />} />
-            <Route path="/contract" element={<ContractInvestigation />} />
-            <Route path="/bulk" element={<BulkInvestigation />} />
-            <Route path="/logs" element={<Logs />} />
-            <Route path="/verify" element={<VerifyReport />} />
-            <Route path="/intel" element={<IntelligenceDatabases />} />
-            <Route path="/address-intelligence" element={<AddressIntelligence />} />
-            <Route path="/cases" element={<Cases />} />
-            <Route path="/cases/:caseId" element={<CaseDashboard />} />
-            {/* Legacy redirects */}
-            <Route path="/graph" element={<Navigate to="/wallet" replace />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <ErrorBoundary>
+            <Routes>
+              <Route path="/" element={<Navigate to="/wallet" replace />} />
+              <Route path="/overview" element={<Overview />} />
+              <Route path="/demo" element={<DemoSamples />} />
+              <Route path="/wallet" element={<WalletInvestigation />} />
+              <Route path="/contract" element={<ContractInvestigation />} />
+              <Route path="/bulk" element={<BulkInvestigation />} />
+              <Route path="/logs" element={<Logs />} />
+              <Route path="/verify" element={<VerifyReport />} />
+              <Route path="/intel" element={<IntelligenceDatabases />} />
+              <Route path="/address-intelligence" element={<AddressIntelligence />} />
+              <Route path="/cases" element={<Cases />} />
+              <Route path="/cases/:caseId" element={<CaseDashboard />} />
+              {/* Legacy redirects */}
+              <Route path="/graph" element={<Navigate to="/wallet" replace />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </ErrorBoundary>
         </main>
       </div>
     </div>

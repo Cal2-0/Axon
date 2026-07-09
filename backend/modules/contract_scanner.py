@@ -326,9 +326,9 @@ async def fetch_etherscan_source(client: httpx.AsyncClient, address: str) -> dic
 import os
 import random
 
-async def fetch_goplus_security(client: httpx.AsyncClient, address: str) -> dict:
+async def fetch_goplus_security(client: httpx.AsyncClient, address: str, chain_id: str = "1") -> dict:
     """Fetch live token security indicators from GoPlus Labs."""
-    url = f"https://api.gopluslabs.io/api/v1/token_security/1?contract_addresses={address.lower()}"
+    url = f"https://api.gopluslabs.io/api/v1/token_security/{chain_id}?contract_addresses={address.lower()}"
     headers = {"User-Agent": "Axon/2.0"}
     
     goplus_keys_env = os.getenv("GOPLUS_API_KEY", "")
@@ -354,7 +354,7 @@ async def fetch_goplus_security(client: httpx.AsyncClient, address: str) -> dict
 # MAIN SCAN FUNCTION
 # ═══════════════════════════════════════════════════════════
 
-async def scan_contract(address: str, db: Session, depth: str = "quick", case_id: int = None) -> dict:
+async def scan_contract(address: str, db: Session, depth: str = "quick", case_id: int = None, chain_id: str = "1") -> dict:
     """
     Full forensic contract scan using the 5-Axis Behavioral Engine v3.0.
     Returns a structured dict consumed by the frontend.
@@ -404,7 +404,7 @@ async def scan_contract(address: str, db: Session, depth: str = "quick", case_id
     async with httpx.AsyncClient(timeout=45.0) as client:
         etherscan, goplus, forta_count, tx_data = await asyncio.gather(
             fetch_etherscan_source(client, address),
-            fetch_goplus_security(client, address),
+            fetch_goplus_security(client, address, chain_id),
             fetch_forta_alerts(client, address),
             fetch_all_etherscan_data(client, address, depth=depth),
             return_exceptions=True

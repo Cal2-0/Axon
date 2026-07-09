@@ -7,16 +7,20 @@ from typing import List, Dict, Any, Optional
 # --- Requests ---
 
 class ScanRequest(BaseModel):
-    address: str
-    depth: Optional[str] = "quick"  # "quick" or "deep"
+    address: str = Field(..., pattern=r"^(0x[a-fA-F0-9]{40}|[13][a-km-zA-HJ-NP-Z1-9]{25,34}|bc1[a-zA-HJ-NP-Z0-9]{39,59}|T[a-zA-Z0-9]{33}|[1-9A-HJ-NP-Za-km-z]{32,44})$", description="Valid EVM, BTC, SOL, or TRON address")
+    chain_id: Optional[str] = Field("1", description="Target Chain ID (default 1 for Ethereum)")
+    depth: Optional[str] = Field("quick", pattern="^(quick|deep)$")
     case_id: Optional[int] = None
+    examiner_name: Optional[str] = Field("AXON Automated Engine", description="Name of the forensic examiner")
+    agency: Optional[str] = Field("", description="Agency or Organization")
+    case_reference: Optional[str] = Field("", description="External case reference number")
 
 class BulkScanRequest(BaseModel):
     addresses: List[str]
     case_id: Optional[int] = None
 
 class DeepDiveRequest(BaseModel):
-    entity_type: str = "wallet"
+    entity_type: str = Field("wallet", pattern="^(wallet|contract)$")
     evidence_context: str
 
 # --- Responses (Matching Frontend DEMO_PROFILES structure) ---

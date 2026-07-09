@@ -11,6 +11,10 @@ from modules.cross_chain import get_cross_chain_holdings, detect_address_type
 from modules.bulk_scanner import run_bulk_scan
 from modules.ai_analyst import generate_dual_analysis
 import asyncio
+from fastapi import Request
+
+# Import the limiter initialized in limiter.py
+from limiter import limiter
 
 router = APIRouter()
 
@@ -28,7 +32,8 @@ async def run_deep_scan_background(address: str, entity_type: str):
         db.close()
 
 @router.post("/wallet")
-async def post_scan_wallet(req: ScanRequest, db: Session = Depends(get_db)):
+@limiter.limit("15/minute")
+async def post_scan_wallet(request: Request, req: ScanRequest, db: Session = Depends(get_db)):
     native_info = detect_address_type(req.address)
     chain_type = native_info["type"]
     
@@ -42,26 +47,41 @@ async def post_scan_wallet(req: ScanRequest, db: Session = Depends(get_db)):
         from modules.tron_scorer import scan_tron_wallet
         return await scan_tron_wallet(req.address, db, depth=req.depth, case_id=req.case_id)
     elif chain_type == "EVM":
+        kwargs = {
+            "depth": req.depth,
+            "case_id": req.case_id,
+            "examiner_name": req.examiner_name,
+            "agency": req.agency,
+            "case_reference": req.case_reference
+        }
         if req.depth == "deep":
-            return await scan_wallet(req.address, db, depth="deep", case_id=req.case_id)
-        return await scan_wallet(req.address, db, depth="quick", case_id=req.case_id)
+            return await scan_wallet(req.address, db, **kwargs)
+        return await scan_wallet(req.address, db, **kwargs)
     else:
         from fastapi import HTTPException
         raise HTTPException(status_code=400, detail="Unsupported Chain. Only EVM, BTC, SOLANA, and TRON are currently supported for deep investigations.")
 
 @router.post("/contract")
-async def post_scan_contract(req: ScanRequest, db: Session = Depends(get_db)):
+@limiter.limit("15/minute")
+async def post_scan_contract(request: Request, req: ScanRequest, db: Session = Depends(get_db)):
+    kwargs = {
+        "depth": req.depth,
+        "case_id": req.case_id,
+        "chain_id": req.chain_id
+    }
     if req.depth == "deep":
-        return await scan_contract(req.address, db, depth="deep", case_id=req.case_id)
+        return await scan_contract(req.address, db, **kwargs)
 
-    return await scan_contract(req.address, db, depth="quick", case_id=req.case_id)
+    return await scan_contract(req.address, db, **kwargs)
 
 @router.get("/wallet/{address}/cross-chain-holdings")
-async def get_wallet_cross_chain_holdings(address: str):
+@limiter.limit("20/minute")
+async def get_wallet_cross_chain_holdings(request: Request, address: str):
     return await get_cross_chain_holdings(address)
 
 @router.post("/deep-dive")
-async def post_deep_dive(req: DeepDiveRequest):
+@limiter.limit("5/minute")
+async def post_deep_dive(request: Request, req: DeepDiveRequest):
     """
     On-demand endpoint to run the expensive Dual-Agent Debate + Judge
     for a specific evidence context payload.
@@ -69,7 +89,8 @@ async def post_deep_dive(req: DeepDiveRequest):
     return await generate_dual_analysis(req.evidence_context, req.entity_type)
 
 @router.post("/bulk")
-async def post_scan_bulk(req: BulkScanRequest, db: Session = Depends(get_db)):
+@limiter.limit("3/minute")
+async def post_scan_bulk(request: Request, req: BulkScanRequest, db: Session = Depends(get_db)):
     """
     Run a bulk investigation on an array of addresses.
     Concurrency is throttled automatically to avoid API bans.
@@ -77,7 +98,8 @@ async def post_scan_bulk(req: BulkScanRequest, db: Session = Depends(get_db)):
     return await run_bulk_scan(req.addresses, db, case_id=req.case_id)
 
 @router.get("/chain-resolution/{address}")
-async def get_chain_resolution(address: str):
+@limiter.limit("60/minute")
+async def get_chain_resolution(request: Request, address: str):
     """
     Deterministic address format analysis with optional AI pattern fallback.
     Step 1: regex + checksum validation. Step 2 (if step 1 fails): OpenRouter/Groq pattern recognition.
@@ -86,7 +108,8 @@ async def get_chain_resolution(address: str):
     return await resolve_chain_identity(address)
 
 @router.get("/trace/{address}")
-async def get_fund_trace(address: str, max_hops: int = 3, db: Session = Depends(get_db)):
+@limiter.limit("10/minute")
+async def get_fund_trace(request: Request, address: str, max_hops: int = 3, db: Session = Depends(get_db)):
     """
     Traces outgoing funds from an address using a bounded BFS search.
     Stops tracing a branch if it hits a known entity in the Attribution DB.

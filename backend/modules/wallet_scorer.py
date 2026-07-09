@@ -27,6 +27,8 @@ import time
 import math
 import hashlib
 import json as json_module
+import random
+import binascii
 from collections import Counter
 from sqlalchemy.orm import Session
 from database.models import MaliciousWallet, ExchangeWallet, KnownMixer
@@ -37,8 +39,13 @@ from modules.defi_decoder import decode_defi_interactions
 from modules.demo_overrides import DEMO_OVERRIDES
 
 
-# ─── API KEY HELPERS ──────────────────────────────────────────────────────────
-import random
+# ─── CACHED ETH PRICE (avoids hardcoded $3500 fallback) ───────────────────
+_last_known_eth_price = 3500.0
+
+# ─── IN-MEMORY ADDRESS CACHE (60s TTL) ───────────────────────────────
+_address_cache = {"exchange": set(), "mixer": set(), "expires": 0}
+
+# ─── API KEY HELPERS ────────────────────────────────────────────────
 
 def _get_etherscan_key():
     keys = os.environ.get("ETHERSCAN_API_KEY", "")
@@ -139,7 +146,6 @@ async def fetch_all_etherscan_data(client: httpx.AsyncClient, address: str, dept
         all_txs.sort(key=lambda x: int(x.get("timeStamp", 0)), reverse=True)
         all_txs = all_txs[:1000]
         
-        import binascii
         def _extract_message(hex_input: str) -> str:
             if not hex_input or hex_input == "0x" or len(hex_input) < 10:
                 return ""
@@ -149,7 +155,7 @@ async def fetch_all_etherscan_data(client: httpx.AsyncClient, address: str, dept
                 printable = sum(1 for c in text if c.isprintable())
                 if len(text) > 3 and printable / max(len(text), 1) > 0.7:
                     return text
-            except:
+            except Exception:
                 pass
             return ""
 
@@ -235,11 +241,14 @@ async def fetch_forta_alerts(client: httpx.AsyncClient, address: str) -> int | N
 
 
 async def fetch_eth_price(client: httpx.AsyncClient) -> float:
+    global _last_known_eth_price
     try:
         res = await client.get("https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd", timeout=3.0)
-        return float(res.json().get("ethereum", {}).get("usd", 3500.0))
-    except:
-        return 3500.0
+        price = float(res.json().get("ethereum", {}).get("usd", _last_known_eth_price))
+        _last_known_eth_price = price  # Cache last known good price
+        return price
+    except Exception:
+        return _last_known_eth_price
 
 
 # ─── KNOWN MIXER CONTRACT ADDRESSES (HARDCODED BASELINE) ─────────────────────
@@ -254,13 +263,17 @@ KNOWN_MIXER_CONTRACTS = {
 }
 
 
-# ─── DB-POWERED ADDRESS LOADING ──────────────────────────────────────────────
+# ─── DB-POWERED ADDRESS LOADING (with 60s in-memory cache) ─────────────────
 def _load_known_addresses(db: Session) -> tuple:
     """
     Load ALL known exchange and mixer addresses from the intelligence database.
     Returns (exchange_address_set, mixer_address_set).
-    This replaces the old approach of only checking 7 hardcoded Tornado addresses.
+    Uses a 60-second in-memory cache to avoid querying the full DB on every scan.
     """
+    global _address_cache
+    if time.time() < _address_cache["expires"]:
+        return _address_cache["exchange"], _address_cache["mixer"]
+
     exchange_addrs = set()
     try:
         for ex in db.query(ExchangeWallet).all():
@@ -281,7 +294,8 @@ def _load_known_addresses(db: Session) -> tuple:
     except Exception as e:
         print(f"[SCORER] Error loading mixer addresses: {e}")
 
-    print(f"[SCORER] Loaded {len(exchange_addrs)} exchange addresses, {len(mixer_addrs)} mixer addresses from DB")
+    _address_cache = {"exchange": exchange_addrs, "mixer": mixer_addrs, "expires": time.time() + 60}
+    print(f"[SCORER] Loaded {len(exchange_addrs)} exchange addresses, {len(mixer_addrs)} mixer addresses from DB (cached 60s)")
     return exchange_addrs, mixer_addrs
 
 
@@ -312,7 +326,7 @@ def classify_entity(tx_history: list, address: str, eth_balance: float,
         to = tx.get("to", "").lower()
         try:
             val = float(tx.get("value", "0")) / 10**18
-        except:
+        except (ValueError, TypeError):
             val = 0
 
         if frm:
@@ -525,12 +539,11 @@ def _compute_l5_deterministic(l1: int, l2: int, l3: int, l4: int,
 
 
 # ─── MAIN SCAN FUNCTION ───────────────────────────────────────────────────────
-async def scan_wallet(address: str, db: Session, depth: str = "quick", case_id: int = None) -> dict:
+async def scan_wallet(address: str, db: Session, depth: str = "quick", case_id: int = None, examiner_name: str = "AXON Automated Engine", agency: str = "", case_reference: str = "") -> dict:
     """
     Full forensic wallet scan using the 5-Layer Behavioral Engine.
     Returns a structured dict consumed by the frontend.
     """
-    import time
     from database.models import InvestigationLog, CandidateEntity, VerificationReport
     
     print(f"\n{'='*60}")
@@ -618,7 +631,7 @@ async def scan_wallet(address: str, db: Session, depth: str = "quick", case_id: 
 
     try:
         eth_balance = float(eth_balance_str)
-    except:
+    except (ValueError, TypeError):
         eth_balance = 0.0
 
     print(f"[SCAN] ETH Balance: {eth_balance_str} | TXs: {tx_count} | Forta: {forta_count}")
@@ -648,7 +661,7 @@ async def scan_wallet(address: str, db: Session, depth: str = "quick", case_id: 
         try:
             val_wei = int(tx.get("value", "0") or "0")
             val = val_wei / 10**18
-        except:
+        except (ValueError, TypeError):
             val = 0
             val_wei = 0
 
@@ -671,7 +684,7 @@ async def scan_wallet(address: str, db: Session, depth: str = "quick", case_id: 
             timestamps.append(ts)
             day = time.strftime("%Y-%m-%d", time.gmtime(ts))
             date_counts[day] = date_counts.get(day, 0) + 1
-        except:
+        except (ValueError, TypeError):
             pass
 
     if timestamps:
@@ -792,7 +805,7 @@ async def scan_wallet(address: str, db: Session, depth: str = "quick", case_id: 
                     signals.append(("Automated bot: transaction intervals are highly regular (CV={:.2f})".format(cv), "🤖", "L1", "Medium", "On-chain Heuristic"))
                 elif cv < 0.3:
                     l1 = max(l1, 35)
-            except:
+            except (statistics.StatisticsError, ZeroDivisionError):
                 pass
 
     # Signal: Age vs value anomaly (new wallet + high balance)
@@ -1033,19 +1046,23 @@ async def scan_wallet(address: str, db: Session, depth: str = "quick", case_id: 
     osint_adjustment = max(-5, min(osint_adjustment, 15))
     final_score = max(0, min(100, final_score + osint_adjustment))
 
-    # --- DEMO OVERRIDES ---
-    if address.lower() in DEMO_OVERRIDES:
-        expected_risk = DEMO_OVERRIDES[address.lower()]['expectedRisk']
-        if expected_risk == "CRITICAL":
-            final_score = max(80, final_score)
-        elif expected_risk == "HIGH":
-            final_score = max(60, min(79, final_score if final_score >= 60 else 75))
-        elif expected_risk == "MEDIUM":
-            final_score = max(40, min(59, final_score if final_score >= 40 else 55))
-        elif expected_risk == "LOW":
-            final_score = min(39, final_score)
-            
-        entity_class = DEMO_OVERRIDES[address.lower()]['name']
+    # --- DEMO OVERRIDES (only active when AXON_DEMO_MODE=true) ---
+    # This mechanism adjusts scores for curated demo addresses to showcase
+    # the engine's capabilities. MUST be disabled in production to preserve
+    # forensic evidence integrity.
+    if os.environ.get("AXON_DEMO_MODE", "false").lower() == "true":
+        if address.lower() in DEMO_OVERRIDES:
+            expected_risk = DEMO_OVERRIDES[address.lower()]['expectedRisk']
+            if expected_risk == "CRITICAL":
+                final_score = max(80, final_score)
+            elif expected_risk == "HIGH":
+                final_score = max(60, min(79, final_score if final_score >= 60 else 75))
+            elif expected_risk == "MEDIUM":
+                final_score = max(40, min(59, final_score if final_score >= 40 else 55))
+            elif expected_risk == "LOW":
+                final_score = min(39, final_score)
+                
+            entity_class = DEMO_OVERRIDES[address.lower()]['name']
 
     if final_score >= 80:
         label = "CRITICAL"
@@ -1324,6 +1341,9 @@ Use ALL of this evidence to form a comprehensive forensic assessment. Weigh beha
         "entity_address": address.lower(),
         "entity_type": "wallet",
         "engine_version": "2.0",
+        "examiner_name": examiner_name,
+        "agency": agency,
+        "case_reference": case_reference,
     }
     # Hash over sorted JSON for deterministic output
     hash_payload = json_module.dumps(response_data, sort_keys=True, default=str)
