@@ -624,6 +624,11 @@ async def scan_wallet(address: str, db: Session, depth: str = "quick", case_id: 
     if _collection_errors:
         print(f"[SCAN] Collection errors: {', '.join(_collection_errors)}")
 
+    if not isinstance(etherscan_result, Exception) and etherscan_result.get("wallet_type") == "Contract":
+        print(f"[SCAN] 🔀 Address {address} is actually a smart contract. Redirecting to scan_contract.")
+        from modules.contract_scanner import scan_contract
+        return await scan_contract(address, db, depth=depth, case_id=case_id)
+
     eth_balance_str = etherscan_result["eth_balance"]
     tx_count = etherscan_result["tx_count"]
     tx_history = etherscan_result["transactions"]
