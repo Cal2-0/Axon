@@ -95,6 +95,9 @@ function MetricsBar() {
         <span>{new Date().toLocaleTimeString()}</span>
       </div>
     </div>
+  );
+}
+
 // ─── MAIN APP ────────────────────────────────────────────────────────────────
 function AppLayout() {
   const location = useLocation();
