@@ -73,6 +73,12 @@ Tracking moving targets. Axon's architecture includes a background engine to sub
 ### 💼 Bulk Scanning & Case Management
 Track long-running investigations natively. Create persistent cases, assign specific investigators, and upload 50+ addresses at once. The engine will sequentially investigate each address, throttling automatically to bypass API rate limits, and output a massive CSV to triage threats.
 
+### 🛡️ Production Hardening & API Rate Limiting (`slowapi`)
+To prevent Denial of Service (DoS) attacks and mitigate API abuse, Axon implements strict backend protection:
+- **Rate Limiting:** Managed via `slowapi` using an IP-based token bucket algorithm (e.g., maximum 15 scans/minute for wallets/contracts, 5/minute for deep-dives).
+- **Strict CORS Policy:** Restricted to trusted Netlify/Vercel domains, permitting only specific methods (`GET`, `POST`, `PUT`, `DELETE`, `OPTIONS`).
+- **Pydantic Validation:** All address inputs are checked against exact cryptographic regex filters before hitting downstream scanner logic.
+
 ---
 
 ## Architecture
@@ -138,6 +144,7 @@ Both the **Smart Contract Scanner** and the **Wallet Investigator** are powered 
 | Backend | Python · FastAPI · Uvicorn · SQLAlchemy |
 | Database | SQLite (axon_intel.db) |
 | AI/ML | Groq Cloud (Multi-Agent Architecture) |
+| Rate Limiting | slowapi (IP-based token bucket) |
 | Deployment | Netlify (frontend) · Render (backend) |
 
 ---
