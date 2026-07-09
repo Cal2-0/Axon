@@ -102,7 +102,28 @@ async def fetch_chain_balance(client: httpx.AsyncClient, address: str, chain_nam
     }
 
 async def fetch_prices(client: httpx.AsyncClient, cg_ids: set) -> dict:
-    """Fetch USD + INR prices for ALL requested CoinGecko IDs."""
+    """Fetch USD + INR prices for ALL requested CoinGecko IDs. Tries DefiLlama first, then CoinGecko, then cache."""
+    # 1. DefiLlama (Rate-limit-free, public)
+    coins_str = ",".join(f"coingecko:{cg_id}" for cg_id in cg_ids)
+    url_llama = f"https://coins.llama.fi/prices/current/{coins_str}"
+    try:
+        res = await client.get(url_llama, timeout=8.0)
+        if res.status_code == 200:
+            llama_data = res.json().get("coins", {})
+            result = {}
+            for cg_id in cg_ids:
+                coin_data = llama_data.get(f"coingecko:{cg_id}")
+                if coin_data and "price" in coin_data:
+                    price_usd = coin_data["price"]
+                    # Approximate INR conversion
+                    result[cg_id] = {"usd": price_usd, "inr": price_usd * 83.5}
+            if result:
+                print(f"[CROSS_CHAIN] Prices fetched via DefiLlama for: {list(result.keys())}")
+                return result
+    except Exception as e:
+        print(f"[CROSS_CHAIN] DefiLlama price fetch failed: {e}")
+
+    # 2. CoinGecko Fallback
     ids_str = ",".join(cg_ids)
     url = f"https://api.coingecko.com/api/v3/simple/price?ids={ids_str}&vs_currencies=usd,inr"
     try:
@@ -113,16 +134,16 @@ async def fetch_prices(client: httpx.AsyncClient, cg_ids: set) -> dict:
         res = await client.get(url, headers=headers, timeout=8.0)
         res.raise_for_status()
         data = res.json()
-        print(f"[CROSS_CHAIN] Prices fetched for: {list(data.keys())}")
+        print(f"[CROSS_CHAIN] Prices fetched via CoinGecko for: {list(data.keys())}")
         return data
     except Exception as e:
-        print(f"[CROSS_CHAIN] Failed fetching prices: {e}. Using fallback prices for demo.")
+        print(f"[CROSS_CHAIN] CoinGecko price fetch failed: {e}. Using fallback prices.")
         return {
-            "ethereum": {"usd": 1683.31, "inr": 140000.0},
+            "ethereum": {"usd": 3500.0, "inr": 290000.0},
             "binancecoin": {"usd": 575.39, "inr": 48000.0},
             "matic-network": {"usd": 0.62, "inr": 52.0},
-            "avalanche-2": {"usd": 6.27, "inr": 520.0},
-            "bitcoin": {"usd": 60000.0, "inr": 5000000.0},
+            "avalanche-2": {"usd": 25.0, "inr": 2000.0},
+            "bitcoin": {"usd": 65000.0, "inr": 5400000.0},
             "solana": {"usd": 150.0, "inr": 12500.0}
         }
 

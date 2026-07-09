@@ -28,11 +28,11 @@ from typing import Optional
 
 # ─── MODEL REGISTRY ────────────────────────────────────────────────────────────
 MODELS = {
-    "fast":        "meta-llama/llama-3.1-8b-instruct",               # OpenRouter
-    "smart":       "meta-llama/llama-3.3-70b-instruct",              # OpenRouter
-    "prosecution": "meta-llama/llama-3.3-70b-instruct",              # OpenRouter
-    "defense":     "meta-llama/llama-3.3-70b-instruct",              # OpenRouter
-    "judge":       "meta-llama/llama-3.3-70b-instruct",              # OpenRouter
+    "fast":        {"groq": "llama-3.1-8b-instant", "openrouter": "meta-llama/llama-3.1-8b-instruct"},
+    "smart":       {"groq": "llama-3.3-70b-specdec", "openrouter": "meta-llama/llama-3.3-70b-instruct"},
+    "prosecution": {"groq": "llama-3.3-70b-specdec", "openrouter": "meta-llama/llama-3.3-70b-instruct"},
+    "defense":     {"groq": "llama-3.1-8b-instant", "openrouter": "meta-llama/llama-3.1-8b-instruct"},
+    "judge":       {"groq": "llama-3.3-70b-specdec", "openrouter": "meta-llama/llama-3.3-70b-instruct"},
 }
 
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
@@ -64,69 +64,87 @@ def _get_openrouter_key():
     return os.environ.get("OPENROUTER_API_KEY", "")
 
 
-async def _call_api(model: str, system_prompt: str, user_prompt: str,
+async def _call_api(role: str, system_prompt: str, user_prompt: str,
                      temperature: float = 0.2, max_tokens: int = 600) -> dict:
-    """Make an API call to OpenRouter or Groq based on model name."""
+    """
+    Highly resilient API call wrapper.
+    First tries Groq (multi-key pool).
+    If Groq fails (429, 401, timeout, etc.), falls back to OpenRouter.
+    """
     fallback = {
         "hypothesis": "AI analysis unavailable.",
         "mitre_tag": "N/A",
         "verdict": "Manual verification required."
     }
 
-    is_openrouter = "/" in model
-    api_url = OPENROUTER_API_URL if is_openrouter else GROQ_API_URL
-    key = _get_openrouter_key() if is_openrouter else _get_groq_key()
-    provider_name = "OpenRouter" if is_openrouter else "Groq"
+    # Retrieve models mapping
+    model_config = MODELS.get(role, MODELS["fast"])
+    groq_model = model_config["groq"]
+    or_model = model_config["openrouter"]
 
-    if not key:
-        print(f"[AI_ANALYST] WARNING: API Key for {provider_name} is EMPTY")
-        return fallback
+    # 1. TRY GROQ FIRST
+    groq_key = _get_groq_key()
+    if groq_key:
+        try:
+            print(f"[AI_ANALYST] Attempting Groq scan ({role}: {groq_model})...")
+            headers = {
+                "Authorization": f"Bearer {groq_key}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "model": groq_model,
+                "response_format": {"type": "json_object"},
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                "temperature": temperature,
+                "max_tokens": max_tokens
+            }
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                response = await client.post(GROQ_API_URL, headers=headers, json=payload)
+                if response.status_code == 200:
+                    data = response.json()
+                    content = data["choices"][0]["message"]["content"].strip()
+                    return json.loads(content)
+                else:
+                    print(f"[AI_ANALYST] Groq returned code {response.status_code}: {response.text[:200]}")
+        except Exception as e:
+            print(f"[AI_ANALYST] Groq failed for role '{role}': {e}")
 
-    headers = {
-        "Authorization": f"Bearer {key}",
-        "Content-Type": "application/json"
-    }
+    # 2. FALLBACK TO OPENROUTER
+    or_key = _get_openrouter_key()
+    if or_key:
+        try:
+            print(f"[AI_ANALYST] Falling back to OpenRouter ({role}: {or_model})...")
+            headers = {
+                "Authorization": f"Bearer {or_key}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://github.com/axon-forensics",
+                "X-Title": "Axon Forensic Engine"
+            }
+            payload = {
+                "model": or_model,
+                "response_format": {"type": "json_object"},
+                "messages": [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                "temperature": temperature,
+                "max_tokens": max_tokens
+            }
+            async with httpx.AsyncClient(timeout=25.0) as client:
+                response = await client.post(OPENROUTER_API_URL, headers=headers, json=payload)
+                if response.status_code == 200:
+                    data = response.json()
+                    content = data["choices"][0]["message"]["content"].strip()
+                    return json.loads(content)
+                else:
+                    print(f"[AI_ANALYST] OpenRouter returned code {response.status_code}: {response.text[:200]}")
+        except Exception as e:
+            print(f"[AI_ANALYST] OpenRouter fallback failed: {e}")
 
-    if is_openrouter:
-        headers["HTTP-Referer"] = "https://github.com/axon-forensics"
-        headers["X-Title"] = "Axon Forensic Engine"
-
-    payload = {
-        "model": model,
-        "response_format": {"type": "json_object"},
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt}
-        ],
-        "temperature": temperature,
-        "max_tokens": max_tokens
-    }
-
-    try:
-        async with httpx.AsyncClient(timeout=45.0) as client:
-            response = await client.post(api_url, headers=headers, json=payload)
-
-            if response.status_code == 429:
-                print(f"[AI_ANALYST] Rate limited on {model} ({provider_name}), waiting 3s...")
-                await asyncio.sleep(3.0)
-                if not is_openrouter:
-                    headers["Authorization"] = f"Bearer {_get_groq_key()}"
-                response = await client.post(api_url, headers=headers, json=payload)
-
-            if response.status_code != 200:
-                print(f"[AI_ANALYST] {model} API Error {response.status_code}: {response.text[:200]}")
-                return fallback
-
-            data = response.json()
-            content = data["choices"][0]["message"]["content"].strip()
-            return json.loads(content)
-
-    except json.JSONDecodeError as e:
-        print(f"[AI_ANALYST] {model} JSON parse error: {e}")
-        return fallback
-    except Exception as e:
-        print(f"[AI_ANALYST] {model} Error: {e}")
-        return fallback
+    return fallback
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -136,7 +154,7 @@ async def _call_api(model: str, system_prompt: str, user_prompt: str,
 async def generate_summary(prompt: str) -> dict:
     """Original interface — single fast model. Used by quick scans and bulk."""
     return await _call_api(
-        model=MODELS["fast"],
+        role="fast",
         system_prompt=(
             "You are Axon AI, an elite cybersecurity forensic engine. "
             "You MUST strictly respond in valid JSON format with exactly these three keys: "
@@ -176,8 +194,8 @@ async def generate_dual_quick_ratings(evidence_context: str, entity_type: str = 
 Respond with ONLY valid JSON."""
 
     alpha_result, beta_result = await asyncio.gather(
-        _call_api(MODELS["fast"], agent_system, agent_prompt, temperature=0.2, max_tokens=200),
-        _call_api(MODELS["defense"], agent_system, agent_prompt, temperature=0.3, max_tokens=200),
+        _call_api("fast", agent_system, agent_prompt, temperature=0.2, max_tokens=200),
+        _call_api("defense", agent_system, agent_prompt, temperature=0.3, max_tokens=200),
         return_exceptions=True
     )
 
@@ -192,8 +210,8 @@ Respond with ONLY valid JSON."""
             "model": model_name,
         }
 
-    agentA = safe_agent(alpha_result, MODELS["fast"], "Agent Alpha")
-    agentB = safe_agent(beta_result, MODELS["defense"], "Agent Beta")
+    agentA = safe_agent(alpha_result, MODELS["fast"]["groq"], "Agent Alpha")
+    agentB = safe_agent(beta_result, MODELS["defense"]["groq"], "Agent Beta")
 
     print(f"[AI_ANALYST] Quick Ratings — Alpha: {agentA['rating']} ({agentA['confidence']}%) | Beta: {agentB['rating']} ({agentB['confidence']}%)")
 
@@ -260,8 +278,8 @@ Respond with ONLY valid JSON with exactly these keys:
 
     # Run both in parallel
     prosecution_result, defense_result = await asyncio.gather(
-        _call_api(MODELS["prosecution"], prosecution_system, prosecution_prompt, temperature=0.3, max_tokens=500),
-        _call_api(MODELS["defense"], defense_system, defense_prompt, temperature=0.3, max_tokens=500),
+        _call_api("prosecution", prosecution_system, prosecution_prompt, temperature=0.3, max_tokens=500),
+        _call_api("defense", defense_system, defense_prompt, temperature=0.3, max_tokens=500),
         return_exceptions=True
     )
 
@@ -311,7 +329,7 @@ Respond with ONLY valid JSON with exactly these keys:
   "judge_reasoning": "1-2 sentences explaining why you sided with prosecution or defense"}}"""
 
     judge_result = await _call_api(
-        MODELS["judge"], judge_system, judge_prompt,
+        "judge", judge_system, judge_prompt,
         temperature=0.15, max_tokens=600
     )
 
@@ -346,7 +364,7 @@ Respond with ONLY valid JSON with exactly these keys:
         "defense_summary": defense_result.get("findings", defense_result.get("hypothesis", "No defense narrative provided.")),
         "defense_risk": defense_result.get("risk_assessment", "MEDIUM"),
         "defense_argument": defense_result.get("key_defense", ""),
-        "models_used": [MODELS["prosecution"], MODELS["defense"], MODELS["judge"]],
+        "models_used": [MODELS["prosecution"]["groq"], MODELS["defense"]["groq"], MODELS["judge"]["groq"]],
         "engine_type": "dual_adversarial",
     }
 
@@ -402,7 +420,7 @@ async def generate_address_pattern_fallback(address: str) -> Optional[dict]:
     user_prompt = f"Address to analyze (deterministic validation failed):\n{address}"
 
     result = await _call_api(
-        model=MODELS["fast"],
+        role="fast",
         system_prompt=system_prompt,
         user_prompt=user_prompt,
         temperature=0.1,
@@ -433,7 +451,7 @@ async def generate_coin_tiebreak_summary(candidates: list) -> str:
     user_prompt = f"Evidence (already computed, do not contradict it):\n- candidates: {json.dumps(candidates)}"
     
     result = await _call_api(
-        model=MODELS["smart"],
+        role="smart",
         system_prompt=system_prompt,
         user_prompt=user_prompt,
         temperature=0.1,
