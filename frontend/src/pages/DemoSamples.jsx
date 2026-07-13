@@ -85,111 +85,99 @@ const DATASETS = {
       "description": "Complex router with intricate call paths."
     },
     {
-      "address": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
-      "name": "Wrapped BTC",
+      "address": "0x28C6c06298d514Db089934071355E5743bf21d60",
+      "name": "Binance 14",
+      "type": "Wallet",
+      "expectedRisk": "LOW",
+      "description": "Binance exchange hot wallet."
+    },
+    {
+      "address": "0x00000000219ab540356cBB839Cbe05303d7705Fa",
+      "name": "Beacon Deposit",
       "type": "Contract",
       "expectedRisk": "LOW",
-      "description": "Cross-chain wrapped asset."
+      "description": "Ethereum PoS Beacon Deposit Contract."
+    },
+    {
+      "address": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+      "name": "vitalik.eth",
+      "type": "Wallet",
+      "expectedRisk": "LOW",
+      "description": "Vitalik Buterin's public wallet."
     }
   ],
-  "Bitcoin": [
-    {
-      "address": "1FeexV6bAHb8RoZP9LSQcw86WXU945h39y",
-      "name": "Mt Gox Hacker (Historic)",
-      "type": "Wallet",
-      "expectedRisk": "CRITICAL",
-      "description": "Ancient legacy address holding ~79,956 BTC tied to the Mt. Gox theft."
-    },
+
+  "BITCOIN": [
     {
       "address": "34xp4vRoCGJym3xR7yCVPFHoCNxv4Twseo",
-      "name": "Binance Cold Storage",
+      "name": "Binance Cold",
       "type": "Wallet",
       "expectedRisk": "LOW",
-      "description": "Massive P2SH cold wallet with immense volume."
+      "description": "Largest Binance BTC Cold Storage."
     },
     {
-      "address": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
-      "name": "Binance Hot Wallet",
+      "address": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+      "name": "Satoshi Genesis",
       "type": "Wallet",
       "expectedRisk": "LOW",
-      "description": "Active SegWit exchange wallet with constant txs."
+      "description": "Genesis block address."
     },
     {
-      "address": "1P5ZEDWTKTFGxQjZphgWPUJt6NDX2j83a3",
-      "name": "Legacy Mega Whale",
+      "address": "bc1qgdjqv0av3q56jvd82tkdjpy7gdp9ut8tlqmgrpmv24sq90ecnvqqjwvw97",
+      "name": "LFG Reserve",
       "type": "Wallet",
       "expectedRisk": "MEDIUM",
-      "description": "Legacy address that occasionally moves large amounts."
+      "description": "Luna Foundation Guard Reserve."
     }
   ],
-  "Solana": [
+
+  "SOLANA": [
     {
-      "address": "9WzDXwBbmcg8ZXcBJhTE5pTxe7XhT4FlbCGT9m4P2sQj",
-      "name": "FTX Drainer (SOL)",
-      "type": "Wallet",
-      "expectedRisk": "CRITICAL",
-      "description": "Tied to the FTX unauthorized transfers."
-    },
-    {
-      "address": "JUP6LkbZbjS1jKKwapdH67y95Y1GyCAXN3Rdz16eJ",
+      "address": "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyDAg",
       "name": "Jupiter Aggregator",
       "type": "Contract",
       "expectedRisk": "LOW",
-      "description": "Major DeFi program on Solana."
+      "description": "Top DEX Aggregator on Solana."
     },
     {
-      "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
-      "name": "SPL Token Program",
-      "type": "Contract",
-      "expectedRisk": "LOW",
-      "description": "System program testing."
-    },
-    {
-      "address": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-      "name": "USDC Coin",
-      "type": "Contract",
-      "expectedRisk": "LOW",
-      "description": "Major stablecoin contract on Solana."
-    }
-  ],
-  "TRON": [
-    {
-      "address": "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
-      "name": "Tether (USDT) Contract",
-      "type": "Contract",
-      "expectedRisk": "LOW",
-      "description": "The most active contract on TRON."
-    },
-    {
-      "address": "TN3W4H6rK2ce4vX9YnFQHwKENnHjoxb3m9",
-      "name": "Binance Hot Wallet",
+      "address": "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM",
+      "name": "Binance Hot",
       "type": "Wallet",
       "expectedRisk": "LOW",
       "description": "High volume exchange wallet."
     },
     {
-      "address": "TAUN6FwrnwwmaEqYcckffC7wYmbaS6cBiX",
-      "name": "Binance Cold",
+      "address": "GgH9RauT2Nyp12gD48hS54kntuT8Xk5FwJpG6tBfXYoQ",
+      "name": "Random Active User",
       "type": "Wallet",
       "expectedRisk": "LOW",
-      "description": "Large exchange storage."
+      "description": "Active Solana retail user."
+    }
+  ],
+  "TRON": [
+    {
+      "address": "TXLAQ63Xg1NAzckPwKHvzw7CSEmLMEqcdj",
+      "name": "Binance Hot",
+      "type": "Wallet",
+      "expectedRisk": "LOW",
+      "description": "High volume exchange wallet."
     },
     {
-      "address": "TE2RzoSV3wFK99w6J9UnnZ4vLfXYoxvRwP",
-      "name": "Justin Sun Wallet",
+      "address": "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+      "name": "Tether USDT Contract",
+      "type": "Contract",
+      "expectedRisk": "LOW",
+      "description": "The most active contract on TRON."
+    },
+    {
+      "address": "TMuA6YqfCeX8EhbfYEh5yca7Tz82SDF8xH",
+      "name": "Huobi Cold",
       "type": "Wallet",
       "expectedRisk": "LOW",
-      "description": "High net worth, public figure."
+      "description": "Huobi exchange cold storage."
     }
   ],
   "Other Chains": [
-    {
-      "address": "D8vFz4p5eaCEiPAW5QoT5R4R4xN3K4Xv7",
-      "name": "Robinhood Cold (DOGE)",
-      "type": "Wallet",
-      "expectedRisk": "UNSUPPORTED",
-      "description": "Dogecoin"
-    },
     {
       "address": "LcFs2BtzjC7Sxb6Qk2U3LzB5E7Y9E8zJ5",
       "name": "Binance Hot (LTC)",
@@ -324,7 +312,7 @@ export default function DemoSamples() {
   };
 
   const handleAnalyze = (type, address) => {
-    if (type.toLowerCase() === 'contract') {
+    if (type.toLowerCase().includes('contract')) {
       navigate(`/contract?address=${address}`);
     } else {
       navigate(`/wallet?address=${address}`);

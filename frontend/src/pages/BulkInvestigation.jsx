@@ -417,7 +417,7 @@ export default function BulkInvestigation({ caseId }) {
                       
                       <button 
                         onClick={() => {
-                          const route = `/wallet?address=${target.address}${report.case_id ? `&case_id=${report.case_id}` : ''}`;
+                          const route = `/${entityType === 'contract' ? 'contract' : 'wallet'}?address=${target.address}${report.case_id ? `&case_id=${report.case_id}` : ''}`;
                           navigate(route);
                         }}
                         className="w-full py-2.5 bg-[#1e293b] hover:bg-blue-600 text-white rounded-lg text-xs font-bold uppercase tracking-widest transition-colors flex items-center justify-center gap-2"

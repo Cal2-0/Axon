@@ -17,8 +17,8 @@ REAL_PROFILES.forEach(profile => {
 export function isValidAddress(addr) {
   if (/^0x[0-9a-fA-F]{40}$/.test(addr)) return true; // EVM
   if (/^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,59}$/i.test(addr)) return true; // BTC
+  if (/^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(addr)) return true; // TRON
   if (/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(addr) && !addr.startsWith('0x') && !addr.startsWith('bc1')) return true; // SOL
-  if (/^T[A-Za-z1-9]{33}$/.test(addr)) return true; // TRON
   return false;
 }
 
@@ -27,10 +27,19 @@ function isPartialAddress(addr) {
 }
 
 // ─── SMART ADDRESS INPUT ─────────────────────────────────────────────────────
-export default function SmartAddressInput({ value, onChange, onSubmit, loading, placeholder = '0x... (ETH, BTC, SOL)' }) {
+export default function SmartAddressInput({ value, onChange, onSubmit, loading, placeholder = '0x... (ETH, BTC, SOL, TRX)' }) {
   const [focused, setFocused] = useState(false);
   const [validation, setValidation] = useState(null); // null | 'typing' | 'invalid' | 'valid' | 'known'
   const [knownInfo, setKnownInfo] = useState(null);
+
+  const getNetworkBadge = () => {
+    if (!value) return null;
+    if (/^0x[0-9a-fA-F]{40}$/.test(value)) return { name: 'EVM', color: 'bg-blue-500/20 text-blue-400' };
+    if (/^(bc1|[13])[a-zA-HJ-NP-Z0-9]{25,59}$/i.test(value)) return { name: 'BTC', color: 'bg-orange-500/20 text-orange-400' };
+    if (/^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(value)) return { name: 'TRON', color: 'bg-red-500/20 text-red-400' };
+    if (/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(value) && !value.startsWith('0x') && !value.startsWith('bc1')) return { name: 'SOL', color: 'bg-purple-500/20 text-purple-400' };
+    return { name: 'UNKNOWN', color: 'bg-gray-500/20 text-gray-400' };
+  };
   const [showDropdown, setShowDropdown] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const inputRef = useRef(null);
