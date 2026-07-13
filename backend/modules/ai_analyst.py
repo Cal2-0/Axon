@@ -29,10 +29,10 @@ from typing import Optional
 # ─── MODEL REGISTRY ────────────────────────────────────────────────────────────
 MODELS = {
     "fast":        {"groq": "llama-3.1-8b-instant", "openrouter": "meta-llama/llama-3.1-8b-instruct"},
-    "smart":       {"groq": "llama-3.3-70b-specdec", "openrouter": "meta-llama/llama-3.3-70b-instruct"},
-    "prosecution": {"groq": "llama-3.3-70b-specdec", "openrouter": "meta-llama/llama-3.3-70b-instruct"},
+    "smart":       {"groq": "llama-3.3-70b-versatile", "openrouter": "meta-llama/llama-3.3-70b-instruct"},
+    "prosecution": {"groq": "llama-3.3-70b-versatile", "openrouter": "meta-llama/llama-3.3-70b-instruct"},
     "defense":     {"groq": "llama-3.1-8b-instant", "openrouter": "meta-llama/llama-3.1-8b-instruct"},
-    "judge":       {"groq": "llama-3.3-70b-specdec", "openrouter": "meta-llama/llama-3.3-70b-instruct"},
+    "judge":       {"groq": "llama-3.3-70b-versatile", "openrouter": "meta-llama/llama-3.3-70b-instruct"},
 }
 
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
@@ -101,7 +101,7 @@ async def _call_api(role: str, system_prompt: str, user_prompt: str,
                 "temperature": temperature,
                 "max_tokens": max_tokens
             }
-            async with httpx.AsyncClient(timeout=15.0) as client:
+            async with httpx.AsyncClient(timeout=20.0) as client:
                 response = await client.post(GROQ_API_URL, headers=headers, json=payload)
                 if response.status_code == 200:
                     data = response.json()

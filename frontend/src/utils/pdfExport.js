@@ -192,9 +192,9 @@ export async function downloadWalletPDF(result, forceHtml = true) {
   .cell .label { font-size: 9px; color: #64748b; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 2px; font-family: 'JetBrains Mono', monospace; }
   .cell .val { font-size: 12px; color: #0f172a; font-weight: 600; word-break: break-all; }
 
-  table { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 11px; margin-bottom: 12px; table-layout: fixed; }
   th { text-align: left; padding: 6px 10px; font-size: 9px; color: #64748b; text-transform: uppercase; letter-spacing: 0.06em; font-family: 'JetBrains Mono', monospace; border-bottom: 2px solid #e2e8f0; background: #f8fafc; }
-  td { padding: 6px 10px; border-bottom: 1px solid #f1f5f9; color: #334155; vertical-align: top; }
+  td { padding: 6px 10px; border-bottom: 1px solid #f1f5f9; color: #334155; vertical-align: top; word-wrap: break-word; word-break: break-all; }
 
   .verdict-box { background: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #0284c7; border-radius: 0 6px 6px 0; padding: 16px 20px; margin: 12px 0; }
   .risk-box { background: ${riskBg}; border: 2px solid ${riskColor}20; border-radius: 8px; padding: 20px; text-align: center; }
@@ -567,9 +567,9 @@ export async function downloadContractPDF(result, forceHtml = true) {
   .mono{font-family:'JetBrains Mono',monospace}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}.grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px}
   .cell{background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:10px 12px}.cell .label{font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px;font-family:'JetBrains Mono',monospace}.cell .val{font-size:12px;color:#0f172a;font-weight:600;word-break:break-all}
-  table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:12px}
+  table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:12px;table-layout:fixed;}
   th{text-align:left;padding:6px 10px;font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;font-family:'JetBrains Mono',monospace;border-bottom:2px solid #e2e8f0;background:#f8fafc}
-  td{padding:6px 10px;border-bottom:1px solid #f1f5f9;color:#334155;vertical-align:top}
+  td{padding:6px 10px;border-bottom:1px solid #f1f5f9;color:#334155;vertical-align:top;word-wrap:break-word;word-break:break-all;}
   .verdict-box{background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #0284c7;border-radius:0 6px 6px 0;padding:16px 20px;margin:12px 0}
   .risk-box{background:${riskBg};border:2px solid ${riskColor}20;border-radius:8px;padding:20px;text-align:center}
   .footer{border-top:2px solid #e2e8f0;padding-top:16px;margin-top:24px}.footer p{font-size:9px;color:#94a3b8;line-height:1.5}

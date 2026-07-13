@@ -67,7 +67,23 @@ def _is_valid(data):
     return True
 
 def _build_table(headers, data_rows, col_widths=None):
-    table_data = [headers] + data_rows
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    styles = getSampleStyleSheet()
+    cell_style = ParagraphStyle('CellStyle', parent=styles['Normal'], fontSize=9, textColor=colors.lightgrey, wordWrap='CJK')
+    header_style = ParagraphStyle('HeaderStyle', parent=styles['Normal'], fontSize=9, textColor=colors.whitesmoke, fontName='Helvetica-Bold')
+
+    formatted_headers = [Paragraph(str(h), header_style) for h in headers]
+    formatted_data = []
+    for row in data_rows:
+        formatted_row = []
+        for cell in row:
+            if isinstance(cell, str):
+                formatted_row.append(Paragraph(cell, cell_style))
+            else:
+                formatted_row.append(cell)
+        formatted_data.append(formatted_row)
+        
+    table_data = [formatted_headers] + formatted_data
     t = Table(table_data, colWidths=col_widths)
     t.setStyle(TableStyle([
         ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#2a2d3e")),

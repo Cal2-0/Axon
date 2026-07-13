@@ -345,16 +345,197 @@ ADDRESS_FORMATS = [
         "notes": "Grin does not provide conventional reusable on-chain addresses. Treat slatepack strings as communication/payment artifacts.",
         "example": "grin1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq",
     },
+    {
+        "chain": "Filecoin", "symbol": "FIL", "family": "Filecoin", "address_type": "Secp256k1 / BLS / Delegated",
+        "prefix": "f1,f3,f4,f0", "min_length": 7, "max_length": 90, "encoding": "Base32 lower",
+        "checksum": "Blake2b-based checksum", "traceability": "Public Blockchain",
+        "privacy_level": "Transparent", "supported": "Unsupported",
+        "notes": "f1 = secp256k1 actor, f3 = BLS actor, f4 = delegated (FVM/EVM-compatible), f0 = actor ID. Prefix determines address type.",
+        "example": "f1abjxfbp274xpdqcpuaykwkfb43omjotacm2p3za",
+    },
+    {
+        "chain": "Internet Computer", "symbol": "ICP", "family": "ICP", "address_type": "Account Identifier / Principal",
+        "prefix": "None", "min_length": 27, "max_length": 64, "encoding": "Hex / Textual encoding",
+        "checksum": "CRC32 checksum", "traceability": "Public Ledger",
+        "privacy_level": "Transparent", "supported": "Unsupported",
+        "notes": "ICP uses two formats: 64-char hex Account Identifiers (for ICP transfers) and shorter Principal IDs (for canister calls). Do not confuse the two.",
+        "example": "e8d4b24f0ea3c2d876745e42d6e89c19d6c1f3a9b7e5d2c1a0f8b6e4d2c0a1b3",
+    },
+    {
+        "chain": "Kaspa", "symbol": "KAS", "family": "Kaspa", "address_type": "Schnorr / ECDSA",
+        "prefix": "kaspa:", "min_length": 67, "max_length": 70, "encoding": "Bech32",
+        "checksum": "Bech32 polymod", "traceability": "Public Blockchain (DAG)",
+        "privacy_level": "Pseudonymous", "supported": "Unsupported",
+        "notes": "Kaspa uses a BlockDAG architecture. Addresses use the kaspa: prefix with Bech32 encoding.",
+        "example": "kaspa:qr5t5yqzrtwcdq8gk9wey6sxyg2xplnrv48tg9v47t",
+    },
+    {
+        "chain": "Fantom", "symbol": "FTM", "family": "EVM", "address_type": "EOA or Contract",
+        "prefix": "0x", "min_length": 42, "max_length": 42, "encoding": "Hex",
+        "checksum": "Optional EIP-55", "traceability": "Public Blockchain",
+        "privacy_level": "Transparent", "supported": "Supported",
+        "notes": "Fantom Opera is a full EVM-compatible chain. Addresses are indistinguishable from Ethereum by format alone.",
+        "example": "0x21be370d5312f44cb42ce377bc9b8a0cef1a4c83",
+    },
+    {
+        "chain": "Cronos", "symbol": "CRO", "family": "EVM", "address_type": "EOA or Contract",
+        "prefix": "0x", "min_length": 42, "max_length": 42, "encoding": "Hex",
+        "checksum": "Optional EIP-55", "traceability": "Public Blockchain",
+        "privacy_level": "Transparent", "supported": "Supported",
+        "notes": "Cronos is an EVM-compatible chain by Crypto.com. Also has a Cosmos-style cro1 address for the native chain.",
+        "example": "0x5c7f8a570d578ed60e5e6a47b3bbbf2f7e78c0a5",
+    },
+    {
+        "chain": "MultiversX", "symbol": "EGLD", "family": "MultiversX", "address_type": "Account Address",
+        "prefix": "erd1", "min_length": 62, "max_length": 62, "encoding": "Bech32",
+        "checksum": "Bech32 polymod", "traceability": "Public Blockchain",
+        "privacy_level": "Transparent", "supported": "Unsupported",
+        "notes": "Formerly Elrond. Uses erd1 Bech32 prefix. Smart contract addresses also start with erd1.",
+        "example": "erd1qqqqqqqqqqqqqpgqp699jngundfqw3d0h6nk2r0cxm8k5g7rlsss8cgyml",
+    },
+    {
+        "chain": "Zilliqa", "symbol": "ZIL", "family": "Zilliqa", "address_type": "Account Address",
+        "prefix": "zil1", "min_length": 42, "max_length": 42, "encoding": "Bech32",
+        "checksum": "Bech32 polymod", "traceability": "Public Blockchain",
+        "privacy_level": "Transparent", "supported": "Unsupported",
+        "notes": "Zilliqa uses zil1 Bech32 addresses. Also has a legacy 0x Base16 format — both represent the same account.",
+        "example": "zil1v25at4s3eh9w34uqqhe3vdlf3mntu2zqe3ewgr",
+    },
+    {
+        "chain": "Tezos", "symbol": "XTZ", "family": "Tezos", "address_type": "Implicit / Originated",
+        "prefix": "tz1,tz2,tz3,KT1", "min_length": 36, "max_length": 36, "encoding": "Base58Check",
+        "checksum": "Blake2b Base58Check", "traceability": "Public Blockchain",
+        "privacy_level": "Transparent", "supported": "Unsupported",
+        "notes": "tz1 = Ed25519, tz2 = secp256k1, tz3 = P-256. KT1 addresses are originated smart contracts. Prefix distinguishes key type.",
+        "example": "tz1VSUr8wwNhLAzempoch5d6hLRiTh8Cjcjb",
+    },
+    {
+        "chain": "EOS", "symbol": "EOS", "family": "EOSIO", "address_type": "Named Account",
+        "prefix": "None", "min_length": 1, "max_length": 12, "encoding": "Lowercase alphanumeric + dots",
+        "checksum": "Account name rules", "traceability": "Public Blockchain",
+        "privacy_level": "Transparent", "supported": "Unsupported",
+        "notes": "EOS accounts are human-readable names up to 12 characters (a-z, 1-5, dots). Premium names can be shorter. Account creation requires an existing account.",
+        "example": "eosio.token",
+    },
+    {
+        "chain": "IOTA", "symbol": "IOTA", "family": "IOTA", "address_type": "Stardust / Chrysalis",
+        "prefix": "iota1,smr1", "min_length": 60, "max_length": 66, "encoding": "Bech32",
+        "checksum": "Bech32 polymod", "traceability": "Public DAG",
+        "privacy_level": "Transparent", "supported": "Unsupported",
+        "notes": "IOTA uses a DAG (Tangle) architecture. Post-Chrysalis addresses use Bech32 encoding with iota1 prefix. Shimmer uses smr1.",
+        "example": "iota1qp0r7e76wfrayh7k3rgj8cnd8al0gsh0dh7cjfu",
+    },
+    {
+        "chain": "Harmony", "symbol": "ONE", "family": "EVM", "address_type": "Account Address",
+        "prefix": "one1", "min_length": 42, "max_length": 42, "encoding": "Bech32",
+        "checksum": "Bech32 polymod", "traceability": "Public Blockchain",
+        "privacy_level": "Transparent", "supported": "Unsupported",
+        "notes": "Harmony is EVM-compatible but uses a one1 Bech32 display format. The underlying key is the same as a 0x EVM address.",
+        "example": "one1a2b3c4d5e6f7g8h9j0k1l2m3n4o5p6q7r8s9t0",
+    },
+    {
+        "chain": "Celo", "symbol": "CELO", "family": "EVM", "address_type": "EOA or Contract",
+        "prefix": "0x", "min_length": 42, "max_length": 42, "encoding": "Hex",
+        "checksum": "Optional EIP-55", "traceability": "Public Blockchain",
+        "privacy_level": "Transparent", "supported": "Supported",
+        "notes": "Celo is a full EVM-compatible chain focused on mobile payments. Addresses are standard EVM format.",
+        "example": "0x471ece3750da237f93b8e339c536989b8978a438",
+    },
+    {
+        "chain": "Klaytn", "symbol": "KLAY", "family": "EVM", "address_type": "EOA or Contract",
+        "prefix": "0x", "min_length": 42, "max_length": 42, "encoding": "Hex",
+        "checksum": "Optional EIP-55", "traceability": "Public Blockchain",
+        "privacy_level": "Transparent", "supported": "Unsupported",
+        "notes": "Klaytn is an EVM-compatible chain by Kakao. Format is identical to Ethereum addresses.",
+        "example": "0xc6a2ad8cc6e4a7e08fc37cc5954be07d499e7654",
+    },
+    {
+        "chain": "Stacks", "symbol": "STX", "family": "Stacks", "address_type": "Standard / Contract",
+        "prefix": "SP,ST", "min_length": 36, "max_length": 41, "encoding": "Crockford Base32",
+        "checksum": "c32check", "traceability": "Public Blockchain",
+        "privacy_level": "Transparent", "supported": "Unsupported",
+        "notes": "Stacks is a Bitcoin Layer-2. SP prefix is mainnet, ST is testnet. Smart contracts append .contract-name to the deployer address.",
+        "example": "SP2J6ZY48GV1EZ5V2V5RB9MP66SW86PYKKNRV9EJ7",
+    },
+    {
+        "chain": "Arweave", "symbol": "AR", "family": "Arweave", "address_type": "Wallet Address",
+        "prefix": "None", "min_length": 43, "max_length": 43, "encoding": "Base64url",
+        "checksum": "None", "traceability": "Permanent Storage",
+        "privacy_level": "Pseudonymous", "supported": "Unsupported",
+        "notes": "Arweave wallet addresses are 43-character Base64url-encoded SHA-256 hashes of RSA public keys. Data stored on Arweave is permanent.",
+        "example": "Fq1aHb3BpTFQv1pMh9RCwLz1g7ER5k0aF3j1fxVSbZQ",
+    },
+    {
+        "chain": "Secret Network", "symbol": "SCRT", "family": "Cosmos", "address_type": "Account Address",
+        "prefix": "secret1", "min_length": 45, "max_length": 45, "encoding": "Bech32",
+        "checksum": "Bech32 polymod", "traceability": "Privacy Chain",
+        "privacy_level": "Optional Privacy", "supported": "Unsupported",
+        "notes": "Cosmos SDK chain with privacy-preserving smart contracts (Secret Contracts). On-chain data for Secret Contracts is encrypted.",
+        "example": "secret1p8s4e8h4f6z9k5j7m6x3w2q7n9v5h3c2xyzuvw",
+    },
+    {
+        "chain": "THORChain", "symbol": "RUNE", "family": "Cosmos", "address_type": "Account Address",
+        "prefix": "thor1", "min_length": 43, "max_length": 43, "encoding": "Bech32",
+        "checksum": "Bech32 polymod", "traceability": "Public Blockchain",
+        "privacy_level": "Transparent", "supported": "Unsupported",
+        "notes": "THORChain enables cross-chain swaps without wrapping. Investigate cross-chain flows carefully — funds may move to/from BTC, ETH, etc.",
+        "example": "thor1p8s4e8h4f6z9k5j7m6x3w2q7n9v5h3c2abcdef",
+    },
+    {
+        "chain": "Flow", "symbol": "FLOW", "family": "Flow", "address_type": "Account Address",
+        "prefix": "0x", "min_length": 18, "max_length": 18, "encoding": "Hex",
+        "checksum": "None", "traceability": "Public Blockchain",
+        "privacy_level": "Transparent", "supported": "Unsupported",
+        "notes": "Flow addresses are shorter than EVM (16 hex chars + 0x prefix = 18 total). Do not confuse with EVM addresses which are 42 characters.",
+        "example": "0xe467b9dd11fa00df",
+    },
+    {
+        "chain": "zkSync Era", "symbol": "ETH", "family": "EVM", "address_type": "EOA or Contract",
+        "prefix": "0x", "min_length": 42, "max_length": 42, "encoding": "Hex",
+        "checksum": "Optional EIP-55", "traceability": "Public Blockchain (L2)",
+        "privacy_level": "Transparent", "supported": "Supported",
+        "notes": "zkSync Era is an Ethereum L2 using ZK rollups. Addresses are standard EVM format. Verify chain via RPC or bridge transaction context.",
+        "example": "0x3355df6d4c9c3035724fd0e3914de96a5a83aaf4",
+    },
+    {
+        "chain": "Astar", "symbol": "ASTR", "family": "EVM/Substrate", "address_type": "EVM or SS58 Account",
+        "prefix": "0x or SS58", "min_length": 42, "max_length": 48, "encoding": "Hex / SS58 Base58",
+        "checksum": "EIP-55 or SS58", "traceability": "Public Blockchain",
+        "privacy_level": "Transparent", "supported": "Unsupported",
+        "notes": "Astar supports both EVM and Substrate native accounts. The same account may have both a 0x and SS58 representation.",
+        "example": "0x7Be8076f4EA4A4AD08075c2508e481d6C946D12b",
+    },
 ]
 
 
 def seed_address_formats():
+    """Seed address formats table. Inserts missing entries by chain+address_type key."""
     db = SessionLocal()
     try:
-        if db.query(AddressFormat).count() > 0:
-            return
-        db.add_all(AddressFormat(**item) for item in ADDRESS_FORMATS)
-        db.commit()
+        existing_count = db.query(AddressFormat).count()
+        if existing_count == 0:
+            # Fresh table — bulk insert all
+            db.add_all(AddressFormat(**item) for item in ADDRESS_FORMATS)
+            db.commit()
+            print(f"[SEED] Inserted {len(ADDRESS_FORMATS)} address formats (fresh seed).")
+        else:
+            # Table has data — merge only new entries
+            existing_keys = set()
+            for row in db.query(AddressFormat.chain, AddressFormat.address_type).all():
+                existing_keys.add((row.chain, row.address_type))
+            
+            new_entries = []
+            for item in ADDRESS_FORMATS:
+                key = (item["chain"], item["address_type"])
+                if key not in existing_keys:
+                    new_entries.append(AddressFormat(**item))
+            
+            if new_entries:
+                db.add_all(new_entries)
+                db.commit()
+                print(f"[SEED] Merged {len(new_entries)} new address formats into existing table.")
+            else:
+                print(f"[SEED] Address formats table up to date ({existing_count} entries).")
     except Exception:
         db.rollback()
         raise
