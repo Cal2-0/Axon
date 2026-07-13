@@ -6,60 +6,39 @@ import { Search, ShieldAlert, Zap, Layers, RefreshCw, Cpu, Activity, Info } from
 const DATASETS = {
   "Ethereum Wallets": [
     {
+      "address": "0x098B716B8Aaf21512996dC57EB0615e2383E2f96",
+      "name": "Lazarus / Ronin Exploiter",
+      "type": "Wallet",
+      "expectedRisk": "CRITICAL",
+      "description": "Lazarus Group / Ronin Bridge exploiter — OFAC sanctioned"
+    },
+    {
+      "address": "0xd90e2f925DA726b50C4Ed8D0Fb90Ad053324F31b",
+      "name": "Tornado Cash Router",
+      "type": "Wallet",
+      "expectedRisk": "CRITICAL",
+      "description": "Tornado Cash Router — OFAC sanctioned mixer"
+    },
+    {
       "address": "0xC8a65Fadf0e0dDAf421F28FEAb69Bf6E2E589963",
       "name": "Poly Network Exploiter",
       "type": "Wallet",
-      "expectedRisk": "CRITICAL",
-      "description": "Historically massive bridge exploit wallet with multiple cross-chain laundering attempts."
-    },
-    {
-      "address": "0xae2Fc483527B8EF99EB5D9B44875F005ba1FaE13",
-      "name": "Jaredfromsubway.eth",
-      "type": "Wallet",
       "expectedRisk": "HIGH",
-      "description": "One of the highest volume MEV bots on Ethereum, front-running retail users continuously."
-    },
-    {
-      "address": "0x8575B2Dbbd7608A1629aDAA952abA74Bcc5381BF",
-      "name": "Pranksy (NFT Whale)",
-      "type": "Wallet",
-      "expectedRisk": "MEDIUM",
-      "description": "High volume, high net-worth individual engaging in complex DeFi/NFT interactions."
+      "description": "Massive bridge exploit wallet with multiple cross-chain laundering attempts."
     },
     {
       "address": "0x28C6c06298d514Db089934071355E5743bf21d60",
       "name": "Binance Hot Wallet 14",
       "type": "Wallet",
       "expectedRisk": "LOW",
-      "description": "High volume exchange wallet for testing the false-positive suppression engine."
+      "description": "Binance legitimate exchange hot wallet, high tx volume."
     },
     {
-      "address": "0xde0B295669a9FD93d5F28D9Ec85E40f4cb697BAe",
-      "name": "Ethereum Foundation",
+      "address": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+      "name": "vitalik.eth",
       "type": "Wallet",
       "expectedRisk": "LOW",
-      "description": "Long-term dormant treasury that occasionally moves large sums for grants."
-    },
-    {
-      "address": "0x0248f752802b2cfb4373cc0c3bc3964429385c26",
-      "name": "Wintermute Exploiter",
-      "type": "Wallet",
-      "expectedRisk": "CRITICAL",
-      "description": "Complex smart contract exploitation and subsequent fund movement."
-    },
-    {
-      "address": "0x56D8B635A7C88Fd1104D23d632AF40c1C3Aac4e3",
-      "name": "Nomad Bridge Exploiter",
-      "type": "Wallet",
-      "expectedRisk": "CRITICAL",
-      "description": "Participated in a decentralized free-for-all bridge exploit."
-    },
-    {
-      "address": "0x1111111254FB6c44BAC0beD2854e76F90643097d",
-      "name": "1inch Aggregator Bot",
-      "type": "Wallet",
-      "expectedRisk": "MEDIUM",
-      "description": "Router/Bot hybrid with extremely complex transaction traces."
+      "description": "Vitalik Buterin's public wallet, 70k+ transactions."
     }
   ],
   "Ethereum Contracts": [
@@ -68,113 +47,114 @@ const DATASETS = {
       "name": "USDT Token Contract",
       "type": "Contract",
       "expectedRisk": "LOW",
-      "description": "Core DeFi infrastructure. Tests static analysis on massive verified proxies."
+      "description": "Largest stablecoin, verified contract."
     },
     {
-      "address": "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
-      "name": "Uniswap V2 Router",
+      "address": "0xE592427A0AEce92De3Edee1F18E0157C05861564",
+      "name": "Uniswap V3 Router",
       "type": "Contract",
       "expectedRisk": "LOW",
-      "description": "Heavily used DEX router. Good for topology tests."
+      "description": "Trusted DEX."
     },
     {
-      "address": "0x1111111254EEB25477B68fb85Ed929f73A960582",
-      "name": "1inch v5 Aggregator",
+      "address": "0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9f",
+      "name": "SushiSwap Router",
       "type": "Contract",
       "expectedRisk": "MEDIUM",
-      "description": "Complex router with intricate call paths."
+      "description": "DeFi-risky classification (governance history)."
     },
     {
-      "address": "0x28C6c06298d514Db089934071355E5743bf21d60",
-      "name": "Binance 14",
-      "type": "Wallet",
-      "expectedRisk": "LOW",
-      "description": "Binance exchange hot wallet."
-    },
-    {
-      "address": "0x00000000219ab540356cBB839Cbe05303d7705Fa",
-      "name": "Beacon Deposit",
+      "address": "0x8589427373D6D84E98730D7795D8f6f8731FDA0",
+      "name": "Tornado Cash 100 ETH Pool",
       "type": "Contract",
-      "expectedRisk": "LOW",
-      "description": "Ethereum PoS Beacon Deposit Contract."
-    },
-    {
-      "address": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
-      "name": "vitalik.eth",
-      "type": "Wallet",
-      "expectedRisk": "LOW",
-      "description": "Vitalik Buterin's public wallet."
+      "expectedRisk": "CRITICAL",
+      "description": "OFAC sanctioned mixing pool contract."
     }
   ],
 
   "BITCOIN": [
     {
+      "address": "13AM4VW2dhxYgXeQepoHkHSQuy6NgaEb94",
+      "name": "WannaCry Ransomware #1",
+      "type": "Wallet",
+      "expectedRisk": "CRITICAL",
+      "description": "WannaCry ransomware wallet #1 — hundreds of real payments."
+    },
+    {
+      "address": "12t9YDPgwueZ9NyMgw519p7AA8isjr6SMw",
+      "name": "WannaCry Ransomware #2",
+      "type": "Wallet",
+      "expectedRisk": "CRITICAL",
+      "description": "WannaCry ransomware wallet #2."
+    },
+    {
+      "address": "115p7UMMngoj1pMvkpHijcRdfJNXj6LrLn",
+      "name": "WannaCry Ransomware #3",
+      "type": "Wallet",
+      "expectedRisk": "CRITICAL",
+      "description": "WannaCry ransomware wallet #3."
+    },
+    {
       "address": "34xp4vRoCGJym3xR7yCVPFHoCNxv4Twseo",
       "name": "Binance Cold",
       "type": "Wallet",
       "expectedRisk": "LOW",
-      "description": "Largest Binance BTC Cold Storage."
+      "description": "Binance-linked BTC wallet — high volume, legitimate exchange activity."
     },
     {
       "address": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
       "name": "Satoshi Genesis",
       "type": "Wallet",
       "expectedRisk": "LOW",
-      "description": "Genesis block address."
-    },
-    {
-      "address": "bc1qgdjqv0av3q56jvd82tkdjpy7gdp9ut8tlqmgrpmv24sq90ecnvqqjwvw97",
-      "name": "LFG Reserve",
-      "type": "Wallet",
-      "expectedRisk": "MEDIUM",
-      "description": "Luna Foundation Guard Reserve."
+      "description": "Satoshi's Genesis address — historical curiosity."
     }
   ],
 
   "SOLANA": [
     {
+      "address": "5tzFkiKscXHK5ZXCGbXZxdw7gTjjD1mBwuoFbhUvuAi9",
+      "name": "Binance Hot 2",
+      "type": "Wallet",
+      "expectedRisk": "LOW",
+      "description": "Labeled exchange wallet on Solscan, high volume."
+    },
+    {
       "address": "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyDAg",
-      "name": "Jupiter Aggregator",
+      "name": "Jupiter Aggregator V6",
       "type": "Contract",
       "expectedRisk": "LOW",
-      "description": "Top DEX Aggregator on Solana."
+      "description": "The dominant Solana DEX aggregator program, massive tx volume."
     },
     {
-      "address": "9WzDXwBbmkg8ZTbNMqUxvQRAyrZzDsGYdLVL9zYtAWWM",
-      "name": "Binance Hot",
-      "type": "Wallet",
+      "address": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      "name": "USDC Mint",
+      "type": "Contract",
       "expectedRisk": "LOW",
-      "description": "High volume exchange wallet."
+      "description": "Official Circle contract, enormous transaction count."
     },
     {
-      "address": "GgH9RauT2Nyp12gD48hS54kntuT8Xk5FwJpG6tBfXYoQ",
-      "name": "Random Active User",
-      "type": "Wallet",
+      "address": "So11111111111111111111111111111111111111",
+      "name": "Wrapped SOL Mint",
+      "type": "Contract",
       "expectedRisk": "LOW",
-      "description": "Active Solana retail user."
+      "description": "The single most-referenced token account on Solana."
     }
   ],
+
   "TRON": [
     {
       "address": "TXLAQ63Xg1NAzckPwKHvzw7CSEmLMEqcdj",
       "name": "Binance Hot",
       "type": "Wallet",
       "expectedRisk": "LOW",
-      "description": "High volume exchange wallet."
+      "description": "Binance-linked TRON wallet — high volume exchange."
     },
     {
       "address": "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
       "name": "Tether USDT Contract",
       "type": "Contract",
       "expectedRisk": "LOW",
-      "description": "The most active contract on TRON."
-    },
-    {
-      "address": "TMuA6YqfCeX8EhbfYEh5yca7Tz82SDF8xH",
-      "name": "Huobi Cold",
-      "type": "Wallet",
-      "expectedRisk": "LOW",
-      "description": "Huobi exchange cold storage."
+      "description": "USDT-TRC20 official contract — billions in daily volume."
     }
   ],
   "Other Chains": [
@@ -265,42 +245,42 @@ const DATASETS = {
   ]
 };
 
-const STORY_1 = `OP: MIDNIGHT SWEEP
+const STORY_1 = \`OP: MIDNIGHT SWEEP
 Targeting DeFi privacy mixers. Evaluate threat level.
 Targets:
-0xde0B295669a9FD93d5F28D9Ec85E40f4cb697BAe
-0xC8a65Fadf0e0dDAf421F28FEAb69Bf6E2E589963`;
+0xd90e2f925DA726b50C4Ed8D0Fb90Ad053324F31b
+0x8589427373D6D84E98730D7795D8f6f8731FDA0\`;
 
-const STORY_2 = `OP: WHALE WATCHING
+const STORY_2 = \`OP: WHALE WATCHING
 Assess legitimate vs malicious topology.
 Targets:
 0x28C6c06298d514Db089934071355E5743bf21d60
-0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D`;
+0x098B716B8Aaf21512996dC57EB0615e2383E2f96\`;
 
-const STORY_3 = `CROSS-CHAIN EVAL
+const STORY_3 = \`CROSS-CHAIN EVAL
 Multi-chain attribution testing.
 Targets:
-0xae2Fc483527B8EF99EB5D9B44875F005ba1FaE13
-bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh
-TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t`;
+13AM4VW2dhxYgXeQepoHkHSQuy6NgaEb94
+0xC8a65Fadf0e0dDAf421F28FEAb69Bf6E2E589963
+TXLAQ63Xg1NAzckPwKHvzw7CSEmLMEqcdj\`;
 
-const STORY_4 = `EXPLOIT SIMULATION
+const STORY_4 = \`EXPLOIT SIMULATION
 Trace forensic paths.
 Targets:
-0x0248f752802b2cfb4373cc0c3bc3964429385c26
-0x1111111254EEB25477B68fb85Ed929f73A960582`;
+0xC8a65Fadf0e0dDAf421F28FEAb69Bf6E2E589963
+0x098B716B8Aaf21512996dC57EB0615e2383E2f96\`;
 
-const STORY_5 = `EXCHANGE LAUNDERING
+const STORY_5 = \`EXCHANGE LAUNDERING
 Tracking cash out paths.
 Targets:
-TN3W4H6rK2ce4vX9YnFQHwKENnHjoxb3m9
-bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh`;
+34xp4vRoCGJym3xR7yCVPFHoCNxv4Twseo
+5tzFkiKscXHK5ZXCGbXZxdw7gTjjD1mBwuoFbhUvuAi9\`;
 
-const STORY_6 = `CONTRACT ANALYSIS
+const STORY_6 = \`CONTRACT ANALYSIS
 Reviewing high-volume DeFi programs.
 Targets:
 0xdAC17F958D2ee523a2206206994597C13D831ec7
-TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`;
+JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyDAg\`;
 
 export default function DemoSamples() {
   const navigate = useNavigate();
