@@ -1004,7 +1004,7 @@ export async function downloadBulkPDF(report, forceHtml = true) {
             <tr>
               <td style="font-family:'Courier New',monospace;font-size:10px;color:#64748b;">${new Date(t.timestamp * 1000).toLocaleString()}</td>
               <td><span style="display:inline-block;padding:2px 6px;border-radius:3px;font-size:9px;font-weight:700;${t.type === 'inflow' ? 'color:#16a34a;background:#f0fdf4;' : 'color:#dc2626;background:#fef2f2;'}">${t.type.toUpperCase()}</span></td>
-              <td style="font-family:'Courier New',monospace;font-weight:bold;color:#0f172a;">${t.token_symbol ? \`\${t.token_value_formatted} \${t.token_symbol}\` : \`\${t.value_eth} \${t.chain === 'bitcoin' ? 'BTC' : t.chain === 'solana' ? 'SOL' : t.chain === 'tron' ? 'TRX' : 'ETH'}\`}</td>
+              <td style="font-family:'Courier New',monospace;font-weight:bold;color:#0f172a;">${t.token_symbol ? `${t.token_value_formatted} ${t.token_symbol}` : `${t.value_eth} ${t.chain === 'bitcoin' ? 'BTC' : t.chain === 'solana' ? 'SOL' : t.chain === 'tron' ? 'TRX' : 'ETH'}`}</td>
               <td>
                 <div style="font-family:'Courier New',monospace;font-size:10px;color:#0284c7;margin-bottom:2px;">Tgt: ${t.address.slice(0,16)}...</div>
                 <div style="font-family:'Courier New',monospace;font-size:9px;color:#64748b;">CPty: ${_esc(t.counterparty)}</div>
