@@ -64,7 +64,7 @@ const DATASETS = {
       "description": "DeFi-risky classification (governance history)."
     },
     {
-      "address": "0x8589427373D6D84E98730D7795D8f6f8731FDA0",
+      "address": "0x8589427373D6D84E98730D7795D8f6f8731FDA00",
       "name": "Tornado Cash 100 ETH Pool",
       "type": "Contract",
       "expectedRisk": "CRITICAL",
@@ -249,7 +249,7 @@ const STORY_1 = `OP: MIDNIGHT SWEEP
 Targeting DeFi privacy mixers. Evaluate threat level.
 Targets:
 0xd90e2f925DA726b50C4Ed8D0Fb90Ad053324F31b
-0x8589427373D6D84E98730D7795D8f6f8731FDA0`;
+0x8589427373D6D84E98730D7795D8f6f8731FDA00`;
 
 const STORY_2 = `OP: WHALE WATCHING
 Assess legitimate vs malicious topology.

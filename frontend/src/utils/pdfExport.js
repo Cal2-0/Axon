@@ -580,7 +580,7 @@ export async function downloadContractPDF(result, forceHtml = true) {
   if (!result) return;
 
   // PRE-FLIGHT QUALITY GATES
-  if (!result.info || result.info.verified === undefined) {
+  if (!result.identity || result.identity.verified === undefined) {
     alert("DATA NORMALIZATION ERROR: Contract verification status missing. Report generation aborted.");
     return;
   }
