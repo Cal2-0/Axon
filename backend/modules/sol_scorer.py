@@ -430,7 +430,20 @@ async def scan_sol_wallet(address: str, db: Session, depth: str = "quick", case_
 
     if db:
         try:
-            from database.models import VerificationReport
+            from database.models import VerificationReport, InvestigationLog
+            
+            log_entry = InvestigationLog(
+                entity_address=address.lower(),
+                entity_type="wallet",
+                scan_depth=depth,
+                risk_score=final_score,
+                triggered_signals=json.dumps([{"reason": s[0], "icon": s[1], "layer": s[2]} for s in signals]) if signals else "[]",
+                raw_data=response_data,
+                case_id=case_id
+            )
+            db.add(log_entry)
+            db.commit()
+
             report_entry = VerificationReport(
                 report_id=report_meta["report_id"],
                 report_hash=report_meta["sha256_hash"],

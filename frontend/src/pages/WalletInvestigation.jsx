@@ -859,7 +859,7 @@ export default function WalletInvestigation({ caseId }) {
                   return (
                     <>
                       <div className="text-lg font-bold font-mono text-axon-cyan">
-                        {result.identity.ethBalance === 'N/A' ? 'N/A' : `${rawBalance} ${sym}`}
+                        {!result.identity.ethBalance || result.identity.ethBalance === 'N/A' || rawBalance === 'undefined' ? 'N/A' : `${rawBalance} ${sym}`}
                       </div>
                       <div className="text-[11px] text-axon-text-dim mt-0.5 font-mono">
                         {!isNaN(balNum) && priceData ? (
