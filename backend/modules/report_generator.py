@@ -157,6 +157,21 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
     if inv_log and isinstance(inv_log.raw_data, dict):
         raw = inv_log.raw_data
 
+        # PRE-FLIGHT QUALITY GATES
+        if report.entity_type == "wallet":
+            identity = raw.get("identity", {})
+            if not identity or identity.get("txCount") is None:
+                Story.append(Paragraph("<b>[DATA NORMALIZATION ERROR]</b> Raw data received, but mapping was incomplete. Report generation aborted.", styles["Heading2"]))
+                doc.build(Story, onFirstPage=_page_footer, onLaterPages=_page_footer)
+                return buffer.getvalue()
+            
+        if report.entity_type == "contract":
+            info = raw.get("info", {})
+            if "verified" not in info:
+                Story.append(Paragraph("<b>[DATA NORMALIZATION ERROR]</b> Contract verification status missing. Report generation aborted.", styles["Heading2"]))
+                doc.build(Story, onFirstPage=_page_footer, onLaterPages=_page_footer)
+                return buffer.getvalue()
+
         if report.entity_type == "wallet":
             identity = raw.get("identity", {})
             risk = raw.get("risk", {})
@@ -207,12 +222,35 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
             explorer = addr_info.get("explorer", "N/A")
             if _is_valid(explorer):
                 Story.append(Paragraph(f"<b>Explorer Link:</b> <a href='{explorer}'>{explorer}</a>", styles["Normal"]))
+            
+            # Coin Identifier Tier 1 Data
+            address_intel = identity.get("address_intelligence")
+            if address_intel:
+                Story.append(Spacer(1, 6))
+                Story.append(Paragraph("<b>Coin Identifier (Tier 1 Intelligence)</b>", styles["Heading3"]))
+                Story.append(Paragraph(f"<b>Blockchain Family:</b> {address_intel.get('family', 'N/A')}", styles["Normal"]))
+                Story.append(Paragraph(f"<b>Address Type:</b> {address_intel.get('address_type', 'N/A')}", styles["Normal"]))
+                Story.append(Paragraph(f"<b>Encoding:</b> {address_intel.get('encoding', 'N/A')}", styles["Normal"]))
+                Story.append(Paragraph(f"<b>Checksum Validation:</b> {address_intel.get('checksum', 'N/A')}", styles["Normal"]))
+                Story.append(Paragraph(f"<b>Length:</b> {address_intel.get('length', 'N/A')}", styles["Normal"]))
+                Story.append(Paragraph(f"<b>Prefix:</b> {address_intel.get('prefix', 'N/A')}", styles["Normal"]))
+                Story.append(Paragraph(f"<b>Detection Method:</b> {address_intel.get('identification_method', 'N/A')}", styles["Normal"]))
+                supported_str = 'Supported' if address_intel.get('supported') else 'Unsupported'
+                Story.append(Paragraph(f"<b>Supported Status:</b> {supported_str}", styles["Normal"]))
+                comp_chains = ", ".join(address_intel.get('possible_networks', []))
+                Story.append(Paragraph(f"<b>Compatible Chains:</b> {comp_chains or 'N/A'}", styles["Normal"]))
+                Story.append(Spacer(1, 6))
+
             if _is_valid(identity.get("first_tx_date")):
                 Story.append(Paragraph(f"<b>First Activity:</b> {identity.get('first_tx_date')}", styles["Normal"]))
             if _is_valid(identity.get("last_tx_date")):
                 Story.append(Paragraph(f"<b>Last Activity:</b> {identity.get('last_tx_date')}", styles["Normal"]))
             if _is_valid(identity.get("balance_wei")):
                 Story.append(Paragraph(f"<b>Native Balance (Wei):</b> {identity.get('balance_wei')}", styles["Normal"]))
+            if _is_valid(identity.get("walletAgeDays")):
+                Story.append(Paragraph(f"<b>Wallet Age:</b> {identity.get('walletAgeDays')}", styles["Normal"]))
+            if _is_valid(identity.get("walletType")):
+                Story.append(Paragraph(f"<b>Wallet Type:</b> {identity.get('walletType')}", styles["Normal"]))
             if _is_valid(identity.get("ens")):
                 Story.append(Paragraph(f"<b>ENS / Domain:</b> {identity.get('ens')}", styles["Normal"]))
             class_label = identity.get("entityClass") or identity.get("protocolCategory")
@@ -221,56 +259,77 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
             Story.append(Spacer(1, 12))
 
             # THREAT DB
+            Story.append(Paragraph("<b>THREAT INTELLIGENCE</b>", styles["Heading2"]))
             if _is_valid(risk.get("factors")):
-                Story.append(Paragraph("<b>THREAT DATABASE MATCHES</b>", styles["Heading2"]))
                 rows = []
                 for factor in risk.get("factors", []):
                     rows.append(["Axon Engine", "Behavioral", "High", translate(factor.get('reason')), "Chain Analysis"])
                 if rows:
                     Story.append(_build_table(["Threat Source", "Threat Category", "Confidence", "Evidence", "Reference"], rows, [80, 80, 60, 150, 60]))
                 Story.append(Spacer(1, 12))
+            else:
+                Story.append(Paragraph("Not available on this blockchain", styles["Normal"]))
+                Story.append(Spacer(1, 12))
 
             # EVIDENCE: TIMELINE
+            Story.append(Paragraph("<b>TIMELINE RECONSTRUCTION</b>", styles["Heading2"]))
             if txs:
                 tx_limit = 50 if report.scan_depth == "deep" else 15
-                Story.append(Paragraph(f"<b>EVIDENCE: TIMELINE RECONSTRUCTION</b> (Showing {min(len(txs), tx_limit)} of {len(txs)} transactions)", styles["Heading2"]))
+                Story.append(Paragraph(f"<b>EVIDENCE:</b> (Showing {min(len(txs), tx_limit)} of {len(txs)} transactions)", styles["Normal"]))
+                
+                defi_interactions = graph.get("defi_interactions", []) if isinstance(graph, dict) else []
+                defi_map = {d.get("hash"): d.get("simple_name") for d in defi_interactions if d.get("hash")}
+                
                 rows = []
                 for tx in txs[:tx_limit]:
                     ts = tx.get("timeStamp")
                     try: dstr = time.strftime("%Y-%m-%d %H:%M", time.gmtime(int(ts)))
                     except: dstr = "N/A"
+                    
+                    tx_hash = tx.get("hash", "")
+                    op_name = defi_map.get(tx_hash)
+                    
                     try:
                         val_num = int(tx.get('value', 0))
-                        if val_num == 0 and tx.get('input') not in ['', '0x']:
+                        if op_name:
+                            val = op_name.capitalize()
+                        elif tx.get('token_symbol'):
+                            val = f"{tx.get('token_value_formatted')} {tx.get('token_symbol')}"
+                        elif val_num == 0 and tx.get('input') not in ['', '0x']:
                             val = "Token Transfer"
                         else:
                             val = f"{(val_num / 10**18):.5f} ETH"
                     except: val = "0 ETH"
                     is_in = tx.get("to", "").lower() == report.entity_address.lower()
-                    rows.append([dstr, tx.get("hash", "")[:8]+"...", "IN" if is_in else "OUT", val])
+                    rows.append([dstr, tx_hash[:8]+"...", "IN" if is_in else "OUT", val])
                 if rows:
-                    Story.append(_build_table(["Date", "Hash", "Dir", "Value (ETH)"], rows, [100, 80, 40, 80]))
+                    Story.append(_build_table(["Date", "Hash", "Dir", "Value / Operation"], rows, [100, 80, 40, 100]))
+                Story.append(Spacer(1, 12))
+            else:
+                Story.append(Paragraph("Not available on this blockchain", styles["Normal"]))
                 Story.append(Spacer(1, 12))
 
             # COUNTERPARTIES
-            if graph and _is_valid(graph.get("nodes")):
+            Story.append(Paragraph("<b>COUNTERPARTIES</b>", styles["Heading2"]))
+            if graph and _is_valid(graph.get("nodes")) and len(graph.get("nodes", [])) > 0:
                 nodes = graph.get("nodes", [])
-                if len(nodes) > 0:
-                    Story.append(Paragraph("<b>COUNTERPARTIES</b>", styles["Heading2"]))
-                    rows = []
-                    for n in nodes[:10]:
-                        ctype = n.get("type", "Unknown")
-                        if ctype == "default": ctype = "Unclassified"
-                        tx_c = str(n.get("interaction_count", n.get("tx_count", "N/A")))
-                        rows.append([n.get("id", "")[:12]+"...", ctype, tx_c, str(n.get("total_value", "N/A")), str(n.get("last_seen", "N/A")), str(n.get("risk", 0))])
-                    if rows:
-                        Story.append(_build_table(["Address", "Known Entity", "Tx Count", "Total Val", "Last Seen", "Threat Lvl"], rows, [80, 70, 50, 50, 60, 50]))
-                    Story.append(Spacer(1, 12))
+                rows = []
+                for n in nodes[:10]:
+                    ctype = n.get("type", "Unknown")
+                    if ctype == "default": ctype = "Unclassified"
+                    tx_c = str(n.get("interaction_count", n.get("tx_count", "N/A")))
+                    rows.append([n.get("id", "")[:12]+"...", ctype, tx_c, str(n.get("total_value", "N/A")), str(n.get("last_seen", "N/A")), str(n.get("risk", 0))])
+                if rows:
+                    Story.append(_build_table(["Address", "Known Entity", "Tx Count", "Total Val", "Last Seen", "Threat Lvl"], rows, [80, 70, 50, 50, 60, 50]))
+                Story.append(Spacer(1, 12))
+            else:
+                Story.append(Paragraph("Not available on this blockchain", styles["Normal"]))
+                Story.append(Spacer(1, 12))
 
             # ASSET INVENTORY
+            Story.append(Paragraph("<b>ASSET INVENTORY</b>", styles["Heading2"]))
             if _is_valid(raw.get("holdings")):
                 holdings = raw.get("holdings", {})
-                Story.append(Paragraph("<b>ASSET INVENTORY</b>", styles["Heading2"]))
                 rows = []
                 if isinstance(holdings, list):
                     for h in holdings:
@@ -283,12 +342,27 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
                 if rows:
                     Story.append(_build_table(["Assets", "Stablecoins", "NFTs", "Contracts", "Protocols"], rows, [80, 70, 50, 60, 60]))
                 Story.append(Spacer(1, 12))
+            else:
+                Story.append(Paragraph("Not available on this blockchain", styles["Normal"]))
+                Story.append(Spacer(1, 12))
             
             # EXCHANGE & KYC
+            Story.append(Paragraph("<b>FINANCIAL SUMMARY (EXCHANGE & KYC)</b>", styles["Heading2"]))
             if exchange and _is_valid(exchange.get("detected")) and exchange.get("detected"):
-                Story.append(Paragraph("<b>EXCHANGE & KYC EXPOSURE (SUBPOENA TARGETS)</b>", styles["Heading2"]))
                 Story.append(Paragraph(f"<b>Exchange Activity Detected:</b> {exchange.get('summary', '')}", styles["Normal"]))
                 Story.append(Paragraph("<b>Recommended legal mechanism:</b> Subpoena / MLAT to exchange compliance.", styles["Normal"]))
+                Story.append(Spacer(1, 12))
+            else:
+                Story.append(Paragraph("Not available on this blockchain", styles["Normal"]))
+                Story.append(Spacer(1, 12))
+                
+            # PROTOCOL ACTIVITY / MIXER
+            Story.append(Paragraph("<b>PROTOCOL ACTIVITY (MIXERS & BRIDGES)</b>", styles["Heading2"]))
+            if mixer and _is_valid(mixer.get("findings")) and len(mixer.get("findings")) > 0:
+                Story.append(Paragraph(f"<b>Mixers Detected:</b> {len(mixer.get('findings'))}", styles["Normal"]))
+                Story.append(Spacer(1, 12))
+            else:
+                Story.append(Paragraph("Not available on this blockchain", styles["Normal"]))
                 Story.append(Spacer(1, 12))
             
             # AI-ASSISTED INTERPRETATION (NON-EVIDENTIARY)
@@ -454,10 +528,32 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
                     Story.append(_build_table(["Address", "Network", "Risk Label", "Score"], rows, [100, 100, 60, 40]))
                 Story.append(Spacer(1, 12))
 
-            # SECTION 4 - PRIORITY INVESTIGATION QUEUE
+            # SECTION 4 - PRIORITY INVESTIGATION QUEUE & TARGET PROFILING
+            Story.append(Paragraph(f"<b>SECTION {sec} - TARGET PROFILING & INVESTIGATION QUEUE</b>", styles["Heading2"])); sec += 1
+            
+            top5 = intel.get("top5", {})
+            if top5:
+                # Add Most Connected
+                mc = top5.get("most_connected", [])
+                if mc and mc[0].get("value", 0) > 0:
+                    Story.append(Paragraph("<b>Most Connected Nodes (Hubs):</b>", styles["Normal"]))
+                    for item in mc[:3]:
+                        if item.get("value", 0) > 0:
+                            Story.append(Paragraph(f"- <b>{item.get('address')[:12]}...</b> ({item.get('value')} counterparties) - Risk: {item.get('risk_score')}", styles["Normal"]))
+                    Story.append(Spacer(1, 6))
+                
+                # Add Highest Volume
+                hv = top5.get("highest_volume", [])
+                if hv and hv[0].get("value", 0) > 0:
+                    Story.append(Paragraph("<b>Highest Volume Transactors:</b>", styles["Normal"]))
+                    for item in hv[:3]:
+                        if item.get("value", 0) > 0:
+                            Story.append(Paragraph(f"- <b>{item.get('address')[:12]}...</b> ({item.get('value'):.2f} ETH) - Risk: {item.get('risk_score')}", styles["Normal"]))
+                    Story.append(Spacer(1, 6))
+
             priority_queue_filtered = [item for item in priority_queue if item.get("score", 0) >= 60]
             if priority_queue_filtered:
-                Story.append(Paragraph(f"<b>SECTION {sec} - PRIORITY INVESTIGATION QUEUE</b>", styles["Heading2"])); sec += 1
+                Story.append(Paragraph("<b>Priority Investigation Targets (Risk >= 60):</b>", styles["Normal"]))
                 rows = []
                 for item in priority_queue_filtered[:15]:
                     rows.append([
@@ -467,7 +563,7 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
                     ])
                 if rows:
                     Story.append(_build_table(["Target Address", "Risk Score", "Primary Indicator"], rows, [100, 60, 200]))
-                Story.append(Spacer(1, 12))
+            Story.append(Spacer(1, 12))
 
             # SECTION 5 - NETWORK CONNECTIONS / OVERLAP MATRIX
             similarity = intel.get("similarity_matrix", [])

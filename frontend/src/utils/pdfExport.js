@@ -15,6 +15,12 @@
  */
 export async function downloadWalletPDF(result, forceHtml = true) {
   if (!result) return;
+  
+  // PRE-FLIGHT QUALITY GATES
+  if (!result.identity || result.identity.txCount === undefined) {
+    alert("DATA NORMALIZATION ERROR: Raw data received, but mapping was incomplete. Report generation aborted.");
+    return;
+  }
 
   const caseId = result.report_metadata?.report_id || `AXN-${Date.now().toString(36).toUpperCase().slice(0, 6)}-${result.identity.address.slice(2, 8).toUpperCase()}`;
   const now = new Date();
@@ -99,14 +105,19 @@ export async function downloadWalletPDF(result, forceHtml = true) {
   `).join('');
 
   // ── Graph Node Classification ──
-  const graphNodes = (result.graph?.nodes || []).slice(0, 30).map(n => `
+  const graphNodes = (result.graph?.nodes || []).slice(0, 30).map(n => {
+    const txCount = n.interaction_count || n.tx_count || 'N/A';
+    const totalVal = n.total_value || 'N/A';
+    const relationship = n.type === 'default' ? 'Unclassified' : (n.type || 'Unknown');
+    return `
     <tr>
-      <td style="font-weight:600">${_esc(n.label || 'N/A')}</td>
-      <td style="font-family:'Courier New',monospace;font-size:10px;text-transform:uppercase;color:#64748b">${_esc(n.type || 'unknown')}</td>
+      <td style="font-weight:600">${_esc(n.id ? n.id.slice(0, 12) + '...' : n.label || 'N/A')}</td>
+      <td style="font-family:'Courier New',monospace;font-size:10px;text-transform:uppercase;color:#64748b">${_esc(relationship)}</td>
+      <td style="font-family:'Courier New',monospace;font-size:11px;">${txCount}</td>
+      <td style="font-family:'Courier New',monospace;font-size:11px;">${totalVal}</td>
       <td><span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:700;${n.risk >= 70 ? 'background:#fef2f2;color:#dc2626;border:1px solid #fecaca' : n.risk >= 40 ? 'background:#fff7ed;color:#ea580c;border:1px solid #fed7aa' : 'background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0'}">${n.risk}/100</span></td>
-      <td style="color:${n.risk >= 70 ? '#dc2626' : n.risk >= 40 ? '#ea580c' : '#16a34a'};font-weight:600;font-size:11px">${n.risk >= 70 ? 'HIGH THREAT' : n.risk >= 40 ? 'MODERATE' : 'LOW RISK'}</td>
     </tr>
-  `).join('');
+  `}).join('');
 
   // ── Analytical Engine Forensic Verdict ──
   const analyticalSynthesis = result.risk?.analyticalSynthesis || result.osint?.analyticalSynthesis || {};
@@ -292,6 +303,16 @@ export async function downloadWalletPDF(result, forceHtml = true) {
       <div style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px">Hypothesis</div>
       <p style="font-size:11px;color:#334155;line-height:1.6">${_esc(hypothesis)}</p>
     </div>
+    ${prosecution ? `
+    <div style="margin-bottom:8px;border-left:2px solid #dc2626;padding-left:8px">
+      <div style="font-size:9px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px">PROSECUTION PERSPECTIVE</div>
+      <p style="font-size:11px;color:#334155;line-height:1.6">${_esc(prosecution)}</p>
+    </div>` : ''}
+    ${defense ? `
+    <div style="margin-bottom:8px;border-left:2px solid #16a34a;padding-left:8px">
+      <div style="font-size:9px;font-weight:700;color:#16a34a;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px">DEFENSE PERSPECTIVE</div>
+      <p style="font-size:11px;color:#334155;line-height:1.6">${_esc(defense)}</p>
+    </div>` : ''}
     <div>
       <div style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px">Executive Verdict</div>
       <p style="font-size:12px;color:#0f172a;font-weight:700;line-height:1.5">${_esc(verdict)}</p>
@@ -303,6 +324,7 @@ export async function downloadWalletPDF(result, forceHtml = true) {
   <div class="grid4">
     ${[
       ['Address', result.identity.address, '#0284c7'],
+      ['Explorer Link', result.identity.explorerLink || 'N/A', '#0284c7'],
       ['Label', result.identity.label || 'Unlabeled', '#0f172a'],
       ['Tag', result.identity.tag || label, score >= 80 ? '#dc2626' : '#16a34a'],
       ['ENS', result.identity.ens || 'None', '#7c3aed'],
@@ -312,6 +334,8 @@ export async function downloadWalletPDF(result, forceHtml = true) {
       ['Counterparties', result.identity.uniqueCounterparties || 0, '#0f172a'],
       ['First Seen', result.identity.firstSeen || 'N/A', '#64748b'],
       ['Last Active', result.identity.lastSeen || 'N/A', '#64748b'],
+      ['Wallet Age', result.identity.walletAgeDays || 'N/A', '#0f172a'],
+      ['Wallet Type', result.identity.walletType || 'N/A', '#16a34a'],
       ['Entity Class', entityClass, '#7c3aed'],
       ['Class Modifier', classModifier + 'x', '#64748b'],
     ].map(([lbl, val, color]) => `
@@ -321,6 +345,27 @@ export async function downloadWalletPDF(result, forceHtml = true) {
       </div>
     `).join('')}
   </div>
+
+  ${result.identity.address_intelligence ? `
+  <h3 style="margin-top:16px;">2.1 Coin Identifier (Tier 1 Intelligence)</h3>
+  <div class="grid4">
+    ${[
+      ['Blockchain Family', result.identity.address_intelligence.family || 'N/A', '#0f172a'],
+      ['Address Type', result.identity.address_intelligence.address_type || 'N/A', '#0284c7'],
+      ['Encoding', result.identity.address_intelligence.encoding || 'N/A', '#0f172a'],
+      ['Checksum Validation', result.identity.address_intelligence.checksum || 'N/A', result.identity.address_intelligence.checksum === 'Verified' ? '#16a34a' : '#ea580c'],
+      ['Address Length', result.identity.address_intelligence.length || 'N/A', '#0f172a'],
+      ['Prefix', result.identity.address_intelligence.prefix || 'N/A', '#0f172a'],
+      ['Detection Method', result.identity.address_intelligence.identification_method || 'N/A', '#7c3aed'],
+      ['Supported Status', result.identity.address_intelligence.supported ? 'Supported' : 'Unsupported', result.identity.address_intelligence.supported ? '#16a34a' : '#dc2626'],
+      ['Compatible Chains', (result.identity.address_intelligence.possible_networks || []).join(', ') || 'N/A', '#0284c7'],
+    ].map(([lbl, val, color]) => \`
+      <div class="cell">
+        <div class="label">\${lbl}</div>
+        <div class="val mono" style="color:\${color};font-size:11px">\${_esc(String(val))}</div>
+      </div>
+    \`).join('')}
+  </div>` : ''}
 
   <!-- ═══ 3. RISK ASSESSMENT ═══ -->
   <h2><span class="bar" style="background:#dc2626"></span>3. Risk Assessment — 5-Layer Behavioral Engine</h2>
@@ -397,6 +442,18 @@ export async function downloadWalletPDF(result, forceHtml = true) {
     <div class="cell"><div class="label">ERC-20 Tokens</div><div class="val" style="font-size:18px">${result.holdings?.erc20_count || 0}</div></div>
     <div class="cell"><div class="label">OSINT Mentions</div><div class="val" style="font-size:18px;color:${(result.osint?.walletMentions || 0) > 0 ? '#ea580c' : '#16a34a'}">${result.osint?.walletMentions || 0}</div></div>
   </div>
+  
+  <!-- ═══ ASSET INVENTORY ═══ -->
+  <h2><span class="bar" style="background:#7c3aed"></span>Asset Inventory</h2>
+  ${(result.holdings && result.holdings.erc20_count > 0) ? `
+  <div class="grid3">
+    <div class="cell"><div class="label">ERC-20 Tokens</div><div class="val" style="font-size:18px">${result.holdings.erc20_count}</div></div>
+  </div>
+  ` : `
+  <div class="verdict-box" style="margin-bottom:12px">
+    <p style="line-height:1.7; color: #64748b; font-style: italic;">Not available on this blockchain or no assets detected.</p>
+  </div>
+  `}
 
   <!-- ═══ 5. FINANCIAL FLOW — EXCHANGE DETECTION ═══ -->
   <h2><span class="bar" style="background:#16a34a"></span>5. Financial Flow Analysis — Exchange Detection</h2>
@@ -412,7 +469,11 @@ export async function downloadWalletPDF(result, forceHtml = true) {
   <table>
     <thead><tr><th>Exchange</th><th>Address</th><th>Conf.</th><th>Type</th><th>Volume</th><th>Date</th><th>Status</th></tr></thead>
     <tbody>${exchangeFindings}</tbody>
-  </table>` : ''}
+  </table>` : `
+  <div class="verdict-box" style="margin-bottom:12px; padding: 12px; background: #f8fafc; border-left: 4px solid #cbd5e1;">
+    <p style="color: #64748b; font-style: italic; margin: 0; font-size: 13px;">Not available on this blockchain.</p>
+  </div>
+  `}
 
   <!-- ═══ 6. MIXER & LAUNDERING ═══ -->
   <h2><span class="bar" style="background:#ea580c"></span>6. Mixer & Laundering Analysis</h2>
@@ -426,7 +487,11 @@ export async function downloadWalletPDF(result, forceHtml = true) {
   <table>
     <thead><tr><th>Pool</th><th>TXs</th><th>Total ETH</th><th>First Use</th><th>Last Use</th></tr></thead>
     <tbody>${mixerFindings}</tbody>
-  </table>` : ''}
+  </table>` : `
+  <div class="verdict-box" style="margin-bottom:12px; padding: 12px; background: #f8fafc; border-left: 4px solid #cbd5e1;">
+    <p style="color: #64748b; font-style: italic; margin: 0; font-size: 13px;">Protocol Activity / Mixer usage not available on this blockchain.</p>
+  </div>
+  `}
   ${launderingList ? `
   <h3>6.2 Laundering Indicators</h3>
   <ul style="padding-left:20px;color:#334155;font-size:11px;line-height:1.7;margin-bottom:12px">${launderingList}</ul>` : ''}
@@ -439,7 +504,7 @@ export async function downloadWalletPDF(result, forceHtml = true) {
   </div>
   <h3>7.1 Node Classification Matrix</h3>
   <table>
-    <thead><tr><th>Node</th><th>Type</th><th>Threat Level</th><th>Classification</th></tr></thead>
+    <thead><tr><th>Counterparty</th><th>Relationship / Entity</th><th>Tx Count</th><th>Total Volume</th><th>Threat Level</th></tr></thead>
     <tbody>${graphNodes}</tbody>
   </table>
 
@@ -466,6 +531,20 @@ export async function downloadWalletPDF(result, forceHtml = true) {
     <thead><tr><th style="width:30px">#</th><th style="width:80px">Priority</th><th>Action Item</th></tr></thead>
     <tbody>${actionRows}</tbody>
   </table>
+
+  <!-- ═══ 9. METHODOLOGY ═══ -->
+  <h2 class="page-break"><span class="bar" style="background:#475569"></span>9. Methodology</h2>
+  <div class="verdict-box" style="border-left-color:#475569;margin-bottom:12px; font-size:11px; color:#475569">
+    <p style="line-height:1.6; margin-bottom: 8px;">
+      <b>Data Sourcing:</b> On-chain data is retrieved from primary RCP nodes and indexed via block explorers. Prices are estimated at the time of transaction execution.
+    </p>
+    <p style="line-height:1.6; margin-bottom: 8px;">
+      <b>Heuristic Engine:</b> Risk scoring leverages a multi-layered heuristic approach, assessing entity exposure, direct/indirect interactions with sanctioned entities (OFAC/SDN), mixer usage, and darknet marketplaces.
+    </p>
+    <p style="line-height:1.6;">
+      <b>AI Synthesis:</b> Natural language summaries are generated via Large Language Models (LLM) and are provided strictly as investigative aids, not evidentiary conclusions.
+    </p>
+  </div>
 
   <!-- ═══ FOOTER ═══ -->
   <div class="footer">
@@ -500,6 +579,12 @@ export async function downloadWalletPDF(result, forceHtml = true) {
 export async function downloadContractPDF(result, forceHtml = true) {
   if (!result) return;
 
+  // PRE-FLIGHT QUALITY GATES
+  if (!result.info || result.info.verified === undefined) {
+    alert("DATA NORMALIZATION ERROR: Contract verification status missing. Report generation aborted.");
+    return;
+  }
+
   const caseId = result.report_metadata?.report_id || `AXN-${Date.now().toString(36).toUpperCase().slice(0, 6)}-${(result.identity?.address || '000000').slice(2, 8).toUpperCase()}`;
   const now = new Date();
   const dateStr = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -517,6 +602,10 @@ export async function downloadContractPDF(result, forceHtml = true) {
   const signals = result.risk?.factors || [];
   const goplus = result.goplus?.checks || [];
   const analyticalSynthesis = result.risk?.analyticalSynthesis || {};
+  const hypothesis = analyticalSynthesis.hypothesis || 'Analysis unavailable.';
+  const verdict = analyticalSynthesis.verdict || 'Verdict unavailable.';
+  const prosecution = analyticalSynthesis.prosecution_summary || '';
+  const defense = analyticalSynthesis.defense_summary || '';
 
   const axisRows = [
     ['A1', 'Code Security', axes.A1 ?? 0],
@@ -617,8 +706,22 @@ export async function downloadContractPDF(result, forceHtml = true) {
         <div class="cell"><div class="label">Proxy</div><div class="val">${result.identity?.proxy ? 'Yes' : 'No'}</div></div>
       </div>
       <div class="verdict-box">
-        <div style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:2px">Executive Verdict</div>
-        <p style="font-size:12px;color:#0f172a;font-weight:700">${_esc(analyticalSynthesis.verdict || 'No verdict available.')}</p>
+        <div style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:2px">Hypothesis</div>
+        <p style="font-size:11px;color:#334155;line-height:1.6">${_esc(hypothesis)}</p>
+        ${prosecution ? `
+        <div style="margin-top:8px;border-left:2px solid #dc2626;padding-left:8px">
+          <div style="font-size:9px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px">PROSECUTION PERSPECTIVE</div>
+          <p style="font-size:11px;color:#334155;line-height:1.6">${_esc(prosecution)}</p>
+        </div>` : ''}
+        ${defense ? `
+        <div style="margin-top:8px;border-left:2px solid #16a34a;padding-left:8px">
+          <div style="font-size:9px;font-weight:700;color:#16a34a;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px">DEFENSE PERSPECTIVE</div>
+          <p style="font-size:11px;color:#334155;line-height:1.6">${_esc(defense)}</p>
+        </div>` : ''}
+        <div style="margin-top:8px">
+          <div style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:2px">Executive Verdict</div>
+          <p style="font-size:12px;color:#0f172a;font-weight:700">${_esc(verdict)}</p>
+        </div>
       </div>
     </div>
   </div>
@@ -901,7 +1004,7 @@ export async function downloadBulkPDF(report, forceHtml = true) {
             <tr>
               <td style="font-family:'Courier New',monospace;font-size:10px;color:#64748b;">${new Date(t.timestamp * 1000).toLocaleString()}</td>
               <td><span style="display:inline-block;padding:2px 6px;border-radius:3px;font-size:9px;font-weight:700;${t.type === 'inflow' ? 'color:#16a34a;background:#f0fdf4;' : 'color:#dc2626;background:#fef2f2;'}">${t.type.toUpperCase()}</span></td>
-              <td style="font-family:'Courier New',monospace;font-weight:bold;color:#0f172a;">${t.value_eth} ${t.chain === 'bitcoin' ? 'BTC' : t.chain === 'solana' ? 'SOL' : t.chain === 'tron' ? 'TRX' : 'ETH'}</td>
+              <td style="font-family:'Courier New',monospace;font-weight:bold;color:#0f172a;">${t.token_symbol ? \`\${t.token_value_formatted} \${t.token_symbol}\` : \`\${t.value_eth} \${t.chain === 'bitcoin' ? 'BTC' : t.chain === 'solana' ? 'SOL' : t.chain === 'tron' ? 'TRX' : 'ETH'}\`}</td>
               <td>
                 <div style="font-family:'Courier New',monospace;font-size:10px;color:#0284c7;margin-bottom:2px;">Tgt: ${t.address.slice(0,16)}...</div>
                 <div style="font-family:'Courier New',monospace;font-size:9px;color:#64748b;">CPty: ${_esc(t.counterparty)}</div>
@@ -937,7 +1040,7 @@ export async function downloadMasterCasePDF(report, forceHtml = true) {
 
   const docHash = "VERIFIABLE-AI-DOSSIER";
   const ai = report.ai_report || {};
-  const score = report.stats?.average_risk || 0;
+  const score = report.stats?.average_risk || report.average_risk || report.highest_risk || 0;
   const riskColor = score >= 80 ? '#dc2626' : score >= 60 ? '#ea580c' : score >= 40 ? '#ca8a04' : '#16a34a';
   const riskBg = score >= 80 ? '#fef2f2' : score >= 60 ? '#fff7ed' : score >= 40 ? '#fefce8' : '#f0fdf4';
 
@@ -951,15 +1054,23 @@ export async function downloadMasterCasePDF(report, forceHtml = true) {
   const entitiesHTML = (report.entities || []).map((e, i) => {
     const eScore = e.risk_score || 0;
     const eColor = eScore >= 80 ? '#dc2626' : eScore >= 60 ? '#ea580c' : eScore >= 40 ? '#ca8a04' : '#16a34a';
+    const addr = e.address || e.entity_address || e.target || e.target_entity || 'N/A';
+    const eType = e.type || e.entity_type || 'WALLET';
+    const eClass = e.class || e.entity_class || 'N/A';
+    const eChain = e.chain || 'ETH';
+    let scannedAt = e.scanned_at || '';
+    if (!scannedAt && e.scan_timestamp) {
+      scannedAt = new Date(e.scan_timestamp * 1000).toLocaleString();
+    }
     return `
       <tr>
         <td style="font-family:'Courier New',monospace;color:#64748b;">${i + 1}</td>
-        <td style="font-family:'Courier New',monospace;font-weight:600;color:#0284c7;">${_esc(e.address)}</td>
-        <td><span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:9px;font-weight:700;border:1px solid #e2e8f0;background:#f8fafc;">${_esc(e.type?.toUpperCase() || 'WALLET')}</span></td>
-        <td>${_esc(e.class || 'N/A')}</td>
+        <td style="font-family:'Courier New',monospace;font-weight:600;color:#0284c7;">${_esc(addr)}</td>
+        <td><span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:9px;font-weight:700;border:1px solid #e2e8f0;background:#f8fafc;">${_esc(eType.toUpperCase())}</span></td>
+        <td>${_esc(eClass)}</td>
         <td><span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:9px;font-weight:700;color:${eColor};border:1px solid ${eColor}30;background:${eColor}10">${eScore}/100</span></td>
-        <td>${_esc(e.chain || 'ETH')}</td>
-        <td style="font-family:'Courier New',monospace;color:#64748b;">${_esc(e.scanned_at || '')}</td>
+        <td>${_esc(eChain)}</td>
+        <td style="font-family:'Courier New',monospace;color:#64748b;">${_esc(scannedAt)}</td>
       </tr>
     `;
   }).join('');
@@ -1022,7 +1133,7 @@ export async function downloadMasterCasePDF(report, forceHtml = true) {
       </div>
       <div style="text-align:right">
         <span style="display:inline-block;padding:4px 16px;border-radius:4px;font-size:11px;font-weight:800;font-family:'JetBrains Mono',monospace;background:#dc2626;color:#fff;margin-bottom:8px;letter-spacing:0.1em;box-shadow:0 0 10px rgba(220,38,38,0.5);">${ai.report_classification || 'CONFIDENTIAL / LEO'}</span>
-        <div class="mono" style="font-size:9px;color:#64748b;text-transform:uppercase;">INTEGRITY PROOF</div>
+        <div class="mono" style="font-size:9px;color:#64748b;text-transform:uppercase;">SHA-256 INTEGRITY HASH</div>
         <div class="mono" style="font-size:10px;color:#94a3b8;max-width:240px;word-break:break-all;">${docHash}</div>
       </div>
     </div>
@@ -1049,8 +1160,8 @@ export async function downloadMasterCasePDF(report, forceHtml = true) {
       <div class="grid4" style="margin-bottom:12px">
         <div class="cell"><div class="label">Title</div><div class="val" style="font-size:11px;color:#0284c7">${_esc(report.case_title || 'N/A')}</div></div>
         <div class="cell"><div class="label">Category</div><div class="val">${_esc(report.case_category || 'General')}</div></div>
-        <div class="cell"><div class="label">Priority</div><div class="val" style="color:#dc2626">${_esc(report.case_priority || 'P2')}</div></div>
-        <div class="cell"><div class="label">Total Subjects</div><div class="val">${report.stats?.total_entities || 0}</div></div>
+        <div class="cell"><div class="label">Priority</div><div class="val" style="color:#dc2626">${_esc(report.case_priority || report.priority || 'P2')}</div></div>
+        <div class="cell"><div class="label">Total Subjects</div><div class="val">${report.stats?.total_entities || report.total_entities || 0}</div></div>
       </div>
       <div class="verdict-box">
         <div style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;margin-bottom:2px">Executive Verdict Summary</div>

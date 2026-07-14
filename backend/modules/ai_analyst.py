@@ -106,6 +106,13 @@ async def _call_api(role: str, system_prompt: str, user_prompt: str,
                 if response.status_code == 200:
                     data = response.json()
                     content = data["choices"][0]["message"]["content"].strip()
+                    if content.startswith("```json"):
+                        content = content[7:]
+                    if content.startswith("```"):
+                        content = content[3:]
+                    if content.endswith("```"):
+                        content = content[:-3]
+                    content = content.strip()
                     return json.loads(content)
                 else:
                     print(f"[AI_ANALYST] Groq returned code {response.status_code}: {response.text[:200]}")
@@ -138,6 +145,13 @@ async def _call_api(role: str, system_prompt: str, user_prompt: str,
                 if response.status_code == 200:
                     data = response.json()
                     content = data["choices"][0]["message"]["content"].strip()
+                    if content.startswith("```json"):
+                        content = content[7:]
+                    if content.startswith("```"):
+                        content = content[3:]
+                    if content.endswith("```"):
+                        content = content[:-3]
+                    content = content.strip()
                     return json.loads(content)
                 else:
                     print(f"[AI_ANALYST] OpenRouter returned code {response.status_code}: {response.text[:200]}")

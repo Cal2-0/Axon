@@ -105,7 +105,7 @@ async def decode_defi_interactions(transactions: List[Dict]) -> List[Dict]:
             narrative += f" with {val_eth:.4f} ETH"
             
         # Add to list if it's an interesting defi interaction (e.g. swap, deposit, stake, borrow)
-        defi_keywords = ["swap", "deposit", "stake", "borrow", "mint", "claim", "liquidity", "pool"]
+        defi_keywords = ["swap", "deposit", "stake", "borrow", "mint", "claim", "liquidity", "pool", "burn", "bridge"]
         is_defi = any(kw in simple_name.lower() for kw in defi_keywords)
         
         if is_defi or "Data Not Available" not in signature:

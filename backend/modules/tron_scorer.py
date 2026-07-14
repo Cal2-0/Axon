@@ -162,11 +162,13 @@ async def scan_tron_wallet(address: str, db: Session, depth: str = "quick", case
         formatted_txs.append({
             "hash": tx_hash,
             "blockNumber": str(tx.get("blockNumber", "Pending")),
+            "timeStamp": str(ts / 1000.0) if ts else "0",
             "from": tx_from,
             "to": tx_to,
             "value": formatted_val,
             "gasUsed": str(tx.get("net_fee", 0)),
-            "gasPrice": "1"
+            "gasPrice": "1",
+            "input": "0x"
         })
 
     # TRC-20 USDT processing
@@ -339,25 +341,41 @@ async def scan_tron_wallet(address: str, db: Session, depth: str = "quick", case
             graph_nodes.append({"id": tgt, "label": tgt[:6]+"...", "type": "Unknown Wallet", "risk": 10})
             existing_node_ids.add(tgt)
 
+    from modules.coin_identifier import resolve_chain_identity
+    address_intel = await resolve_chain_identity(address, ai_fallback=False)
+
+    wallet_age_days = "Unavailable"
+    if timestamps:
+        try:
+            t1 = min(timestamps)
+            t2 = max(timestamps)
+            wallet_age_days = str(max(0, int((t2 - t1) / 86400))) + " days"
+        except Exception:
+            pass
+
     response_data = {
-        "shortName": "TRX Wallet",
+        "shortName": "TRON Wallet",
         "tag": label,
         "identity": {
             "address": address,
+            "explorerLink": f"https://tronscan.org/#/address/{address}",
+            "balance_wei": f"{tron_balance:.4f} TRX",
             "ens": None,
             "label": "Tron Address",
             "tag": label,
-            "firstSeen": time.strftime("%Y-%m-%d", time.gmtime(min(timestamps))) if timestamps else "Data Not Available",
-            "lastSeen": time.strftime("%Y-%m-%d", time.gmtime(max(timestamps))) if timestamps else "Data Not Available",
-            "ethBalance": f"{tron_balance:.4f}",
-            "totalReceived": "Data Not Available",
-            "totalSent": "Data Not Available",
-            "txCount": total_tx_count,
+            "first_tx_date": time.strftime("%Y-%m-%d", time.gmtime(min(timestamps))) if timestamps else "Unavailable",
+            "last_tx_date": time.strftime("%Y-%m-%d", time.gmtime(max(timestamps))) if timestamps else "Unavailable",
+            "totalReceived": "Unavailable",
+            "totalSent": "Unavailable",
+            "tx_count": total_tx_count,
+            "walletAgeDays": wallet_age_days,
+            "wallet_type": "Tron Address",
             "uniqueCounterparties": len(unique_counterparties),
             "totalVolumeUSD": f"~${total_usd_value:,.0f}",
             "ethPrice": tron_price,
             "entityClass": entity_class,
             "classModifier": class_modifier,
+            "address_intelligence": address_intel,
         },
         "risk": {
             "score": final_score,

@@ -174,24 +174,54 @@ async def fetch_all_etherscan_data(client: httpx.AsyncClient, address: str, dept
 
         await asyncio.sleep(0.4)
         
-        # Stablecoin flows (USDT and USDC)
+        # Stablecoin flows (USDT and USDC) and ERC-20 Timeline
         token_tx_url = f"{base}&module=account&action=tokentx&address={address}&page=1&offset={offset}&sort=desc&apikey={key}"
         token_json = await _etherscan_get(client, token_tx_url)
         usdt_in, usdt_out, usdc_in, usdc_out = 0, 0, 0, 0
-        if token_json.get("status") == "1":
-            for tx in token_json.get("result", []):
-                symbol = tx.get("tokenSymbol", "").upper()
-                if symbol not in ["USDT", "USDC"]:
-                    continue
-                decimals = int(tx.get("tokenDecimal", "6"))
-                val = float(tx.get("value", 0)) / (10**decimals)
-                if tx.get("to", "").lower() == address.lower():
-                    if symbol == "USDT": usdt_in += val
-                    if symbol == "USDC": usdc_in += val
-                if tx.get("from", "").lower() == address.lower():
-                    if symbol == "USDT": usdt_out += val
-                    if symbol == "USDC": usdc_out += val
         
+        if token_json.get("status") == "1":
+            token_txs = token_json.get("result", [])
+            
+            # Map of existing txlist hashes to enrich them
+            existing_hashes = {tx.get("hash"): tx for tx in all_txs if tx.get("hash")}
+            
+            for tx in token_txs:
+                symbol = tx.get("tokenSymbol", "").upper()
+                decimals = int(tx.get("tokenDecimal", "18") or "18")
+                try:
+                    val = float(tx.get("value", 0)) / (10**decimals)
+                except:
+                    val = 0
+                
+                # Format for frontend timeline
+                tx_hash = tx.get("hash")
+                if tx_hash in existing_hashes:
+                    # Enrich existing tx
+                    existing = existing_hashes[tx_hash]
+                    # Only enrich if it's the first token transfer in this tx, or make it a list if we wanted
+                    if "token_symbol" not in existing:
+                        existing["token_symbol"] = symbol
+                        existing["token_value_formatted"] = val
+                        existing["is_erc20"] = True
+                else:
+                    # Append new token transfer (e.g. user was a passive recipient)
+                    tx["token_symbol"] = symbol
+                    tx["token_value_formatted"] = val
+                    tx["is_erc20"] = True
+                    all_txs.append(tx)
+
+                if symbol == "USDT":
+                    if tx.get("to", "").lower() == address.lower(): usdt_in += val
+                    elif tx.get("from", "").lower() == address.lower(): usdt_out += val
+                elif symbol == "USDC":
+                    if tx.get("to", "").lower() == address.lower(): usdc_in += val
+                    elif tx.get("from", "").lower() == address.lower(): usdc_out += val
+        
+        # Re-sort after appending missing tokentxs
+        all_txs.sort(key=lambda x: int(x.get("timeStamp", 0)), reverse=True)
+        all_txs = all_txs[:1000]
+        
+        result["transactions"] = all_txs
         result["stablecoin_flows"] = {
             "usdt_in": usdt_in, "usdt_out": usdt_out,
             "usdc_in": usdc_in, "usdc_out": usdc_out,
@@ -1233,12 +1263,27 @@ Use ALL of this evidence to form a comprehensive forensic assessment. Weigh beha
     # ─── Return Response ──────────────────────────────────────────
     if depth != "deep":
         defi_interactions = await decode_defi_interactions(tx_history)
+        
+    from modules.coin_identifier import resolve_chain_identity
+    address_intel = await resolve_chain_identity(address, ai_fallback=False)
     
+    first_str = etherscan_result.get("first_tx_date")
+    last_str = etherscan_result.get("last_tx_date")
+    wallet_age_days = "Unavailable"
+    if first_str and last_str:
+        try:
+            t1 = time.mktime(time.strptime(first_str, '%Y-%m-%d %H:%M:%S'))
+            t2 = time.mktime(time.strptime(last_str, '%Y-%m-%d %H:%M:%S'))
+            wallet_age_days = str(max(0, int((t2 - t1) / 86400))) + " days"
+        except Exception:
+            pass
+
     response_data = {
         "shortName": wallet_db.label if wallet_db else "Unknown Wallet",
         "tag": label,
         "identity": {
             "address": address,
+            "explorerLink": f"https://etherscan.io/address/{address}",
             "ens": osint_data.get("summary", {}).get("ens_name"),
             "walletType": etherscan_result.get("wallet_type", "Unknown"),
             "balanceWei": etherscan_result.get("balance_wei", "Unknown"),
@@ -1250,15 +1295,16 @@ Use ALL of this evidence to form a comprehensive forensic assessment. Weigh beha
             "firstSeen": wallet_db.first_seen if wallet_db else first_seen,
             "lastSeen": last_seen if last_seen != "N/A" else "Live",
             "ethBalance": eth_balance_str,
-            "totalReceived": f"{total_received_eth:.4f} ETH" if total_received_eth > 0 else ("Collection error — retry scan" if _collection_errors else "Data Not Available"),
-            "totalSent": f"{total_sent_eth:.4f} ETH" if total_sent_eth > 0 else ("Collection error — retry scan" if _collection_errors else "Data Not Available"),
+            "totalReceived": f"{total_received_eth:.4f} ETH" if total_received_eth > 0 else ("Collection error — retry scan" if _collection_errors else "Unavailable"),
+            "totalSent": f"{total_sent_eth:.4f} ETH" if total_sent_eth > 0 else ("Collection error — retry scan" if _collection_errors else "Unavailable"),
             "txCount": tx_count,
             "uniqueCounterparties": counterparties if counterparties > 0 else (wallet_db.counterparties if wallet_db else 0),
-            "walletAgeDays": "Data Not Available",
-            "totalVolumeUSD": wallet_db.amount_usd if wallet_db else (f"~${total_volume_eth * eth_price:,.0f}" if total_volume_eth > 0 else ("Collection error — retry scan" if _collection_errors else "Data Not Available")),
+            "walletAgeDays": wallet_age_days,
+            "totalVolumeUSD": wallet_db.amount_usd if wallet_db else (f"~${total_volume_eth * eth_price:,.0f}" if total_volume_eth > 0 else ("Collection error — retry scan" if _collection_errors else "Unavailable")),
             "ethPrice": eth_price,
             "entityClass": entity_class,
             "classModifier": class_modifier,
+            "address_intelligence": address_intel,
         },
         "risk": {
             "score": final_score,

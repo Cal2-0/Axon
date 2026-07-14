@@ -210,11 +210,13 @@ async def scan_btc_wallet(address: str, db: Session, depth: str = "quick", case_
         formatted_txs.append({
             "hash": tx_hash,
             "blockNumber": str(tx.get("block_height", "Pending")),
+            "timeStamp": str(ts),
             "from": address if is_entity_sender else "External",
             "to": "External" if is_entity_sender else address,
             "value": str(tx_val_satoshis * 10**10),
             "gasUsed": "0",
-            "gasPrice": "0"
+            "gasPrice": "0",
+            "input": "0x"
         })
         
     if timestamps:
@@ -386,25 +388,41 @@ async def scan_btc_wallet(address: str, db: Session, depth: str = "quick", case_
             graph_nodes.append({"id": tgt, "label": tgt[:6]+"...", "type": "Unknown Wallet", "risk": 10})
             existing_node_ids.add(tgt)
 
+    from modules.coin_identifier import resolve_chain_identity
+    address_intel = await resolve_chain_identity(address, ai_fallback=False)
+
+    wallet_age_days = "Unavailable"
+    if timestamps:
+        try:
+            t1 = min(timestamps)
+            t2 = max(timestamps)
+            wallet_age_days = str(max(0, int((t2 - t1) / 86400))) + " days"
+        except Exception:
+            pass
+
     response_data = {
         "shortName": "BTC Entity",
         "tag": label,
         "identity": {
             "address": address,
+            "explorerLink": f"https://mempool.space/address/{address}",
             "ens": f"Cluster of {len(entity_addresses)} addresses",
             "label": "Bitcoin Entity",
             "tag": label,
-            "firstSeen": time.strftime("%Y-%m-%d", time.gmtime(min(timestamps))) if timestamps else "Data Not Available",
-            "lastSeen": time.strftime("%Y-%m-%d", time.gmtime(max(timestamps))) if timestamps else "Data Not Available",
-            "ethBalance": f"{btc_balance:.4f}",
+            "first_tx_date": time.strftime("%Y-%m-%d", time.gmtime(min(timestamps))) if timestamps else "Unavailable",
+            "last_tx_date": time.strftime("%Y-%m-%d", time.gmtime(max(timestamps))) if timestamps else "Unavailable",
+            "balance_wei": f"{btc_balance:.4f} BTC",
             "totalReceived": f"{entity_recv_sat / 10**8:.4f} BTC",
             "totalSent": f"{entity_sent_sat / 10**8:.4f} BTC",
-            "txCount": total_txs,
+            "tx_count": total_txs,
+            "walletAgeDays": wallet_age_days,
+            "wallet_type": "Native SegWit",
             "uniqueCounterparties": len(unique_counterparties),
             "totalVolumeUSD": f"~${total_volume_btc * btc_price:,.0f}",
             "ethPrice": btc_price,
             "entityClass": entity_class,
             "classModifier": class_modifier,
+            "address_intelligence": address_intel,
         },
         "risk": {
             "score": final_score,

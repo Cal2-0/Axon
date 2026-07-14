@@ -476,6 +476,8 @@ def merge_timelines(results: List[dict]) -> List[dict]:
                 "value_eth": round(value_eth, 4),
                 "counterparty": from_addr if is_inflow else to_addr,
                 "tx_hash": tx.get("hash", "")[:16] + "..." if tx.get("hash") else "",
+                "token_symbol": tx.get("token_symbol"),
+                "token_value_formatted": tx.get("token_value_formatted")
             })
     
     merged.sort(key=lambda x: x["timestamp"])

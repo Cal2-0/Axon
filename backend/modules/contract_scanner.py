@@ -307,16 +307,18 @@ async def fetch_etherscan_source(client: httpx.AsyncClient, address: str) -> dic
     try:
         res = await client.get(url)
         data = res.json()
-        if data.get("status") == "1" and data.get("message") == "OK" and data["result"][0]["SourceCode"]:
+        if data.get("status") == "1" and "result" in data and len(data["result"]) > 0:
             r = data["result"][0]
-            return {
-                "source": r.get("SourceCode", ""),
-                "abi": r.get("ABI", "[]"),
-                "name": r.get("ContractName", "Data Not Available"),
-                "compiler": r.get("CompilerVersion", "N/A"),
-                "proxy": r.get("Proxy", "0") == "1",
-                "license": r.get("LicenseType", "Data Not Available")
-            }
+            # Some unverified contracts return ABI="Contract source code not verified"
+            if r.get("ABI") and r.get("ABI") != "Contract source code not verified":
+                return {
+                    "source": r.get("SourceCode", ""),
+                    "abi": r.get("ABI", "[]"),
+                    "name": r.get("ContractName", "Data Not Available"),
+                    "compiler": r.get("CompilerVersion", "N/A"),
+                    "proxy": r.get("Proxy", "0") == "1",
+                    "license": r.get("LicenseType", "Data Not Available")
+                }
     except Exception as e:
         print(f"[CONTRACT] Etherscan source error: {e}")
 

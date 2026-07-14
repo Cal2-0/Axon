@@ -194,11 +194,13 @@ async def scan_sol_wallet(address: str, db: Session, depth: str = "quick", case_
         formatted_txs.append({
             "hash": sig,
             "blockNumber": str(tx.get("slot", "Pending")),
+            "timeStamp": str(ts) if ts else "0",
             "from": tx_from,
             "to": tx_to,
             "value": formatted_val,
             "gasUsed": str(fee),
-            "gasPrice": "1"
+            "gasPrice": "1",
+            "input": "0x"
         })
 
     error_rate = errors / max(tx_count, 1)
@@ -340,25 +342,41 @@ async def scan_sol_wallet(address: str, db: Session, depth: str = "quick", case_
             graph_nodes.append({"id": tgt, "label": tgt[:6]+"...", "type": "Unknown Wallet", "risk": 10})
             existing_node_ids.add(tgt)
 
+    from modules.coin_identifier import resolve_chain_identity
+    address_intel = await resolve_chain_identity(address, ai_fallback=False)
+
+    wallet_age_days = "Unavailable"
+    if timestamps:
+        try:
+            t1 = min(timestamps)
+            t2 = max(timestamps)
+            wallet_age_days = str(max(0, int((t2 - t1) / 86400))) + " days"
+        except Exception:
+            pass
+
     response_data = {
-        "shortName": "SOL Wallet",
+        "shortName": "Solana PDA" if is_pda else "Solana User",
         "tag": label,
         "identity": {
             "address": address,
-            "ens": None,
+            "explorerLink": f"https://solscan.io/account/{address}",
+            "balance_wei": f"{sol_balance:.4f} SOL",
             "label": "Solana PDA" if is_pda else "Solana Address",
             "tag": label,
-            "firstSeen": time.strftime("%Y-%m-%d", time.gmtime(min(timestamps))) if timestamps else "Data Not Available",
-            "lastSeen": time.strftime("%Y-%m-%d", time.gmtime(max(timestamps))) if timestamps else "Data Not Available",
-            "ethBalance": f"{sol_balance:.4f}",
-            "totalReceived": "Data Not Available",
-            "totalSent": "Data Not Available",
-            "txCount": tx_count,
-            "uniqueCounterparties": "Data Not Available",
+            "first_tx_date": time.strftime("%Y-%m-%d", time.gmtime(min(timestamps))) if timestamps else "Unavailable",
+            "last_tx_date": time.strftime("%Y-%m-%d", time.gmtime(max(timestamps))) if timestamps else "Unavailable",
+            "balance_wei": f"{sol_balance:.4f} SOL",
+            "totalReceived": "Unavailable",
+            "totalSent": "Unavailable",
+            "tx_count": tx_count,
+            "walletAgeDays": wallet_age_days,
+            "wallet_type": "Solana PDA" if is_pda else "Solana Address",
+            "uniqueCounterparties": "Unavailable",
             "totalVolumeUSD": f"~${total_usd_value:,.0f}",
             "ethPrice": sol_price,
             "entityClass": entity_class,
             "classModifier": class_modifier,
+            "address_intelligence": address_intel,
         },
         "risk": {
             "score": final_score,
