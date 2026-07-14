@@ -852,14 +852,28 @@ export default function WalletInvestigation({ caseId }) {
                   const sym = activeChain === 'Bitcoin' ? 'BTC' : activeChain === 'Solana' ? 'SOL' : activeChain === 'Tron' ? 'TRX' : 'ETH';
                   const cgId = activeChain === 'Bitcoin' ? 'bitcoin' : activeChain === 'Solana' ? 'solana' : activeChain === 'Tron' ? 'tron' : 'ethereum';
                   
-                  const rawBalance = String(result.identity.ethBalance).replace(/,/g, '').replace(/ ETH| BTC| SOL| TRX/g, '');
+                  let rawBalance = String(result.identity.ethBalance).replace(/,/g, '').replace(/ ETH| BTC| SOL| TRX/g, '');
+                  let isNA = !result.identity.ethBalance || result.identity.ethBalance === 'N/A' || rawBalance === 'undefined';
+                  
+                  if (isNA) {
+                    const recvStr = String(result.identity.totalReceived || '').replace(/,/g, '').replace(/ ETH| BTC| SOL| TRX/g, '');
+                    const sentStr = String(result.identity.totalSent || '').replace(/,/g, '').replace(/ ETH| BTC| SOL| TRX/g, '');
+                    const rNum = parseFloat(recvStr);
+                    const sNum = parseFloat(sentStr);
+                    if (!isNaN(rNum) && !isNaN(sNum)) {
+                      rawBalance = Math.max(0, rNum - sNum).toFixed(6).replace(/\.?0+$/, '');
+                      if (rawBalance === '') rawBalance = '0';
+                      isNA = false;
+                    }
+                  }
+
                   const balNum = parseFloat(rawBalance);
                   const priceData = cryptoPrices[cgId];
                   
                   return (
                     <>
                       <div className="text-lg font-bold font-mono text-axon-cyan">
-                        {!result.identity.ethBalance || result.identity.ethBalance === 'N/A' || rawBalance === 'undefined' ? 'N/A' : `${rawBalance} ${sym}`}
+                        {isNA ? 'N/A' : `${rawBalance} ${sym}`}
                       </div>
                       <div className="text-[11px] text-axon-text-dim mt-0.5 font-mono">
                         {!isNaN(balNum) && priceData ? (
