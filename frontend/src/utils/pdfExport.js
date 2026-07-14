@@ -359,12 +359,12 @@ export async function downloadWalletPDF(result, forceHtml = true) {
       ['Detection Method', result.identity.address_intelligence.identification_method || 'N/A', '#7c3aed'],
       ['Supported Status', result.identity.address_intelligence.supported ? 'Supported' : 'Unsupported', result.identity.address_intelligence.supported ? '#16a34a' : '#dc2626'],
       ['Compatible Chains', (result.identity.address_intelligence.possible_networks || []).join(', ') || 'N/A', '#0284c7'],
-    ].map(([lbl, val, color]) => \`
+    ].map(([lbl, val, color]) => `
       <div class="cell">
-        <div class="label">\${lbl}</div>
-        <div class="val mono" style="color:\${color};font-size:11px">\${_esc(String(val))}</div>
+        <div class="label">${lbl}</div>
+        <div class="val mono" style="color:${color};font-size:11px">${_esc(String(val))}</div>
       </div>
-    \`).join('')}
+    `).join('')}
   </div>` : ''}
 
   <!-- ═══ 3. RISK ASSESSMENT ═══ -->
