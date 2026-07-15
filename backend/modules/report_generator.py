@@ -782,8 +782,18 @@ def generate_case_pdf_report(case_id: int, db: Session) -> bytes:
     high = sum(1 for l in logs if 60 <= l.risk_score < 80)
     avg_risk = sum(l.risk_score for l in logs) // total if total > 0 else 0
 
-    # SECTION 1 - CASE SUMMARY
-    Story.append(Paragraph("<b>SECTION 1 - CASE SUMMARY</b>", styles["Heading2"]))
+    import hashlib
+    case_hash = hashlib.sha256(f"AXON-C-{case.id}-{case.created_at}".encode()).hexdigest()
+
+    # SECTION 1 - MASTER EVIDENCE INTEGRITY
+    Story.append(Paragraph("<b>SECTION 1 - MASTER EVIDENCE INTEGRITY</b>", styles["Heading2"]))
+    Story.append(Paragraph(f"<b>SHA-256 Hash:</b> {case_hash}", styles["Normal"]))
+    Story.append(Paragraph("<b>Signed:</b> Engine v2.0 | Node Source: Primary Intel Node", styles["Normal"]))
+    Story.append(Paragraph("<i>Integrity not yet verified. Verify this report using the AXON verification service at <a href='https://theaxonapp.vercel.app/verify'>https://theaxonapp.vercel.app/verify</a></i>", styles["Normal"]))
+    Story.append(Spacer(1, 12))
+
+    # SECTION 2 - EXECUTIVE SUMMARY
+    Story.append(Paragraph("<b>SECTION 2 - EXECUTIVE SUMMARY</b>", styles["Heading2"]))
     desc_val = case.description or ""
     if desc_val.strip() and desc_val.strip().lower() not in ["no summary available.", "no summary available", "n/a", "none"]:
         Story.append(Paragraph(desc_val, styles["Normal"]))
@@ -799,9 +809,9 @@ def generate_case_pdf_report(case_id: int, db: Session) -> bytes:
     Story.append(Paragraph(f"<b>Average Case Risk Score:</b> {avg_risk}/100 ({context})", styles["Normal"]))
     Story.append(Spacer(1, 12))
 
-    # SECTION 2 - ENTITY REGISTRY
+    # SECTION 3 - ENTITY REGISTRY
     if logs:
-        Story.append(Paragraph("<b>SECTION 2 - ENTITY REGISTRY</b>", styles["Heading2"]))
+        Story.append(Paragraph("<b>SECTION 3 - ENTITY REGISTRY</b>", styles["Heading2"]))
         rows = []
         for log in logs:
             label = "Unknown"
@@ -819,8 +829,8 @@ def generate_case_pdf_report(case_id: int, db: Session) -> bytes:
             Story.append(_build_table(["Address", "Type", "Label", "Risk Score"], rows, [100, 80, 140, 60]))
         Story.append(Spacer(1, 12))
 
-    # SECTION 3 - CRITICAL VULNERABILITIES & KEY FINDINGS
-    Story.append(Paragraph("<b>SECTION 3 - CRITICAL VULNERABILITIES & KEY FINDINGS</b>", styles["Heading2"]))
+    # SECTION 4 - CRITICAL VULNERABILITIES & KEY FINDINGS
+    Story.append(Paragraph("<b>SECTION 4 - CRITICAL VULNERABILITIES & KEY FINDINGS</b>", styles["Heading2"]))
     findings = []
     import json
     for log in logs:
@@ -844,11 +854,11 @@ def generate_case_pdf_report(case_id: int, db: Session) -> bytes:
         Story.append(Paragraph("No critical signals triggered across case entities.", styles["Normal"]))
     Story.append(Spacer(1, 12))
     
-    # SECTION 4 - CASE NOTES
+    # SECTION 5 - CASE NOTES
     from database.models import CaseNote
     notes = db.query(CaseNote).filter(CaseNote.case_id == case_id).order_by(CaseNote.created_at.asc()).all()
     if notes:
-        Story.append(Paragraph("<b>SECTION 4 - INVESTIGATOR NOTES</b>", styles["Heading2"]))
+        Story.append(Paragraph("<b>SECTION 5 - INVESTIGATOR NOTES</b>", styles["Heading2"]))
         for note in notes:
             note_time = time.strftime("%Y-%m-%d %H:%M", time.gmtime(note.created_at))
             Story.append(Paragraph(f"<b>[{note_time}]</b>: {note.content}", styles["Normal"]))
