@@ -140,6 +140,12 @@ def _forensic_note(family: str, address_type: str, encoding: str, prefix: str = 
             "and represent a 20-byte account identifier. "
             "This address format is fully supported by AXON."
         ),
+        "Cardano": (
+            "This address matches the Cardano specification."
+        ),
+        "Cosmos": (
+            "This address matches the Cosmos ecosystem specification."
+        ),
         "Litecoin": (
             "This address matches the Litecoin specification but is not supported for AXON investigations."
         ),
@@ -387,6 +393,109 @@ def analyze_address_format(address: str) -> Dict[str, Any]:
         except ValueError:
             pass
 
+    # ── Cardano (Bech32) ─────────────────────────────────────────────────
+    if re.match(r"^addr1[a-z0-9]{50,110}$", addr_lower):
+        spec = _bech32_decode_with_spec(addr_lower, "addr")
+        if spec in ("bech32", "bech32m"):
+            axon = _axon_support_lists("Cardano", ["Cardano"])
+            result.update({
+                "valid": True,
+                "family": "Cardano",
+                "possible_networks": ["Cardano"],
+                "address_type": "Shelley",
+                "encoding": "Bech32" if spec == "bech32" else "Bech32m",
+                "checksum": "Valid",
+                "prefix": "addr1",
+                "supported": True,
+                "axon_support": axon,
+                "forensic_notes": "This address matches the Cardano Shelley-era specification using Bech32 encoding.",
+                "privacy": "Medium",
+                "traceability": "Public",
+            })
+            return _attach_legacy_fields(result, address)
+
+    # ── Cardano (Byron) ──────────────────────────────────────────────────
+    if re.match(r"^(Ae2|DdzFF)[1-9A-HJ-NP-Za-km-z]{50,110}$", address):
+        axon = _axon_support_lists("Cardano", ["Cardano"])
+        result.update({
+            "valid": True,
+            "family": "Cardano",
+            "possible_networks": ["Cardano"],
+            "address_type": "Byron",
+            "encoding": "Base58",
+            "checksum": "Unknown",
+            "prefix": address[:2] if address.startswith("Ae2") else "DdzFF",
+            "supported": True,
+            "axon_support": axon,
+            "forensic_notes": "This address matches the Cardano Byron-era specification.",
+            "privacy": "Low",
+            "traceability": "Public",
+        })
+        return _attach_legacy_fields(result, address)
+
+    # ── Cosmos Ecosystem ─────────────────────────────────────────────────
+    for hrp in ["cosmos", "osmo", "juno", "akash", "celestia", "inj", "stars", "secret", "kava"]:
+        if re.match(rf"^{hrp}1[a-z0-9]{{38}}$", addr_lower):
+            spec = _bech32_decode_with_spec(addr_lower, hrp)
+            if spec in ("bech32", "bech32m"):
+                capitalized_hrp = hrp.capitalize() if hrp != "osmo" else "Osmosis"
+                if hrp == "cosmos": capitalized_hrp = "Cosmos Hub"
+                axon = _axon_support_lists("Cosmos", [capitalized_hrp])
+                result.update({
+                    "valid": True,
+                    "family": "Cosmos",
+                    "possible_networks": [capitalized_hrp],
+                    "address_type": f"{capitalized_hrp} Account",
+                    "encoding": "Bech32",
+                    "checksum": "Valid",
+                    "prefix": f"{hrp}1",
+                    "supported": True,
+                    "axon_support": axon,
+                    "forensic_notes": f"This address matches the {capitalized_hrp} specification.",
+                    "privacy": "Low",
+                    "traceability": "Public",
+                })
+                return _attach_legacy_fields(result, address)
+
+    # ── Ripple/XRP ───────────────────────────────────────────────────────
+    if re.match(r"^r[a-zA-Z0-9]{24,34}$", address):
+        axon = _axon_support_lists("Ripple", ["Ripple"])
+        result.update({
+            "valid": True,
+            "family": "Ripple",
+            "possible_networks": ["Ripple"],
+            "address_type": "XRP Account",
+            "encoding": "Base58 (Custom Alphabet)",
+            "checksum": "Assumed Valid",
+            "prefix": "r",
+            "supported": True,
+            "axon_support": axon,
+            "forensic_notes": "This address matches the Ripple (XRP) specification.",
+            "privacy": "Low",
+            "traceability": "Public",
+        })
+        return _attach_legacy_fields(result, address)
+
+    # ── Dash ─────────────────────────────────────────────────────────────
+    if re.match(r"^X[1-9A-HJ-NP-Za-km-z]{33}$", address):
+        if validate_base58check(address, [b"\x4C"]): 
+            axon = _axon_support_lists("Dash", ["Dash"])
+            result.update({
+                "valid": True,
+                "family": "Dash",
+                "possible_networks": ["Dash"],
+                "address_type": "P2PKH",
+                "encoding": "Base58Check",
+                "checksum": "Valid",
+                "prefix": "X",
+                "supported": True,
+                "axon_support": axon,
+                "forensic_notes": "This address matches the Dash specification.",
+                "privacy": "High",
+                "traceability": "Public",
+            })
+            return _attach_legacy_fields(result, address)
+
     return _attach_legacy_fields(result, address)
 
 
@@ -435,11 +544,10 @@ def _attach_legacy_fields(result: Dict[str, Any], address: str) -> Dict[str, Any
     return result
 
 
-async def resolve_chain_identity(address: str, ai_fallback: bool = True) -> Dict[str, Any]:
+async def resolve_chain_identity(address: str, ai_fallback: bool = False) -> Dict[str, Any]:
     """
     Address format analysis pipeline:
       1. Deterministic — regex + checksum + pattern DB
-      2. AI fallback (optional) — pattern recognition when step 1 fails
     """
     address = address.strip()
     if address.startswith("chain:"):
@@ -448,34 +556,6 @@ async def resolve_chain_identity(address: str, ai_fallback: bool = True) -> Dict
         address = address.split(":", 1)[1]
 
     result = analyze_address_format(address)
-
-    if not result.get("valid") and ai_fallback:
-        try:
-            from modules.ai_analyst import generate_address_pattern_fallback
-            ai_result = await generate_address_pattern_fallback(address)
-            if ai_result:
-                networks = ai_result.get("possible_networks") or [ai_result.get("family", "")]
-                family = ai_result.get("family", "Unrecognized")
-                result["deterministic_valid"] = False
-                result["valid"] = bool(ai_result.get("valid", True))
-                result["family"] = family
-                result["possible_networks"] = networks
-                result["address_type"] = ai_result.get("address_type", "Unknown")
-                result["encoding"] = ai_result.get("encoding", "Unknown")
-                result["checksum"] = ai_result.get("checksum", "Unverified")
-                result["length"] = ai_result.get("length", len(address))
-                result["prefix"] = ai_result.get("prefix", address[:4] if len(address) >= 4 else "")
-                result["supported"] = _is_axon_supported(family, networks)
-                result["axon_support"] = _axon_support_lists(family, networks)
-                result["forensic_notes"] = (
-                    ai_result.get("forensic_notes", "")
-                    + " [Identified via AI pattern fallback — deterministic checksum validation did not pass.]"
-                )
-                result["confidence"] = "AI Assisted"
-                result["identification_method"] = "ai_fallback"
-                result = _attach_legacy_fields(result, address)
-        except Exception as e:
-            print(f"[COIN_IDENTIFIER] AI fallback failed: {e}")
 
     if result.get("valid"):
         if "identification_method" not in result:
@@ -486,3 +566,8 @@ async def resolve_chain_identity(address: str, ai_fallback: bool = True) -> Dict
         result["deterministic_valid"] = False
 
     return result
+
+async def get_active_evm_chains(address: str) -> List[str]:
+    """Placeholder for existential probing of EVM chains."""
+    # This should be replaced with actual RPC/explorer calls for EVM activity checking.
+    return EVM_NETWORKS

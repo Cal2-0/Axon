@@ -184,7 +184,7 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
             Story.append(Paragraph("<b>SECTION 1 - EVIDENCE INTEGRITY</b>", styles["Heading2"]))
             Story.append(Paragraph(f"<b>SHA-256 Hash:</b> {report.report_hash}", styles["Normal"]))
             Story.append(Paragraph("<b>Signed:</b> Engine v2.0 | Node Source: Primary Intel Node", styles["Normal"]))
-            Story.append(Paragraph("<i>Integrity verification failed. Please verify hash using <a href='https://theaxonapp.vercel.app/verify'>https://theaxonapp.vercel.app/verify</a></i>", styles["Normal"]))
+            Story.append(Paragraph("<i>Integrity not yet verified. Verify this report using the AXON verification service at <a href='https://theaxonapp.vercel.app/verify'>https://theaxonapp.vercel.app/verify</a></i>", styles["Normal"]))
             Story.append(Spacer(1, 12))
 
             # SECTION 2 - EXECUTIVE SUMMARY
@@ -312,10 +312,11 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
             if graph and _is_valid(graph.get("nodes")) and len(graph.get("nodes", [])) > 0:
                 cp_stats = {}
                 target_addr = report.entity_address.lower()
-                history = raw.get("history", [])
-                for tx in history:
+                txs = raw.get("transactions", [])
+                for tx in txs:
                     frm = tx.get("from", "").lower()
                     to_addr = tx.get("to", "").lower()
+                    if frm == "external" or to_addr == "external": continue
                     if frm == target_addr: cp = to_addr
                     elif to_addr == target_addr: cp = frm
                     else: continue
@@ -334,6 +335,35 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
                         cp_stats[cp]["first"] = min(cp_stats[cp]["first"], ts)
                         cp_stats[cp]["last"] = max(cp_stats[cp]["last"], ts)
                     if frm == target_addr: cp_stats[cp]["dir_out"] += 1
+                    else: cp_stats[cp]["dir_in"] += 1
+
+                hash_to_ts = {}
+                for tx in txs:
+                    try: ts = int(tx.get("timeStamp", 0))
+                    except: ts = 0
+                    if ts and tx.get("hash"):
+                        hash_to_ts[tx.get("hash", "").lower()] = ts
+
+                edges = graph.get("edges", [])
+                for e in edges:
+                    src = e.get("source", "").lower()
+                    tgt = e.get("target", "").lower()
+                    if src == target_addr: cp = tgt
+                    elif tgt == target_addr: cp = src
+                    else: continue
+                    if not cp: continue
+                    if cp not in cp_stats:
+                        cp_stats[cp] = {"vol": 0.0, "count": 0, "first": 99999999999, "last": 0, "dir_in": 0, "dir_out": 0}
+                    val = 0
+                    try: val = float(e.get("value", 0))
+                    except: pass
+                    ts = hash_to_ts.get(e.get("hash", "").lower(), 0) if e.get("hash") else 0
+                    cp_stats[cp]["vol"] += val
+                    cp_stats[cp]["count"] += 1
+                    if ts:
+                        cp_stats[cp]["first"] = min(cp_stats[cp]["first"], ts)
+                        cp_stats[cp]["last"] = max(cp_stats[cp]["last"], ts)
+                    if src == target_addr: cp_stats[cp]["dir_out"] += 1
                     else: cp_stats[cp]["dir_in"] += 1
 
                 nodes = graph.get("nodes", [])
@@ -393,7 +423,7 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
             day_counts = {}
             hour_counts = {}
             target_addr = report.entity_address.lower()
-            history = raw.get("history", [])
+            history = raw.get("transactions", [])
             for tx in history:
                 val = 0
                 try: val = float(tx.get("value", 0)) / 10**18
@@ -485,7 +515,7 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
             Story.append(Paragraph("<b>SECTION 1 - EVIDENCE INTEGRITY</b>", styles["Heading2"]))
             Story.append(Paragraph(f"<b>SHA-256 Hash:</b> {report.report_hash}", styles["Normal"]))
             Story.append(Paragraph("<b>Signed:</b> Engine v2.0 | Node Source: Primary Intel Node", styles["Normal"]))
-            Story.append(Paragraph("<i>Integrity verification failed. Please verify hash using <a href='https://theaxonapp.vercel.app/verify'>https://theaxonapp.vercel.app/verify</a></i>", styles["Normal"]))
+            Story.append(Paragraph("<i>Integrity not yet verified. Verify this report using the AXON verification service at <a href='https://theaxonapp.vercel.app/verify'>https://theaxonapp.vercel.app/verify</a></i>", styles["Normal"]))
             Story.append(Spacer(1, 12))
 
             # SECTION 2 - EXECUTIVE SUMMARY
@@ -578,7 +608,7 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
             Story.append(Paragraph(f"<b>SECTION {sec} - MASTER EVIDENCE INTEGRITY</b>", styles["Heading2"])); sec += 1
             Story.append(Paragraph(f"<b>SHA-256 Hash:</b> {report.report_hash}", styles["Normal"]))
             Story.append(Paragraph("<b>Signed:</b> Engine v2.0 | Node Source: Primary Intel Node", styles["Normal"]))
-            Story.append(Paragraph("<i>Integrity verification failed. Please verify hash using <a href='https://theaxonapp.vercel.app/verify'>https://theaxonapp.vercel.app/verify</a></i>", styles["Normal"]))
+            Story.append(Paragraph("<i>Integrity not yet verified. Verify this report using the AXON verification service at <a href='https://theaxonapp.vercel.app/verify'>https://theaxonapp.vercel.app/verify</a></i>", styles["Normal"]))
             Story.append(Spacer(1, 12))
 
             # SECTION 2 - CASE OVERVIEW
@@ -738,6 +768,12 @@ def generate_case_pdf_report(case_id: int, db: Session) -> bytes:
     Story.append(Paragraph(f"<b>Category:</b> {case.category or 'General'}", styles["Normal"]))
     Story.append(Paragraph(f"<b>Priority:</b> {case.priority or 'P2'}", styles["Normal"]))
     Story.append(Paragraph(f"<b>Timestamp:</b> {timestamp_str}", styles["Normal"]))
+    Story.append(Paragraph(f"<b>Engine:</b> {ENGINE_VERSION}", styles["Normal"]))
+    Story.append(Spacer(1, 16))
+
+    # METHODOLOGY DISCLAIMER
+    disclaimer_style = ParagraphStyle('Disclaimer', parent=styles['Normal'], fontSize=7, textColor=colors.grey, italic=True)
+    Story.append(Paragraph(METHODOLOGY_DISCLAIMER, disclaimer_style))
     Story.append(Spacer(1, 16))
 
     # Calculate metrics first for the summary
