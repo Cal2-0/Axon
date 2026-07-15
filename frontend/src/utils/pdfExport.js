@@ -80,7 +80,7 @@ export async function downloadWalletPDF(result, forceHtml = true) {
     <tr>
       <td style="font-weight:600">${_esc(typeof f === 'object' ? (f.mixer || f) : f)}</td>
       <td style="font-family:'Courier New',monospace;font-size:11px">${f.txCount != null ? f.txCount.toLocaleString() : 'N/A'}</td>
-      <td style="font-family:'Courier New',monospace;font-size:11px;color:#dc2626;font-weight:700">${_esc(f.totalETH || 'N/A')}</td>
+      <td style="font-family:'Courier New',monospace;font-size:11px;color:#dc2626;font-weight:700">${_esc(f.totalETH || f.nativeBalance || 'N/A')}</td>
       <td style="font-family:'Courier New',monospace;font-size:10px;color:#64748b">${_esc(f.firstUse || 'N/A')}</td>
       <td style="font-family:'Courier New',monospace;font-size:10px;color:#64748b">${_esc(f.lastUse || 'N/A')}</td>
     </tr>
@@ -98,7 +98,7 @@ export async function downloadWalletPDF(result, forceHtml = true) {
       <td style="font-family:'Courier New',monospace;font-size:10px">${_esc(f.address || 'N/A')}</td>
       <td style="font-family:'Courier New',monospace;font-size:11px">${f.confidence || 0}%</td>
       <td>${_esc(f.type || 'N/A')}</td>
-      <td style="font-family:'Courier New',monospace;font-size:11px">${_esc(f.volumeETH || 'N/A')} ETH</td>
+      <td style="font-family:'Courier New',monospace;font-size:11px">${_esc(f.volumeETH || f.nativeVolume || 'N/A')} ${_esc(result.identity.nativeSymbol || 'ETH')}</td>
       <td style="font-family:'Courier New',monospace;font-size:10px;color:#64748b">${_esc(f.date || 'N/A')}</td>
       <td><span style="display:inline-block;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:700;${f.status === 'FLAGGED' ? 'background:#fef2f2;color:#dc2626;border:1px solid #fecaca' : f.status === 'BLOCKED' ? 'background:#fff7ed;color:#ea580c;border:1px solid #fed7aa' : 'background:#f0fdf4;color:#16a34a;border:1px solid #bbf7d0'}">${_esc(f.status || 'UNKNOWN')}</span></td>
     </tr>
@@ -328,9 +328,9 @@ export async function downloadWalletPDF(result, forceHtml = true) {
       ['Label', result.identity.label || 'Unlabeled', '#0f172a'],
       ['Tag', result.identity.tag || label, score >= 80 ? '#dc2626' : '#16a34a'],
       ['ENS', result.identity.ens || 'None', '#7c3aed'],
-      ['ETH Balance', (result.identity.ethBalance || '0') + ' ETH', '#0284c7'],
-      ['Total Received', result.identity.totalReceived || 'Data Not Available', '#16a34a'],
-      ['Total Sent', result.identity.totalSent || 'Data Not Available', '#dc2626'],
+      [`${result.identity.nativeSymbol || 'ETH'} Balance`, (result.identity.nativeBalance || result.identity.ethBalance || '0') + ' ' + (result.identity.nativeSymbol || 'ETH'), '#0284c7'],
+      ['Total Received', (result.identity.nativeTotalReceived ? result.identity.nativeTotalReceived + ' ' + (result.identity.nativeSymbol || 'ETH') : result.identity.totalReceived) || 'Data Not Available', '#16a34a'],
+      ['Total Sent', (result.identity.nativeTotalSent ? result.identity.nativeTotalSent + ' ' + (result.identity.nativeSymbol || 'ETH') : result.identity.totalSent) || 'Data Not Available', '#dc2626'],
       ['Counterparties', result.identity.uniqueCounterparties || 0, '#0f172a'],
       ['First Seen', result.identity.firstSeen || 'N/A', '#64748b'],
       ['Last Active', result.identity.lastSeen || 'N/A', '#64748b'],
@@ -480,13 +480,14 @@ export async function downloadWalletPDF(result, forceHtml = true) {
   <div class="grid3" style="margin-bottom:12px">
     <div class="cell"><div class="label">Mixers Detected</div><div class="val" style="font-size:18px;color:#dc2626">${(result.mixer?.findings || []).length}</div></div>
     <div class="cell"><div class="label">Bridges Used</div><div class="val" style="font-size:18px;color:#ea580c">${(result.mixer?.bridgeActivity || []).length}</div></div>
-    <div class="cell"><div class="label">Total Mixed</div><div class="val" style="font-size:14px;color:#dc2626">${_esc(result.mixer?.totalMixedETH || 'Data Not Available')}</div></div>
+    <div class="cell"><div class="label">Total Mixed</div><div class="val" style="font-size:14px;color:#dc2626">${_esc(result.mixer?.totalMixed || 'Data Not Available')}</div></div>
   </div>
   ${mixerFindings ? `
   <h3>6.1 Mixer Usage Detail</h3>
-  <table>
-    <thead><tr><th>Pool</th><th>TXs</th><th>Total ETH</th><th>First Use</th><th>Last Use</th></tr></thead>
-    <tbody>${mixerFindings}</tbody>
+  <table class="data-table">
+    <thead><tr><th>Pool</th><th>TXs</th><th>Total Volume</th><th>First Use</th><th>Last Use</th></tr></thead>
+    <tbody>
+      ${mixerFindings}</tbody>
   </table>` : `
   <div class="verdict-box" style="margin-bottom:12px; padding: 12px; background: #f8fafc; border-left: 4px solid #cbd5e1;">
     <p style="color: #64748b; font-style: italic; margin: 0; font-size: 13px;">Protocol Activity / Mixer usage not available on this blockchain.</p>

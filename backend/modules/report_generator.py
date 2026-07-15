@@ -186,7 +186,7 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
             Story.append(Paragraph("<b>SECTION 1 - EVIDENCE INTEGRITY</b>", styles["Heading2"]))
             Story.append(Paragraph(f"<b>SHA-256 Hash:</b> {report.report_hash}", styles["Normal"]))
             Story.append(Paragraph("<b>Signed:</b> Engine v2.0 | Node Source: Primary Intel Node", styles["Normal"]))
-            Story.append(Paragraph("<i>Hash mismatch = report tampered. Verify before court use.</i>", styles["Normal"]))
+            Story.append(Paragraph("<i>Integrity verification failed. The calculated SHA-256 hash differs from the embedded report hash. Possible causes include: File modification, Export conversion, File corruption. Manual verification recommended.</i>", styles["Normal"]))
             Story.append(Spacer(1, 12))
 
             # SECTION 2 - EXECUTIVE SUMMARY
@@ -298,8 +298,8 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
                         elif val_num == 0 and tx.get('input') not in ['', '0x']:
                             val = "Token Transfer"
                         else:
-                            val = f"{(val_num / 10**18):.5f} ETH"
-                    except: val = "0 ETH"
+                            val = f"{(val_num / 10**18):.5f} {identity.get('nativeSymbol', 'ETH')}"
+                    except: val = f"0 {identity.get('nativeSymbol', 'ETH')}"
                     is_in = tx.get("to", "").lower() == report.entity_address.lower()
                     rows.append([dstr, tx_hash[:8]+"...", "IN" if is_in else "OUT", val])
                 if rows:
@@ -548,7 +548,7 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
                     Story.append(Paragraph("<b>Highest Volume Transactors:</b>", styles["Normal"]))
                     for item in hv[:3]:
                         if item.get("value", 0) > 0:
-                            Story.append(Paragraph(f"- <b>{item.get('address')[:12]}...</b> ({item.get('value'):.2f} ETH) - Risk: {item.get('risk_score')}", styles["Normal"]))
+                            Story.append(Paragraph(f"- <b>{item.get('address')[:12]}...</b> ({item.get('value'):.2f} {item.get('nativeSymbol', 'ETH')}) - Risk: {item.get('risk_score')}", styles["Normal"]))
                     Story.append(Spacer(1, 6))
 
             priority_queue_filtered = [item for item in priority_queue if item.get("score", 0) >= 60]

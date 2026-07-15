@@ -184,7 +184,7 @@ export default function VerifyReport() {
                       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     </div>
                     <div>
-                      <div className="text-red-400 font-bold text-sm uppercase tracking-wider">Hash Mismatch — Tampering Detected (FAIL)</div>
+                      <div className="text-red-400 font-bold text-sm uppercase tracking-wider">Integrity Verification Failed</div>
                       <div className="text-red-400/80 text-xs font-mono mt-1 mb-2">The provided hash DOES NOT MATCH the server's authentic hash. The document has been modified since it was generated.</div>
                       <div className="grid grid-cols-2 gap-2 text-[10px] font-mono mt-2">
                         <div className="bg-red-500/20 p-2 rounded">
