@@ -853,8 +853,9 @@ export default function WalletInvestigation({ caseId }) {
                   const sym = activeChain === 'Bitcoin' ? 'BTC' : activeChain === 'Solana' ? 'SOL' : activeChain === 'Tron' ? 'TRX' : 'ETH';
                   const cgId = activeChain === 'Bitcoin' ? 'bitcoin' : activeChain === 'Solana' ? 'solana' : activeChain === 'Tron' ? 'tron' : 'ethereum';
                   
-                  let rawBalance = String(result.identity.ethBalance).replace(/,/g, '').replace(/ ETH| BTC| SOL| TRX/g, '');
-                  let isNA = !result.identity.ethBalance || result.identity.ethBalance === 'N/A' || rawBalance === 'undefined';
+                  let balanceValue = result.identity.nativeBalance || result.identity.ethBalance;
+                  let rawBalance = String(balanceValue).replace(/,/g, '').replace(/ ETH| BTC| SOL| TRX/g, '');
+                  let isNA = !balanceValue || balanceValue === 'N/A' || rawBalance === 'undefined';
                   
                   if (isNA) {
                     const recvStr = String(result.identity.totalReceived || '').replace(/,/g, '').replace(/ ETH| BTC| SOL| TRX/g, '');

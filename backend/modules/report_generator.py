@@ -168,9 +168,7 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
         if report.entity_type == "contract":
             info = raw.get("info", {})
             if "verified" not in info:
-                Story.append(Paragraph("<b>[DATA NORMALIZATION ERROR]</b> Contract verification status missing. Report generation aborted.", styles["Heading2"]))
-                doc.build(Story, onFirstPage=_page_footer, onLaterPages=_page_footer)
-                return buffer.getvalue()
+                info["verified"] = False
 
         if report.entity_type == "wallet":
             identity = raw.get("identity", {})
@@ -186,7 +184,7 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
             Story.append(Paragraph("<b>SECTION 1 - EVIDENCE INTEGRITY</b>", styles["Heading2"]))
             Story.append(Paragraph(f"<b>SHA-256 Hash:</b> {report.report_hash}", styles["Normal"]))
             Story.append(Paragraph("<b>Signed:</b> Engine v2.0 | Node Source: Primary Intel Node", styles["Normal"]))
-            Story.append(Paragraph("<i>Integrity verification failed. The calculated SHA-256 hash differs from the embedded report hash. Possible causes include: File modification, Export conversion, File corruption. Manual verification recommended.</i>", styles["Normal"]))
+            Story.append(Paragraph("<i>Integrity verification failed. Please verify hash using <a href='https://theaxonapp.vercel.app/verify'>https://theaxonapp.vercel.app/verify</a></i>", styles["Normal"]))
             Story.append(Spacer(1, 12))
 
             # SECTION 2 - EXECUTIVE SUMMARY
@@ -312,15 +310,55 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
             # COUNTERPARTIES
             Story.append(Paragraph("<b>COUNTERPARTIES</b>", styles["Heading2"]))
             if graph and _is_valid(graph.get("nodes")) and len(graph.get("nodes", [])) > 0:
+                cp_stats = {}
+                target_addr = report.entity_address.lower()
+                history = raw.get("history", [])
+                for tx in history:
+                    frm = tx.get("from", "").lower()
+                    to_addr = tx.get("to", "").lower()
+                    if frm == target_addr: cp = to_addr
+                    elif to_addr == target_addr: cp = frm
+                    else: continue
+                    if not cp: continue
+                    if cp not in cp_stats:
+                        cp_stats[cp] = {"vol": 0.0, "count": 0, "first": 99999999999, "last": 0, "dir_in": 0, "dir_out": 0}
+                    val = 0
+                    try: val = float(tx.get("value", 0)) / 10**18
+                    except: pass
+                    ts = 0
+                    try: ts = int(tx.get("timeStamp", 0))
+                    except: pass
+                    cp_stats[cp]["vol"] += val
+                    cp_stats[cp]["count"] += 1
+                    if ts:
+                        cp_stats[cp]["first"] = min(cp_stats[cp]["first"], ts)
+                        cp_stats[cp]["last"] = max(cp_stats[cp]["last"], ts)
+                    if frm == target_addr: cp_stats[cp]["dir_out"] += 1
+                    else: cp_stats[cp]["dir_in"] += 1
+
                 nodes = graph.get("nodes", [])
                 rows = []
-                for n in nodes[:10]:
+                for n in nodes:
+                    nid = n.get("id", "").lower()
+                    if nid == target_addr: continue
                     ctype = n.get("type", "Unknown")
                     if ctype == "default": ctype = "Unclassified"
-                    tx_c = str(n.get("interaction_count", n.get("tx_count", "N/A")))
-                    rows.append([n.get("id", "")[:12]+"...", ctype, tx_c, str(n.get("total_value", "N/A")), str(n.get("last_seen", "N/A")), str(n.get("risk", 0))])
+                    stats = cp_stats.get(nid, {})
+                    vol = f"{stats.get('vol', 0.0):.2f}" if stats else str(n.get("total_value", "N/A"))
+                    if vol == "0.00" and not stats: vol = "N/A"
+                    tx_c = str(stats.get('count', 0)) if stats else str(n.get("interaction_count", n.get("tx_count", "N/A")))
+                    direction = "IN" if stats.get("dir_in", 0) > stats.get("dir_out", 0) else ("OUT" if stats.get("dir_out", 0) > stats.get("dir_in", 0) else "BI") if stats else "BI"
+                    first_str = "N/A"
+                    last_str = "N/A"
+                    if stats and stats.get("first") != 99999999999:
+                        first_str = time.strftime("%Y-%m-%d", time.gmtime(stats.get("first")))
+                        last_str = time.strftime("%Y-%m-%d", time.gmtime(stats.get("last")))
+                    conf = "High" if ctype != "Unclassified" else "Low"
+                    rows.append([n.get("id", "")[:10]+"...", vol, tx_c, direction, first_str, last_str, conf, str(n.get("risk", 0))])
+                    if len(rows) >= 10: break
+                
                 if rows:
-                    Story.append(_build_table(["Address", "Known Entity", "Tx Count", "Total Val", "Last Seen", "Threat Lvl"], rows, [80, 70, 50, 50, 60, 50]))
+                    Story.append(_build_table(["Counterparty", "Total Vol", "Tx Count", "Dir", "First Seen", "Last Seen", "Confidence", "Threat Lvl"], rows, [70, 50, 40, 30, 60, 60, 50, 40]))
                 Story.append(Spacer(1, 12))
             else:
                 Story.append(Paragraph("Not available on this blockchain", styles["Normal"]))
@@ -345,6 +383,55 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
             else:
                 Story.append(Paragraph("<i>No asset inventory data collected at this depth or chain.</i>", styles["Normal"]))
                 Story.append(Spacer(1, 12))
+            
+            # FINANCIAL SUMMARY (TRANSACTIONAL)
+            Story.append(Paragraph("<b>FINANCIAL SUMMARY (TRANSACTIONAL)</b>", styles["Heading2"]))
+            largest_tx = 0.0
+            total_rcvd = 0.0
+            total_sent = 0.0
+            tx_count = 0
+            day_counts = {}
+            hour_counts = {}
+            target_addr = report.entity_address.lower()
+            history = raw.get("history", [])
+            for tx in history:
+                val = 0
+                try: val = float(tx.get("value", 0)) / 10**18
+                except: pass
+                if val > largest_tx: largest_tx = val
+                frm = tx.get("from", "").lower()
+                if frm == target_addr: total_sent += val
+                else: total_rcvd += val
+                tx_count += 1
+                ts = 0
+                try: ts = int(tx.get("timeStamp", 0))
+                except: pass
+                if ts:
+                    day = time.strftime("%Y-%m-%d", time.gmtime(ts))
+                    hour = time.strftime("%H:00 UTC", time.gmtime(ts))
+                    day_counts[day] = day_counts.get(day, 0) + 1
+                    hour_counts[hour] = hour_counts.get(hour, 0) + 1
+                    
+            avg_tx = ((total_rcvd + total_sent) / tx_count) if tx_count > 0 else 0.0
+            net_flow = total_rcvd - total_sent
+            peak_day = max(day_counts, key=day_counts.get) if day_counts else "N/A"
+            peak_hour = max(hour_counts, key=hour_counts.get) if hour_counts else "N/A"
+            identity = raw.get("identity", {})
+            native_bal = identity.get("nativeBalance", identity.get("ethBalance", "0"))
+            sym = identity.get('nativeSymbol', 'ETH')
+            
+            f_rows = [
+                ["Largest Tx", f"{largest_tx:.4f} {sym}"],
+                ["Total Received", f"{total_rcvd:.4f} {sym}"],
+                ["Total Sent", f"{total_sent:.4f} {sym}"],
+                ["Average Transfer", f"{avg_tx:.4f} {sym}"],
+                ["Native Balance", f"{native_bal} {sym}"],
+                ["Net Flow", f"{net_flow:.4f} {sym}"],
+                ["Peak Activity Day", peak_day],
+                ["Peak Activity Hour", peak_hour]
+            ]
+            Story.append(_build_table(["Metric", "Value"], f_rows, [150, 250]))
+            Story.append(Spacer(1, 12))
             
             # EXCHANGE & KYC
             Story.append(Paragraph("<b>FINANCIAL SUMMARY (EXCHANGE & KYC)</b>", styles["Heading2"]))
@@ -398,6 +485,7 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
             Story.append(Paragraph("<b>SECTION 1 - EVIDENCE INTEGRITY</b>", styles["Heading2"]))
             Story.append(Paragraph(f"<b>SHA-256 Hash:</b> {report.report_hash}", styles["Normal"]))
             Story.append(Paragraph("<b>Signed:</b> Engine v2.0 | Node Source: Primary Intel Node", styles["Normal"]))
+            Story.append(Paragraph("<i>Integrity verification failed. Please verify hash using <a href='https://theaxonapp.vercel.app/verify'>https://theaxonapp.vercel.app/verify</a></i>", styles["Normal"]))
             Story.append(Spacer(1, 12))
 
             # SECTION 2 - EXECUTIVE SUMMARY
@@ -490,6 +578,7 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
             Story.append(Paragraph(f"<b>SECTION {sec} - MASTER EVIDENCE INTEGRITY</b>", styles["Heading2"])); sec += 1
             Story.append(Paragraph(f"<b>SHA-256 Hash:</b> {report.report_hash}", styles["Normal"]))
             Story.append(Paragraph("<b>Signed:</b> Engine v2.0 | Node Source: Primary Intel Node", styles["Normal"]))
+            Story.append(Paragraph("<i>Integrity verification failed. Please verify hash using <a href='https://theaxonapp.vercel.app/verify'>https://theaxonapp.vercel.app/verify</a></i>", styles["Normal"]))
             Story.append(Spacer(1, 12))
 
             # SECTION 2 - CASE OVERVIEW
@@ -548,7 +637,13 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
                     Story.append(Paragraph("<b>Highest Volume Transactors:</b>", styles["Normal"]))
                     for item in hv[:3]:
                         if item.get("value", 0) > 0:
-                            Story.append(Paragraph(f"- <b>{item.get('address')[:12]}...</b> ({item.get('value'):.2f} {item.get('nativeSymbol', 'ETH')}) - Risk: {item.get('risk_score')}", styles["Normal"]))
+                            addr = item.get('address', '')
+                            addr_info = detect_address_type(addr)
+                            sym = addr_info.get("coin", "ETH") if addr_info.get("coin") != "Unknown" else "ETH"
+                            if sym == 'Bitcoin': sym = 'BTC'
+                            if sym == 'Solana': sym = 'SOL'
+                            if sym == 'Tron': sym = 'TRX'
+                            Story.append(Paragraph(f"- <b>{addr[:12]}...</b> ({item.get('value'):.2f} {sym}) - Risk: {item.get('risk_score')}", styles["Normal"]))
                     Story.append(Spacer(1, 6))
 
             priority_queue_filtered = [item for item in priority_queue if item.get("score", 0) >= 60]
@@ -626,8 +721,18 @@ def generate_case_pdf_report(case_id: int, db: Session) -> bytes:
     Story.append(Spacer(1, 12))
     
     timestamp_str = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(case.created_at))
-    title_text = case.title if case.title and not case.title.startswith('[Placeholder') else f"Investigation Dossier - {case.id}"
-    code_text = case.case_number if case.case_number and not case.case_number.startswith('[Placeholder') else f"AXON-C-{case.id}"
+    title_val = case.title or ""
+    if not title_val or title_val.startswith('[Placeholder') or title_val.upper() == 'N/A' or title_val.upper() == 'NONE':
+        title_text = f"AXON Master Intelligence Dossier - Case #{case.id}"
+    else:
+        title_text = title_val
+
+    code_val = case.case_number or ""
+    if not code_val or code_val.startswith('[Placeholder') or code_val.upper() == 'N/A' or code_val.upper() == 'NONE':
+        code_text = f"AXON-C-{case.id}"
+    else:
+        code_text = code_val
+
     Story.append(Paragraph(f"<b>Case ID:</b> {code_text}", styles["Normal"]))
     Story.append(Paragraph(f"<b>Case Title:</b> {title_text}", styles["Normal"]))
     Story.append(Paragraph(f"<b>Category:</b> {case.category or 'General'}", styles["Normal"]))
@@ -635,22 +740,27 @@ def generate_case_pdf_report(case_id: int, db: Session) -> bytes:
     Story.append(Paragraph(f"<b>Timestamp:</b> {timestamp_str}", styles["Normal"]))
     Story.append(Spacer(1, 16))
 
-    # SECTION 1 - CASE SUMMARY
-    Story.append(Paragraph("<b>SECTION 1 - CASE SUMMARY</b>", styles["Heading2"]))
-    if case.description and case.description.strip() and case.description.strip().lower() not in ["no summary available.", "no summary available", "n/a", "none"]:
-        Story.append(Paragraph(case.description, styles["Normal"]))
-    else:
-        Story.append(Paragraph("Summary unavailable because no cross-entity relationships were identified.", styles["Normal"]))
-    Story.append(Spacer(1, 8))
-    
+    # Calculate metrics first for the summary
     total = len(logs)
     critical = sum(1 for l in logs if l.risk_score >= 80)
     high = sum(1 for l in logs if 60 <= l.risk_score < 80)
     avg_risk = sum(l.risk_score for l in logs) // total if total > 0 else 0
+
+    # SECTION 1 - CASE SUMMARY
+    Story.append(Paragraph("<b>SECTION 1 - CASE SUMMARY</b>", styles["Heading2"]))
+    desc_val = case.description or ""
+    if desc_val.strip() and desc_val.strip().lower() not in ["no summary available.", "no summary available", "n/a", "none"]:
+        Story.append(Paragraph(desc_val, styles["Normal"]))
+    else:
+        desc_fallback = f"This Master Intelligence Dossier represents an aggregate of {total} investigated entities. Based on automated heuristics, {critical} entities exhibit CRITICAL risk profiles and {high} exhibit HIGH risk profiles. The overall average risk score for this case is {avg_risk}/100."
+        Story.append(Paragraph(desc_fallback, styles["Normal"]))
+    Story.append(Spacer(1, 8))
+    
+    context = "CRITICAL - IMMEDIATE REVIEW" if avg_risk >= 80 else ("HIGH" if avg_risk >= 60 else ("MEDIUM" if avg_risk >= 30 else "LOW"))
     Story.append(Paragraph(f"<b>Total Entities Analyzed:</b> {total}", styles["Normal"]))
     Story.append(Paragraph(f"<b>Critical Risk Profiles:</b> {critical}", styles["Normal"]))
     Story.append(Paragraph(f"<b>High Risk Profiles:</b> {high}", styles["Normal"]))
-    Story.append(Paragraph(f"<b>Average Case Risk Score:</b> {avg_risk}/100", styles["Normal"]))
+    Story.append(Paragraph(f"<b>Average Case Risk Score:</b> {avg_risk}/100 ({context})", styles["Normal"]))
     Story.append(Spacer(1, 12))
 
     # SECTION 2 - ENTITY REGISTRY
