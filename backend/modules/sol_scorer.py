@@ -371,7 +371,7 @@ async def scan_sol_wallet(address: str, db: Session, depth: str = "quick", case_
             "ethBalance": f"{sol_balance:.4f} SOL",
             "totalReceived": "Unavailable",
             "totalSent": "Unavailable",
-            "tx_count": tx_count,
+            "txCount": tx_count,
             "walletAgeDays": wallet_age_days,
             "wallet_type": "Solana PDA" if is_pda else "Solana Address",
             "uniqueCounterparties": "Unavailable",

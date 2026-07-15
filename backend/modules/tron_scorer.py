@@ -370,7 +370,7 @@ async def scan_tron_wallet(address: str, db: Session, depth: str = "quick", case
             "last_tx_date": time.strftime("%Y-%m-%d", time.gmtime(max(timestamps))) if timestamps else "Unavailable",
             "totalReceived": "Unavailable",
             "totalSent": "Unavailable",
-            "tx_count": total_tx_count,
+            "txCount": total_tx_count,
             "walletAgeDays": wallet_age_days,
             "wallet_type": "Tron Address",
             "uniqueCounterparties": len(unique_counterparties),

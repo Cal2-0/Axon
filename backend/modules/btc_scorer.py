@@ -415,7 +415,7 @@ async def scan_btc_wallet(address: str, db: Session, depth: str = "quick", case_
             "ethBalance": f"{btc_balance:.4f} BTC",
             "totalReceived": f"{entity_recv_sat / 10**8:.4f} BTC",
             "totalSent": f"{entity_sent_sat / 10**8:.4f} BTC",
-            "tx_count": total_txs,
+            "txCount": total_txs,
             "walletAgeDays": wallet_age_days,
             "wallet_type": "Native SegWit",
             "uniqueCounterparties": len(unique_counterparties),

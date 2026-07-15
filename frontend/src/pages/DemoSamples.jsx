@@ -291,11 +291,13 @@ export default function DemoSamples() {
     navigator.clipboard.writeText(text);
   };
 
-  const handleAnalyze = (type, address) => {
-    if (type.toLowerCase().includes('contract')) {
-      navigate(`/contract?address=${address}`);
+    const handleAnalyze = (type, address) => {
+    // Only EVM contracts are supported for Contract Analysis
+    const isEVM = /^0x[0-9a-fA-F]{40}$/i.test(address);
+    if (type.toLowerCase().includes('contract') && isEVM) {
+      navigate(/contract?address=);
     } else {
-      navigate(`/wallet?address=${address}`);
+      navigate(/wallet?address=);
     }
   };
 
