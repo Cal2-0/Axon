@@ -72,7 +72,7 @@ const DATASETS = {
     }
   ],
 
-  "BITCOIN": [
+  "Bitcoin Wallets": [
     {
       "address": "13AM4VW2dhxYgXeQepoHkHSQuy6NgaEb94",
       "name": "WannaCry Ransomware #1",
@@ -110,14 +110,16 @@ const DATASETS = {
     }
   ],
 
-  "SOLANA": [
+  "Solana Wallets": [
     {
       "address": "5tzFkiKscXHK5ZXCGbXZxdw7gTjjD1mBwuoFbhUvuAi9",
       "name": "Binance Hot 2",
       "type": "Wallet",
       "expectedRisk": "LOW",
       "description": "Labeled exchange wallet on Solscan, high volume."
-    },
+    }
+  ],
+  "Solana Contracts": [
     {
       "address": "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyDAg",
       "name": "Jupiter Aggregator V6",
@@ -141,14 +143,16 @@ const DATASETS = {
     }
   ],
 
-  "TRON": [
+  "TRON Wallets": [
     {
       "address": "TXLAQ63Xg1NAzckPwKHvzw7CSEmLMEqcdj",
       "name": "Binance Hot",
       "type": "Wallet",
       "expectedRisk": "LOW",
       "description": "Binance-linked TRON wallet — high volume exchange."
-    },
+    }
+  ],
+  "TRON Contracts": [
     {
       "address": "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
       "name": "Tether USDT Contract",
@@ -292,12 +296,10 @@ export default function DemoSamples() {
   };
 
     const handleAnalyze = (type, address) => {
-    // Only EVM contracts are supported for Contract Analysis
-    const isEVM = /^0x[0-9a-fA-F]{40}$/i.test(address);
-    if (type.toLowerCase().includes('contract') && isEVM) {
-      navigate(/contract?address=);
+    if (type.toLowerCase().includes('contract')) {
+      navigate(`/contract?address=${address}`);
     } else {
-      navigate(/wallet?address=);
+      navigate(`/wallet?address=${address}`);
     }
   };
 
