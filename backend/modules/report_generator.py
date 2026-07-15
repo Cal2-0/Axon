@@ -643,7 +643,7 @@ def generate_case_pdf_report(case_id: int, db: Session) -> bytes:
         Story.append(Paragraph("Summary unavailable because no cross-entity relationships were identified.", styles["Normal"]))
     Story.append(Spacer(1, 8))
     
-total = len(logs)
+    total = len(logs)
     critical = sum(1 for l in logs if l.risk_score >= 80)
     high = sum(1 for l in logs if 60 <= l.risk_score < 80)
     avg_risk = sum(l.risk_score for l in logs) // total if total > 0 else 0
