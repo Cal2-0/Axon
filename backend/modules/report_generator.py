@@ -626,8 +626,10 @@ def generate_case_pdf_report(case_id: int, db: Session) -> bytes:
     Story.append(Spacer(1, 12))
     
     timestamp_str = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(case.created_at))
-    Story.append(Paragraph(f"<b>Case ID:</b> {case.case_number}", styles["Normal"]))
-    Story.append(Paragraph(f"<b>Case Title:</b> {case.title}", styles["Normal"]))
+title_text = case.title if case.title and not case.title.startswith('[Placeholder') else f"Investigation Dossier - {case.id}"
+    code_text = case.case_number if case.case_number and not case.case_number.startswith('[Placeholder') else f"AXON-C-{case.id}"
+    Story.append(Paragraph(f"<b>Case ID:</b> {code_text}", styles["Normal"]))
+    Story.append(Paragraph(f"<b>Case Title:</b> {title_text}", styles["Normal"]))
     Story.append(Paragraph(f"<b>Category:</b> {case.category or 'General'}", styles["Normal"]))
     Story.append(Paragraph(f"<b>Priority:</b> {case.priority or 'P2'}", styles["Normal"]))
     Story.append(Paragraph(f"<b>Timestamp:</b> {timestamp_str}", styles["Normal"]))
@@ -641,12 +643,14 @@ def generate_case_pdf_report(case_id: int, db: Session) -> bytes:
         Story.append(Paragraph("Summary unavailable because no cross-entity relationships were identified.", styles["Normal"]))
     Story.append(Spacer(1, 8))
     
-    total = len(logs)
+total = len(logs)
     critical = sum(1 for l in logs if l.risk_score >= 80)
     high = sum(1 for l in logs if 60 <= l.risk_score < 80)
+    avg_risk = sum(l.risk_score for l in logs) // total if total > 0 else 0
     Story.append(Paragraph(f"<b>Total Entities Analyzed:</b> {total}", styles["Normal"]))
     Story.append(Paragraph(f"<b>Critical Risk Profiles:</b> {critical}", styles["Normal"]))
     Story.append(Paragraph(f"<b>High Risk Profiles:</b> {high}", styles["Normal"]))
+    Story.append(Paragraph(f"<b>Average Case Risk Score:</b> {avg_risk}/100", styles["Normal"]))
     Story.append(Spacer(1, 12))
 
     # SECTION 2 - ENTITY REGISTRY
