@@ -98,12 +98,13 @@ export default function ContractInvestigation({ caseId }) {
     const searchParams = new URLSearchParams(location.search);
     const initialAddress = searchParams.get('address');
     if (initialAddress) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAddress(initialAddress);
       runAnalysis(initialAddress);
     }
   }, [location.search]);
 
-  const runAnalysis = async (targetAddress) => {
+  async function runAnalysis(targetAddress) {
     if (!targetAddress.trim()) return;
     setLoading(true); setResult(null); setDeepDiveResult(null);
     try {
@@ -296,28 +297,28 @@ export default function ContractInvestigation({ caseId }) {
           <CollapsibleSection color="orange" icon="⚠️" title="Threat Assessment" badge="5-AXIS BEHAVIORAL MATRIX">
             <div className="flex flex-col md:flex-row gap-8 items-start">
               <div className="shrink-0 flex flex-col items-center gap-4">
-                <RiskMeter score={result.risk.score} label={result.risk.label} />
-                <div className="text-axon-text-muted text-xs font-mono font-bold mt-[-10px] bg-axon-bg px-2 py-0.5 rounded border border-axon-border">± {result.risk.ci} CI</div>
+                <RiskMeter score={result?.risk?.score} label={result?.risk?.label} />
+                <div className="text-axon-text-muted text-xs font-mono font-bold mt-[-10px] bg-axon-bg px-2 py-0.5 rounded border border-axon-border">± {result?.risk?.ci} CI</div>
                 
                 {/* Score Breakdown Panel */}
                 <div className="w-full bg-axon-bg rounded border border-axon-border p-3 text-left min-w-[170px]">
                   <div className="text-[10px] font-bold text-axon-text-dim uppercase tracking-wider mb-2 text-center border-b border-axon-border/50 pb-1">5-Axis Matrix Breakdown</div>
                   {[
-                    { l: 'A1: Code Security', v: result.risk.axes?.A1 },
-                    { l: 'A2: Admin Risk', v: result.risk.axes?.A2 },
-                    { l: 'A3: Behavior', v: result.risk.axes?.A3 },
-                    { l: 'A4: Topology', v: result.risk.axes?.A4 },
-                    { l: 'A5: Threat Intel', v: result.risk.axes?.A5 }
+                    { l: 'A1: Code Security', v: result?.risk?.axes?.A1 },
+                    { l: 'A2: Admin Risk', v: result?.risk?.axes?.A2 },
+                    { l: 'A3: Behavior', v: result?.risk?.axes?.A3 },
+                    { l: 'A4: Topology', v: result?.risk?.axes?.A4 },
+                    { l: 'A5: Threat Intel', v: result?.risk?.axes?.A5 }
                   ].map(a => (
                      <div key={a.l} className="flex justify-between items-center text-[11px] mb-1">
                         <span className="text-axon-text-muted">{a.l}</span>
                         <span className="font-mono text-white">{a.v || 0}/100</span>
                      </div>
                   ))}
-                  {result.risk.multiplier && result.risk.multiplier > 1.0 && (
+                  {result?.risk?.multiplier && result?.risk?.multiplier > 1.0 && (
                     <div className="mt-2 pt-1 border-t border-axon-orange/30 flex justify-between items-center text-[11px]">
                       <span className="text-axon-orange font-bold uppercase">Cross-Axis Mult</span>
-                      <span className="font-mono text-axon-orange font-bold">x{result.risk.multiplier}</span>
+                      <span className="font-mono text-axon-orange font-bold">x{result?.risk?.multiplier}</span>
                     </div>
                   )}
                 </div>
@@ -325,21 +326,21 @@ export default function ContractInvestigation({ caseId }) {
               <div className="flex-1 space-y-6">
                 
                 {/* Initial Quick Forensic Verdict */}
-                {result.risk.analyticalSynthesis && result.risk.analyticalSynthesis.verdict ? (
+                {result?.risk?.analyticalSynthesis && result?.risk?.analyticalSynthesis?.verdict ? (
                   <div className="mb-6 bg-[#1e293b]/50 rounded-xl border border-blue-500/30 p-5 font-sans text-sm leading-relaxed text-gray-200">
                     <div className="flex items-center gap-2 mb-4 border-b border-blue-500/20 pb-2">
                       <span className="px-2 py-0.5 text-[10px] font-mono font-bold tracking-widest text-white bg-blue-600 rounded">ANALYST SYNTHESIS</span>
-                      <span className="text-xs font-mono font-bold text-blue-400">{result.risk.analyticalSynthesis.mitre_tag || "N/A"}</span>
+                      <span className="text-xs font-mono font-bold text-blue-400">{result?.risk?.analyticalSynthesis?.mitre_tag || "N/A"}</span>
                     </div>
                     
                     <div className="mb-4">
                       <div className="text-[10px] font-bold text-blue-400/70 uppercase tracking-widest mb-1">Plausible Hypothesis</div>
-                      <p className="text-gray-300 font-mono text-xs break-words">{result.risk.analyticalSynthesis.hypothesis}</p>
+                      <p className="text-gray-300 font-mono text-xs break-words">{result?.risk?.analyticalSynthesis?.hypothesis}</p>
                     </div>
 
                     <div>
                       <div className="text-[10px] font-bold text-blue-400/70 uppercase tracking-widest mb-1">Adversarial Synthesis (Executive Verdict)</div>
-                      <p className="text-white font-bold break-words">{result.risk.analyticalSynthesis.verdict}</p>
+                      <p className="text-white font-bold break-words">{result?.risk?.analyticalSynthesis?.verdict}</p>
                     </div>
 
                     <div className="mt-6 border-t border-blue-500/20 pt-4 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -360,7 +361,7 @@ export default function ContractInvestigation({ caseId }) {
 
                 <div>
                   <div className="text-sm font-bold text-axon-text-dim uppercase tracking-wider mb-3">Top Signals Triggered</div>
-                {result.risk.factors.map((f, i) => (
+                {result?.risk?.factors.map((f, i) => (
                   <div key={i} className="flex items-start gap-3 p-3 bg-axon-bg rounded-lg border border-axon-border">
                     <span className="text-base shrink-0">{f.icon}</span>
                     <div className="flex-1 text-sm text-white">{f.reason}</div>
@@ -373,37 +374,37 @@ export default function ContractInvestigation({ caseId }) {
           </CollapsibleSection>
 
           {/* Deep Dive Independent Module */}
-          {deepDiveResult && deepDiveResult.risk && deepDiveResult.risk.analyticalSynthesis && (
+          {deepDiveResult && deepDiveResult.risk && deepDiveResult?.risk?.analyticalSynthesis && (
             <CollapsibleSection color="cyan" icon="🧠" title="Dual-Adversarial Deep Scan" badge="3-AGENT PIPELINE" defaultOpen={true}>
 
               {/* Updated Risk Score Delta */}
-              {deepDiveResult.risk.score !== undefined && (
+              {deepDiveResult?.risk?.score !== undefined && (
                 <div className="mb-6 flex items-center gap-6 p-4 bg-axon-bg rounded-xl border border-axon-purple/30">
                   <div className="flex items-center gap-4">
                     <div className="text-center">
                       <div className="text-[10px] font-bold text-axon-text-dim uppercase tracking-widest mb-1">Quick Scan</div>
-                      <div className="text-2xl font-bold font-mono text-white">{result.risk.score}</div>
+                      <div className="text-2xl font-bold font-mono text-white">{result?.risk?.score}</div>
                     </div>
                     <div className="text-2xl text-axon-text-dim">→</div>
                     <div className="text-center">
                       <div className="text-[10px] font-bold text-axon-purple uppercase tracking-widest mb-1">Deep Scan</div>
-                      <div className={`text-2xl font-bold font-mono ${deepDiveResult.risk.score >= 80 ? 'text-red-400' : deepDiveResult.risk.score >= 60 ? 'text-orange-400' : deepDiveResult.risk.score >= 40 ? 'text-yellow-400' : 'text-green-400'}`}>
-                        {deepDiveResult.risk.score}
+                      <div className={`text-2xl font-bold font-mono ${deepDiveResult?.risk?.score >= 80 ? 'text-red-400' : deepDiveResult?.risk?.score >= 60 ? 'text-orange-400' : deepDiveResult?.risk?.score >= 40 ? 'text-yellow-400' : 'text-green-400'}`}>
+                        {deepDiveResult?.risk?.score}
                       </div>
                     </div>
                     <div className={`px-3 py-1 text-sm font-bold font-mono rounded border ${
-                      deepDiveResult.risk.score - result.risk.score > 0
+                      deepDiveResult?.risk?.score - result?.risk?.score > 0
                         ? 'bg-red-500/10 text-red-400 border-red-500/30'
-                        : deepDiveResult.risk.score - result.risk.score < 0
+                        : deepDiveResult?.risk?.score - result?.risk?.score < 0
                         ? 'bg-green-500/10 text-green-400 border-green-500/30'
                         : 'bg-axon-card text-axon-text-dim border-axon-border'
                     }`}>
-                      Δ {deepDiveResult.risk.score - result.risk.score > 0 ? '+' : ''}{deepDiveResult.risk.score - result.risk.score}
+                      Δ {deepDiveResult?.risk?.score - result?.risk?.score > 0 ? '+' : ''}{deepDiveResult?.risk?.score - result?.risk?.score}
                     </div>
                   </div>
                   <div className="ml-auto text-right">
-                    <div className={`text-lg font-extrabold font-mono tracking-widest ${deepDiveResult.risk.score >= 80 ? 'text-red-400' : deepDiveResult.risk.score >= 60 ? 'text-orange-400' : deepDiveResult.risk.score >= 40 ? 'text-yellow-400' : 'text-green-400'}`}>
-                      {deepDiveResult.risk.label}
+                    <div className={`text-lg font-extrabold font-mono tracking-widest ${deepDiveResult?.risk?.score >= 80 ? 'text-red-400' : deepDiveResult?.risk?.score >= 60 ? 'text-orange-400' : deepDiveResult?.risk?.score >= 40 ? 'text-yellow-400' : 'text-green-400'}`}>
+                      {deepDiveResult?.risk?.label}
                     </div>
                     <div className="text-[10px] text-axon-text-dim font-mono">Updated Risk Rating</div>
                   </div>
@@ -416,18 +417,18 @@ export default function ContractInvestigation({ caseId }) {
                   <div className="bg-red-950/20 rounded-xl border border-red-500/30 p-4">
                     <div className="flex items-center justify-between mb-3 border-b border-red-500/20 pb-2">
                       <span className="px-2 py-0.5 text-[10px] font-mono font-bold tracking-widest text-white bg-red-600 rounded">PROSECUTION PERSPECTIVE</span>
-                      <span className="text-xs font-mono font-bold text-red-400">{deepDiveResult.risk.analyticalSynthesis.prosecution_risk} RISK</span>
+                      <span className="text-xs font-mono font-bold text-red-400">{deepDiveResult?.risk?.analyticalSynthesis?.prosecution_risk} RISK</span>
                     </div>
-                    <p className="text-gray-300 font-mono text-xs break-words">{deepDiveResult.risk.analyticalSynthesis.prosecution_summary}</p>
+                    <p className="text-gray-300 font-mono text-xs break-words">{deepDiveResult?.risk?.analyticalSynthesis?.prosecution_summary}</p>
                   </div>
 
                   {/* Defense Panel */}
                   <div className="bg-[#064e3b]/40 rounded-xl border border-emerald-500/30 p-4">
                     <div className="flex items-center justify-between mb-3 border-b border-emerald-500/20 pb-2">
                       <span className="px-2 py-0.5 text-[10px] font-mono font-bold tracking-widest text-white bg-emerald-600 rounded">DEFENSE PERSPECTIVE</span>
-                      <span className="text-xs font-mono font-bold text-emerald-400">{deepDiveResult.risk.analyticalSynthesis.defense_risk} RISK</span>
+                      <span className="text-xs font-mono font-bold text-emerald-400">{deepDiveResult?.risk?.analyticalSynthesis?.defense_risk} RISK</span>
                     </div>
-                    <p className="text-gray-300 font-mono text-xs break-words">{deepDiveResult.risk.analyticalSynthesis.defense_summary}</p>
+                    <p className="text-gray-300 font-mono text-xs break-words">{deepDiveResult?.risk?.analyticalSynthesis?.defense_summary}</p>
                   </div>
                 </div>
 
@@ -437,30 +438,30 @@ export default function ContractInvestigation({ caseId }) {
                   <div className="flex items-center justify-between mb-4 border-b border-blue-500/20 pb-2 relative z-10">
                     <div className="flex items-center gap-2">
                       <span className="px-2 py-0.5 text-[10px] font-mono font-bold tracking-widest text-white bg-blue-600 rounded">EXECUTIVE VERDICT</span>
-                      <span className="text-xs font-mono font-bold text-blue-400">{deepDiveResult.risk.analyticalSynthesis.mitre_tag || "N/A"}</span>
+                      <span className="text-xs font-mono font-bold text-blue-400">{deepDiveResult?.risk?.analyticalSynthesis?.mitre_tag || "N/A"}</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-[10px] font-bold text-blue-400/70 uppercase tracking-widest">Confidence</span>
-                      <span className="text-xs font-mono font-bold text-white bg-blue-500/20 px-2 py-0.5 rounded">{deepDiveResult.risk.analyticalSynthesis.confidence}%</span>
+                      <span className="text-xs font-mono font-bold text-white bg-blue-500/20 px-2 py-0.5 rounded">{deepDiveResult?.risk?.analyticalSynthesis?.confidence}%</span>
                     </div>
                   </div>
                   
                   <div className="mb-4 relative z-10">
                     <div className="text-[10px] font-bold text-blue-400/70 uppercase tracking-widest mb-1">Synthesized Hypothesis</div>
-                    <p className="text-gray-300 font-mono text-xs break-words">{deepDiveResult.risk.analyticalSynthesis.hypothesis}</p>
+                    <p className="text-gray-300 font-mono text-xs break-words">{deepDiveResult?.risk?.analyticalSynthesis?.hypothesis}</p>
                   </div>
 
                   <div className="mb-4 relative z-10">
                     <div className="text-[10px] font-bold text-blue-400/70 uppercase tracking-widest mb-1">Judge Reasoning</div>
-                    <p className="text-gray-400 italic text-xs break-words border-l-2 border-blue-500/30 pl-3">{deepDiveResult.risk.analyticalSynthesis.judge_reasoning}</p>
+                    <p className="text-gray-400 italic text-xs break-words border-l-2 border-blue-500/30 pl-3">{deepDiveResult?.risk?.analyticalSynthesis?.judge_reasoning}</p>
                   </div>
 
                   <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 relative z-10">
                     <div className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-1 flex justify-between">
                       <span>Final Executive Verdict</span>
-                      <span className="opacity-70">Consensus: {deepDiveResult.risk.analyticalSynthesis.consensus_level}</span>
+                      <span className="opacity-70">Consensus: {deepDiveResult?.risk?.analyticalSynthesis?.consensus_level}</span>
                     </div>
-                    <p className="text-white font-bold break-words">{deepDiveResult.risk.analyticalSynthesis.verdict}</p>
+                    <p className="text-white font-bold break-words">{deepDiveResult?.risk?.analyticalSynthesis?.verdict}</p>
                   </div>
                 </div>
               </div>

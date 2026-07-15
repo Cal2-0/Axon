@@ -509,6 +509,7 @@ export default function WalletInvestigation({ caseId }) {
     const initialAddress = searchParams.get('address');
     const deepdive = searchParams.get('deepdive') === 'true';
     if (initialAddress) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAddress(initialAddress);
       // eslint-disable-next-line no-use-before-define
       runAnalysis(initialAddress, deepdive);
@@ -516,7 +517,7 @@ export default function WalletInvestigation({ caseId }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.search]);
 
-  const runAnalysis = async (targetAddress, autoDeepDive = false) => {
+  async function runAnalysis(targetAddress, autoDeepDive = false) {
     if (!targetAddress || !targetAddress.trim()) return;
     setLoading(true);
     setResult(null);
@@ -917,17 +918,17 @@ export default function WalletInvestigation({ caseId }) {
           <CollapsibleSection color="red" icon="⚠️" title="Threat Assessment" badge="5-LAYER BEHAVIORAL ENGINE" defaultOpen={true}>
             <div className="flex flex-col md:flex-row gap-8 items-start">
               <div className="flex flex-col items-center gap-3 shrink-0">
-                <RiskMeter score={result.risk.score} label={result.risk.label} />
+                <RiskMeter score={result?.risk?.score} label={result?.risk?.label} />
                 
                 {/* Score Breakdown Panel */}
                 <div className="w-full bg-axon-bg rounded border border-axon-border p-3 text-left min-w-[170px]">
                   <div className="text-[10px] font-bold text-axon-text-dim uppercase tracking-wider mb-2 text-center border-b border-axon-border/50 pb-1">5-Layer Breakdown</div>
                   {[
-                    { l: 'L1: Behavioral', v: result.risk.layers?.L1 },
-                    { l: 'L2: Graph', v: result.risk.layers?.L2 },
-                    { l: 'L3: Economic', v: result.risk.layers?.L3 },
-                    { l: 'L4: Attribution', v: result.risk.layers?.L4 },
-                    { l: 'L5: Analytical Engine Delta', v: result.risk.layers?.L5 }
+                    { l: 'L1: Behavioral', v: result?.risk?.layers?.L1 },
+                    { l: 'L2: Graph', v: result?.risk?.layers?.L2 },
+                    { l: 'L3: Economic', v: result?.risk?.layers?.L3 },
+                    { l: 'L4: Attribution', v: result?.risk?.layers?.L4 },
+                    { l: 'L5: Analytical Engine Delta', v: result?.risk?.layers?.L5 }
                   ].map(a => (
                      <div key={a.l} className="flex justify-between items-center text-[11px] mb-1">
                         <span className="text-axon-text-muted">{a.l}</span>
@@ -938,34 +939,34 @@ export default function WalletInvestigation({ caseId }) {
 
                 <div className="text-center mt-2">
                   <div className="text-xs text-axon-text-dim">ML Classification</div>
-                  <div className="text-sm font-bold font-mono text-axon-purple">{result.risk.mlClassification}</div>
+                  <div className="text-sm font-bold font-mono text-axon-purple">{result?.risk?.mlClassification}</div>
                 </div>
                 <div className="w-full bg-axon-bg rounded border border-axon-border p-3 text-center min-w-[150px]">
                   <div className="text-xs text-axon-text-dim mb-1">Anomaly Severity</div>
-                  <div className="text-lg font-bold font-mono text-axon-purple">{result.risk.anomalyScore}%</div>
+                  <div className="text-lg font-bold font-mono text-axon-purple">{result?.risk?.anomalyScore}%</div>
                   <div className="w-full h-1.5 bg-axon-card rounded-full mt-2 overflow-hidden">
-                    <div className="h-full bg-axon-purple rounded-full" style={{ width: `${result.risk.anomalyScore}%` }} />
+                    <div className="h-full bg-axon-purple rounded-full" style={{ width: `${result?.risk?.anomalyScore}%` }} />
                   </div>
                 </div>
               </div>
               <div className="flex-1 min-w-0">
                 
                 {/* Analytical Engine Forensic Analysis (Quick Scan) */}
-                {result.risk.analyticalSynthesis && (
+                {result?.risk?.analyticalSynthesis && (
                   <div className="mb-6 bg-[#1e293b]/50 rounded-xl border border-blue-500/30 p-5 font-sans text-sm leading-relaxed text-gray-200">
                     <div className="flex items-center gap-2 mb-4 border-b border-blue-500/20 pb-2">
                       <span className="px-2 py-0.5 text-[10px] font-mono font-bold tracking-widest text-white bg-blue-600 rounded">ANALYST SYNTHESIS</span>
-                      <span className="text-xs font-mono font-bold text-blue-400">{result.risk.analyticalSynthesis.mitre_tag || "N/A"}</span>
+                      <span className="text-xs font-mono font-bold text-blue-400">{result?.risk?.analyticalSynthesis?.mitre_tag || "N/A"}</span>
                     </div>
                     
                     <div className="mb-4">
                       <div className="text-[10px] font-bold text-blue-400/70 uppercase tracking-widest mb-1">Plausible Hypothesis</div>
-                      <p className="text-gray-300 font-mono text-xs break-words">{result.risk.analyticalSynthesis.hypothesis}</p>
+                      <p className="text-gray-300 font-mono text-xs break-words">{result?.risk?.analyticalSynthesis?.hypothesis}</p>
                     </div>
 
                     <div>
                       <div className="text-[10px] font-bold text-blue-400/70 uppercase tracking-widest mb-1">Adversarial Synthesis (Executive Verdict)</div>
-                      <p className="text-white font-bold break-words">{result.risk.analyticalSynthesis.verdict}</p>
+                      <p className="text-white font-bold break-words">{result?.risk?.analyticalSynthesis?.verdict}</p>
                     </div>
 
                     <div className="mt-6 border-t border-blue-500/20 pt-4 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -1002,37 +1003,37 @@ export default function WalletInvestigation({ caseId }) {
           </CollapsibleSection>
 
           {/* ── Deep Dive Results (shown after deep scan completes) ── */}
-          {deepDiveResult && deepDiveResult.risk && deepDiveResult.risk.analyticalSynthesis && (
+          {deepDiveResult && deepDiveResult.risk && deepDiveResult?.risk?.analyticalSynthesis && (
             <CollapsibleSection color="purple" icon="🧠" title="Dual-Adversarial Deep Scan" badge="3-AGENT PIPELINE" defaultOpen={true}>
               
               {/* Updated Risk Score Delta */}
-              {deepDiveResult.risk.score !== undefined && (
+              {deepDiveResult?.risk?.score !== undefined && (
                 <div className="mb-6 flex items-center gap-6 p-4 bg-axon-bg rounded-xl border border-axon-purple/30">
                   <div className="flex items-center gap-4">
                     <div className="text-center">
                       <div className="text-[10px] font-bold text-axon-text-dim uppercase tracking-widest mb-1">Quick Scan</div>
-                      <div className="text-2xl font-bold font-mono text-white">{result.risk.score}</div>
+                      <div className="text-2xl font-bold font-mono text-white">{result?.risk?.score}</div>
                     </div>
                     <div className="text-2xl text-axon-text-dim">→</div>
                     <div className="text-center">
                       <div className="text-[10px] font-bold text-axon-purple uppercase tracking-widest mb-1">Deep Scan</div>
-                      <div className={`text-2xl font-bold font-mono ${deepDiveResult.risk.score >= 80 ? 'text-red-400' : deepDiveResult.risk.score >= 60 ? 'text-orange-400' : deepDiveResult.risk.score >= 40 ? 'text-yellow-400' : 'text-green-400'}`}>
-                        {deepDiveResult.risk.score}
+                      <div className={`text-2xl font-bold font-mono ${deepDiveResult?.risk?.score >= 80 ? 'text-red-400' : deepDiveResult?.risk?.score >= 60 ? 'text-orange-400' : deepDiveResult?.risk?.score >= 40 ? 'text-yellow-400' : 'text-green-400'}`}>
+                        {deepDiveResult?.risk?.score}
                       </div>
                     </div>
                     <div className={`px-3 py-1 text-sm font-bold font-mono rounded border ${
-                      deepDiveResult.risk.score - result.risk.score > 0
+                      deepDiveResult?.risk?.score - result?.risk?.score > 0
                         ? 'bg-red-500/10 text-red-400 border-red-500/30'
-                        : deepDiveResult.risk.score - result.risk.score < 0
+                        : deepDiveResult?.risk?.score - result?.risk?.score < 0
                         ? 'bg-green-500/10 text-green-400 border-green-500/30'
                         : 'bg-axon-card text-axon-text-dim border-axon-border'
                     }`}>
-                      Δ {deepDiveResult.risk.score - result.risk.score > 0 ? '+' : ''}{deepDiveResult.risk.score - result.risk.score}
+                      Δ {deepDiveResult?.risk?.score - result?.risk?.score > 0 ? '+' : ''}{deepDiveResult?.risk?.score - result?.risk?.score}
                     </div>
                   </div>
                   <div className="ml-auto text-right">
-                    <div className={`text-lg font-extrabold font-mono tracking-widest ${deepDiveResult.risk.score >= 80 ? 'text-red-400' : deepDiveResult.risk.score >= 60 ? 'text-orange-400' : deepDiveResult.risk.score >= 40 ? 'text-yellow-400' : 'text-green-400'}`}>
-                      {deepDiveResult.risk.label}
+                    <div className={`text-lg font-extrabold font-mono tracking-widest ${deepDiveResult?.risk?.score >= 80 ? 'text-red-400' : deepDiveResult?.risk?.score >= 60 ? 'text-orange-400' : deepDiveResult?.risk?.score >= 40 ? 'text-yellow-400' : 'text-green-400'}`}>
+                      {deepDiveResult?.risk?.label}
                     </div>
                     <div className="text-[10px] text-axon-text-dim font-mono">Updated Risk Rating</div>
                   </div>
@@ -1045,18 +1046,18 @@ export default function WalletInvestigation({ caseId }) {
                   <div className="bg-red-950/20 rounded-xl border border-red-500/30 p-4">
                     <div className="flex items-center justify-between mb-3 border-b border-red-500/20 pb-2">
                       <span className="px-2 py-0.5 text-[10px] font-mono font-bold tracking-widest text-white bg-red-600 rounded">PROSECUTION PERSPECTIVE</span>
-                      <span className="text-xs font-mono font-bold text-red-400">{deepDiveResult.risk.analyticalSynthesis.prosecution_risk || deepDiveResult.risk.label} RISK</span>
+                      <span className="text-xs font-mono font-bold text-red-400">{deepDiveResult?.risk?.analyticalSynthesis?.prosecution_risk || deepDiveResult?.risk?.label} RISK</span>
                     </div>
-                    <p className="text-gray-300 font-mono text-xs break-words">{deepDiveResult.risk.analyticalSynthesis.prosecution_summary}</p>
+                    <p className="text-gray-300 font-mono text-xs break-words">{deepDiveResult?.risk?.analyticalSynthesis?.prosecution_summary}</p>
                   </div>
 
                   {/* Defense Panel */}
                   <div className="bg-[#064e3b]/40 rounded-xl border border-emerald-500/30 p-4">
                     <div className="flex items-center justify-between mb-3 border-b border-emerald-500/20 pb-2">
                       <span className="px-2 py-0.5 text-[10px] font-mono font-bold tracking-widest text-white bg-emerald-600 rounded">DEFENSE PERSPECTIVE</span>
-                      <span className="text-xs font-mono font-bold text-emerald-400">{deepDiveResult.risk.analyticalSynthesis.defense_risk || 'MEDIUM'} RISK</span>
+                      <span className="text-xs font-mono font-bold text-emerald-400">{deepDiveResult?.risk?.analyticalSynthesis?.defense_risk || 'MEDIUM'} RISK</span>
                     </div>
-                    <p className="text-gray-300 font-mono text-xs break-words">{deepDiveResult.risk.analyticalSynthesis.defense_summary}</p>
+                    <p className="text-gray-300 font-mono text-xs break-words">{deepDiveResult?.risk?.analyticalSynthesis?.defense_summary}</p>
                   </div>
                 </div>
 
@@ -1066,32 +1067,32 @@ export default function WalletInvestigation({ caseId }) {
                   <div className="flex items-center justify-between mb-4 border-b border-blue-500/20 pb-2 relative z-10">
                     <div className="flex items-center gap-2">
                       <span className="px-2 py-0.5 text-[10px] font-mono font-bold tracking-widest text-white bg-blue-600 rounded">EXECUTIVE VERDICT</span>
-                      <span className="text-xs font-mono font-bold text-blue-400">{deepDiveResult.risk.analyticalSynthesis.mitre_tag || "N/A"}</span>
+                      <span className="text-xs font-mono font-bold text-blue-400">{deepDiveResult?.risk?.analyticalSynthesis?.mitre_tag || "N/A"}</span>
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-[10px] font-bold text-blue-400/70 uppercase tracking-widest">Confidence</span>
-                      <span className="text-xs font-mono font-bold text-white bg-blue-500/20 px-2 py-0.5 rounded">{deepDiveResult.risk.analyticalSynthesis.confidence || '—'}%</span>
+                      <span className="text-xs font-mono font-bold text-white bg-blue-500/20 px-2 py-0.5 rounded">{deepDiveResult?.risk?.analyticalSynthesis?.confidence || '—'}%</span>
                     </div>
                   </div>
                   
                   <div className="mb-4 relative z-10">
                     <div className="text-[10px] font-bold text-blue-400/70 uppercase tracking-widest mb-1">Synthesized Hypothesis</div>
-                    <p className="text-gray-300 font-mono text-xs break-words">{deepDiveResult.risk.analyticalSynthesis.hypothesis}</p>
+                    <p className="text-gray-300 font-mono text-xs break-words">{deepDiveResult?.risk?.analyticalSynthesis?.hypothesis}</p>
                   </div>
 
-                  {deepDiveResult.risk.analyticalSynthesis.judge_reasoning && (
+                  {deepDiveResult?.risk?.analyticalSynthesis?.judge_reasoning && (
                     <div className="mb-4 relative z-10">
                       <div className="text-[10px] font-bold text-blue-400/70 uppercase tracking-widest mb-1">Judge Reasoning</div>
-                      <p className="text-gray-400 italic text-xs break-words border-l-2 border-blue-500/30 pl-3">{deepDiveResult.risk.analyticalSynthesis.judge_reasoning}</p>
+                      <p className="text-gray-400 italic text-xs break-words border-l-2 border-blue-500/30 pl-3">{deepDiveResult?.risk?.analyticalSynthesis?.judge_reasoning}</p>
                     </div>
                   )}
 
                   <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 relative z-10">
                     <div className="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-1 flex justify-between">
                       <span>Final Executive Verdict</span>
-                      <span className="opacity-70">Consensus: {deepDiveResult.risk.analyticalSynthesis.consensus_level || 'N/A'}</span>
+                      <span className="opacity-70">Consensus: {deepDiveResult?.risk?.analyticalSynthesis?.consensus_level || 'N/A'}</span>
                     </div>
-                    <p className="text-white font-bold break-words">{deepDiveResult.risk.analyticalSynthesis.verdict}</p>
+                    <p className="text-white font-bold break-words">{deepDiveResult?.risk?.analyticalSynthesis?.verdict}</p>
                   </div>
                 </div>
               </div>
@@ -1207,24 +1208,24 @@ export default function WalletInvestigation({ caseId }) {
 
 {/* ── 4. OSINT & Threat Alerts ──────────────────────────────────────── */}
           <CollapsibleSection color="purple" icon="🛰️" title="OSINT & Threat Alerts" badge="LIVE" defaultOpen={false}>
-            {result.osint.analyticalSynthesis && result.osint.analyticalSynthesis.verdict ? (
+            {result?.osint?.analyticalSynthesis && result?.osint?.analyticalSynthesis?.verdict ? (
               <div className="mb-6 p-4 bg-axon-purple/5 border border-axon-purple/20 rounded-lg">
                 <div className="flex items-center gap-2 mb-3 border-b border-axon-purple/20 pb-2">
                   <span className="px-2 py-0.5 text-[10px] font-bold font-mono bg-axon-purple/20 text-axon-purple rounded">THREAT SUMMARY</span>
-                  <span className="text-xs font-bold text-white">{result.osint.analyticalSynthesis.mitre_tag || "N/A"}</span>
+                  <span className="text-xs font-bold text-white">{result?.osint?.analyticalSynthesis?.mitre_tag || "N/A"}</span>
                 </div>
                 <div className="text-xs text-axon-text-dim uppercase tracking-widest mb-1 font-bold">Hypothesis</div>
-                <p className="text-sm text-axon-text-muted leading-relaxed mb-3">{result.osint.analyticalSynthesis.hypothesis}</p>
+                <p className="text-sm text-axon-text-muted leading-relaxed mb-3">{result?.osint?.analyticalSynthesis?.hypothesis}</p>
                 <div className="text-xs text-axon-text-dim uppercase tracking-widest mb-1 font-bold">Verdict</div>
-                <p className="text-sm text-axon-purple font-bold leading-relaxed">{result.osint.analyticalSynthesis.verdict}</p>
+                <p className="text-sm text-axon-purple font-bold leading-relaxed">{result?.osint?.analyticalSynthesis?.verdict}</p>
               </div>
             ) : (
               <div className="mb-4 p-3 bg-axon-purple/5 border border-axon-purple/20 rounded-lg text-sm text-axon-text-muted">
-                {typeof result.osint?.summary === 'string' ? result.osint.summary : (
+                {typeof result.osint?.summary === 'string' ? result?.osint?.summary : (
                   <div>
                     <p className="font-semibold mb-1 text-white text-xs uppercase tracking-wider text-axon-purple/80">OSINT Sweep Metrics</p>
                     <ul className="list-disc pl-4 space-y-1 mt-1 text-xs">
-                      {result.osint?.summary?.ens_name && <li>ENS Domain: {result.osint.summary.ens_name}</li>}
+                      {result.osint?.summary?.ens_name && <li>ENS Domain: {result?.osint?.summary.ens_name}</li>}
                       <li>Reddit Mentions: <span className="font-mono text-white font-bold">{result.osint?.summary?.reddit_mentions || 0}</span></li>
                       <li>GitHub Mentions: <span className="font-mono text-white font-bold">{result.osint?.summary?.github_mentions || 0}</span></li>
                       <li>Twitter Mentions: <span className="font-mono text-white font-bold">{result.osint?.summary?.twitter_mentions || 0}</span></li>
@@ -1269,8 +1270,8 @@ export default function WalletInvestigation({ caseId }) {
                     <div className="text-sm font-bold text-white">OSINT Platform Mentions</div>
                     <div className="text-xs text-axon-text-dim">Scraped from security feeds</div>
                   </div>
-                  <div className={`text-2xl font-mono font-bold ${result.osint.walletMentions > 0 ? 'text-red-400' : 'text-axon-green'}`}>
-                    {result.osint.walletMentions || 0}
+                  <div className={`text-2xl font-mono font-bold ${result?.osint?.walletMentions > 0 ? 'text-red-400' : 'text-axon-green'}`}>
+                    {result?.osint?.walletMentions || 0}
                   </div>
                 </div>
               </div>

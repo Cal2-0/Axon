@@ -3,10 +3,13 @@ import httpx
 import asyncio
 import os
 import math
+import re
+import json
+import hashlib
 from sqlalchemy.orm import Session
 from database.models import InvestigationLog, MaliciousWallet
 from modules.osint_scraper import run_osint_scan
-from modules.ai_analyst import analyze_entity
+from modules.ai_analyst import analyze_entity, generate_dual_quick_ratings
 from modules.wallet_scorer import _compute_l5_deterministic, _compute_dormancy_persistence
 
 def _get_trongrid_key():
@@ -359,7 +362,7 @@ async def scan_tron_wallet(address: str, db: Session, depth: str = "quick", case
         "identity": {
             "address": address,
             "explorerLink": f"https://tronscan.org/#/address/{address}",
-            "balance_wei": f"{tron_balance:.4f} TRX",
+            "ethBalance": f"{tron_balance:.4f} TRX",
             "ens": None,
             "label": "Tron Address",
             "tag": label,
@@ -402,13 +405,36 @@ async def scan_tron_wallet(address: str, db: Session, depth: str = "quick", case
             "aiAgentB": ai_data.get("agentB")
         },
         "osint": osint_data,
-        "exchange": {"detected": False, "findings": [], "summary": "No centralized exchange patterns confirmed"},
-        "mixer": {"detected": False, "findings": [], "launderingIndicators": []},
+        "exchange": {
+            "detected": False,
+            "findings": [],
+            "exchangeCounterparties": 0,
+            "cashOutEvents": 0,
+            "totalCashOutUSD": "$0",
+            "summary": "No exchange activity detected on this chain."
+        },
+        "mixer": {
+            "detected": False,
+            "findings": [],
+            "mixerCounterparties": 0,
+            "bridgeActivity": [],
+            "launderingIndicators": [],
+            "totalMixedETH": "N/A"
+        },
+        "holdings": {
+            "erc20_count": len(usdt_txs),
+            "forta_alerts": 0,
+            "stablecoin_flows": {"usdt": usdt_balance}
+        },
         "graph": {"nodes": graph_nodes, "edges": graph_edges[:100], "tokens": [], "osint": {}, "defi_interactions": []},
-        "holdings": {"erc20_count": len(usdt_txs), "forta_alerts": 0, "stablecoin_flows": {"usdt": usdt_balance}},
         "transactions": formatted_txs,
         "evidence_context": "TRON Scan Context"
     }
+    
+    if depth == "deep":
+        ai_prompt = f"Address: {address}\nType: Wallet\nRisk Score: {final_score}\nSignals: {signals}\nChain: TRON\n"
+        dual_ratings = await generate_dual_quick_ratings(ai_prompt, entity_type="wallet")
+        response_data["ai_analysis"] = dual_ratings
 
     # ── Server-Side Hash & Report Metadata (tamper-proof) ──
     import uuid, hashlib, json

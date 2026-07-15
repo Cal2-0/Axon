@@ -343,7 +343,7 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
                     Story.append(_build_table(["Assets", "Stablecoins", "NFTs", "Contracts", "Protocols"], rows, [80, 70, 50, 60, 60]))
                 Story.append(Spacer(1, 12))
             else:
-                Story.append(Paragraph("Not available on this blockchain", styles["Normal"]))
+                Story.append(Paragraph("<i>No asset inventory data collected at this depth or chain.</i>", styles["Normal"]))
                 Story.append(Spacer(1, 12))
             
             # EXCHANGE & KYC
@@ -353,7 +353,7 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
                 Story.append(Paragraph("<b>Recommended legal mechanism:</b> Subpoena / MLAT to exchange compliance.", styles["Normal"]))
                 Story.append(Spacer(1, 12))
             else:
-                Story.append(Paragraph("Not available on this blockchain", styles["Normal"]))
+                Story.append(Paragraph("<i>No centralized exchange interactions detected.</i>", styles["Normal"]))
                 Story.append(Spacer(1, 12))
                 
             # PROTOCOL ACTIVITY / MIXER
@@ -362,7 +362,7 @@ def generate_pdf_report(report_id: str, db: Session) -> bytes:
                 Story.append(Paragraph(f"<b>Mixers Detected:</b> {len(mixer.get('findings'))}", styles["Normal"]))
                 Story.append(Spacer(1, 12))
             else:
-                Story.append(Paragraph("Not available on this blockchain", styles["Normal"]))
+                Story.append(Paragraph("<i>No mixer or bridge interactions detected.</i>", styles["Normal"]))
                 Story.append(Spacer(1, 12))
             
             # AI-ASSISTED INTERPRETATION (NON-EVIDENTIARY)

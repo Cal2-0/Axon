@@ -121,9 +121,9 @@ export async function downloadWalletPDF(result, forceHtml = true) {
 
   // ── Analytical Engine Forensic Verdict ──
   const analyticalSynthesis = result.risk?.analyticalSynthesis || result.osint?.analyticalSynthesis || {};
-  const hypothesis = analyticalSynthesis.hypothesis || 'No Analytical Engine analysis available.';
-  const verdict = analyticalSynthesis.verdict || 'No verdict available.';
-  const mitreTag = analyticalSynthesis.mitre_tag || 'N/A';
+  const hypothesis = analyticalSynthesis?.hypothesis || 'No Analytical Engine analysis available.';
+  const verdict = analyticalSynthesis?.verdict || 'No verdict available.';
+  const mitreTag = analyticalSynthesis?.mitre_tag || 'N/A';
 
   // ── Scoring metadata ──
   const entityClass = result.risk?.entityClass || result.identity?.entityClass || 'Data Not Available';
@@ -426,9 +426,9 @@ export async function downloadWalletPDF(result, forceHtml = true) {
     <p style="line-height:1.7">
       ${_esc(
         typeof result.osint?.summary === 'string'
-          ? result.osint.summary
-          : (result.osint?.summary && typeof result.osint.summary === 'object'
-            ? `OSINT Sweep completed. Reddit Mentions: ${result.osint.summary.reddit_mentions || 0}, GitHub Mentions: ${result.osint.summary.github_mentions || 0}, Twitter Mentions: ${result.osint.summary.twitter_mentions || 0}, Web Mentions: ${result.osint.summary.web_mentions || 0}.`
+          ? result?.osint?.summary
+          : (result.osint?.summary && typeof result?.osint?.summary === 'object'
+            ? `OSINT Sweep completed. Reddit Mentions: ${result?.osint?.summary.reddit_mentions || 0}, GitHub Mentions: ${result?.osint?.summary.github_mentions || 0}, Twitter Mentions: ${result?.osint?.summary.twitter_mentions || 0}, Web Mentions: ${result?.osint?.summary.web_mentions || 0}.`
             : hypothesis)
       )}
     </p>
@@ -445,9 +445,9 @@ export async function downloadWalletPDF(result, forceHtml = true) {
   
   <!-- ═══ ASSET INVENTORY ═══ -->
   <h2><span class="bar" style="background:#7c3aed"></span>Asset Inventory</h2>
-  ${(result.holdings && result.holdings.erc20_count > 0) ? `
+  ${(result.holdings && result?.holdings?.erc20_count > 0) ? `
   <div class="grid3">
-    <div class="cell"><div class="label">ERC-20 Tokens</div><div class="val" style="font-size:18px">${result.holdings.erc20_count}</div></div>
+    <div class="cell"><div class="label">ERC-20 Tokens</div><div class="val" style="font-size:18px">${result?.holdings?.erc20_count}</div></div>
   </div>
   ` : `
   <div class="verdict-box" style="margin-bottom:12px">
@@ -602,10 +602,10 @@ export async function downloadContractPDF(result, forceHtml = true) {
   const signals = result.risk?.factors || [];
   const goplus = result.goplus?.checks || [];
   const analyticalSynthesis = result.risk?.analyticalSynthesis || {};
-  const hypothesis = analyticalSynthesis.hypothesis || 'Analysis unavailable.';
-  const verdict = analyticalSynthesis.verdict || 'Verdict unavailable.';
-  const prosecution = analyticalSynthesis.prosecution_summary || '';
-  const defense = analyticalSynthesis.defense_summary || '';
+  const hypothesis = analyticalSynthesis?.hypothesis || 'Analysis unavailable.';
+  const verdict = analyticalSynthesis?.verdict || 'Verdict unavailable.';
+  const prosecution = analyticalSynthesis?.prosecution_summary || '';
+  const defense = analyticalSynthesis?.defense_summary || '';
 
   const axisRows = [
     ['A1', 'Code Security', axes.A1 ?? 0],

@@ -12,11 +12,11 @@ export default function ContractForensicReport({ result, onClose }) {
   const dateStr = reportDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   const timeStr = reportDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   const riskColor = result.risk.score >= 80 ? '#ef4444' : result.risk.score >= 60 ? '#f97316' : result.risk.score >= 40 ? '#eab308' : '#22c55e';
-  const totalSlither = result.slither.length;
-  const totalMythril = result.mythril.length;
+  const totalSlither = result.slither?.length || 0;
+  const totalMythril = result.mythril?.length || 0;
   const totalFindings = totalSlither + totalMythril;
-  const criticalFindings = result.slither.filter(f => f.severity === 'High').length + result.mythril.filter(f => f.severity === 'High').length;
-  const mediumFindings = result.slither.filter(f => f.severity === 'Medium').length + result.mythril.filter(f => f.severity === 'Medium').length;
+  const criticalFindings = (result.slither || []).filter(f => f.severity === 'High').length + (result.mythril || []).filter(f => f.severity === 'High').length;
+  const mediumFindings = (result.slither || []).filter(f => f.severity === 'Medium').length + (result.mythril || []).filter(f => f.severity === 'Medium').length;
   const lowFindings = totalFindings - criticalFindings - mediumFindings;
 
   const handlePrint = () => {
@@ -66,7 +66,7 @@ export default function ContractForensicReport({ result, onClose }) {
   };
 
   const handleExportJSON = () => {
-    const blob = new Blob([JSON.stringify({ caseId, generated: reportDate.toISOString(), classification: 'CONFIDENTIAL', contract: result.identity, risk: result.risk, info: result.info, slither: result.slither, mythril: result.mythril, goplus: result.goplus }, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify({ caseId, generated: reportDate.toISOString(), classification: 'CONFIDENTIAL', contract: result.identity, risk: result.risk, info: result.info, slither: result.slither || [], mythril: result.mythril || [], goplus: result.goplus }, null, 2)], { type: 'application/json' });
     const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `AXON-${caseId}.json`; a.click();
   };
 
@@ -263,7 +263,7 @@ export default function ContractForensicReport({ result, onClose }) {
               </div>
               <div className="cell">
                 <div className="label">Mythril (Symbolic)</div>
-                <div className="val">{result.risk.mythrilCount.high}H / {result.risk.mythrilCount.medium}M / {result.risk.mythrilCount.low}L</div>
+                <div className="val">{result.risk?.mythrilCount?.high || 0}H / {result.risk?.mythrilCount?.medium || 0}M / {result.risk?.mythrilCount?.low || 0}L</div>
               </div>
               <div className="cell">
                 <div className="label">GoPlus Score</div>
@@ -354,7 +354,7 @@ export default function ContractForensicReport({ result, onClose }) {
               Mythril uses concolic analysis and SMT solving to discover exploitable vulnerabilities. It explores all possible execution paths
               and identifies conditions under which security violations can occur. Total findings: <strong style={{ color: '#fff' }}>{totalMythril}</strong>.
             </p>
-            {result.mythril.map((f, i) => (
+            {(result.mythril || []).map((f, i) => (
               <div key={f.id} className="finding" style={{
                 borderColor: f.severity === 'High' ? 'rgba(239,68,68,0.2)' : 'rgba(249,115,22,0.15)',
                 background: f.severity === 'High' ? 'rgba(239,68,68,0.03)' : 'rgba(249,115,22,0.02)'

@@ -2,18 +2,19 @@
 Axon Backend — Bitcoin (UTXO) Scorer Module
 Dedicated 5-Layer Behavioral Forensic Engine for Bitcoin with Entity Resolution.
 """
+import re
+import os
 import time
 import httpx
 import asyncio
 import math
-from sqlalchemy.orm import Session
-from database.models import InvestigationLog, MaliciousWallet
 import hashlib
 import json as json_module
 from collections import defaultdict
-
+from sqlalchemy.orm import Session
+from database.models import InvestigationLog, MaliciousWallet
 from modules.osint_scraper import run_osint_scan
-from modules.ai_analyst import analyze_entity
+from modules.ai_analyst import analyze_entity, generate_dual_quick_ratings
 from modules.wallet_scorer import _compute_l5_deterministic, _compute_dormancy_persistence
 
 # ─── API FETCHERS ─────────────────────────────────────────────────────────────
@@ -411,7 +412,7 @@ async def scan_btc_wallet(address: str, db: Session, depth: str = "quick", case_
             "tag": label,
             "first_tx_date": time.strftime("%Y-%m-%d", time.gmtime(min(timestamps))) if timestamps else "Unavailable",
             "last_tx_date": time.strftime("%Y-%m-%d", time.gmtime(max(timestamps))) if timestamps else "Unavailable",
-            "balance_wei": f"{btc_balance:.4f} BTC",
+            "ethBalance": f"{btc_balance:.4f} BTC",
             "totalReceived": f"{entity_recv_sat / 10**8:.4f} BTC",
             "totalSent": f"{entity_sent_sat / 10**8:.4f} BTC",
             "tx_count": total_txs,
@@ -449,13 +450,36 @@ async def scan_btc_wallet(address: str, db: Session, depth: str = "quick", case_
             "aiAgentB": ai_data.get("agentB")
         },
         "osint": osint_data,
-        "exchange": {"detected": False, "findings": [], "summary": "No centralized exchange patterns confirmed"},
-        "mixer": {"detected": len(coinjoin_txs) > 0, "findings": [], "launderingIndicators": []},
+        "exchange": {
+            "detected": False,
+            "findings": [],
+            "exchangeCounterparties": 0,
+            "cashOutEvents": 0,
+            "totalCashOutUSD": "$0",
+            "summary": "No exchange activity detected on this chain."
+        },
+        "mixer": {
+            "detected": len(coinjoin_txs) > 0,
+            "findings": [],
+            "mixerCounterparties": 0,
+            "bridgeActivity": [],
+            "launderingIndicators": [],
+            "totalMixedETH": "N/A"
+        },
+        "holdings": {
+            "erc20_count": 0,
+            "forta_alerts": 0,
+            "stablecoin_flows": {}
+        },
         "graph": {"nodes": graph_nodes, "edges": graph_edges[:100], "tokens": [], "osint": {}, "defi_interactions": []},
-        "holdings": {"erc20_count": 0, "forta_alerts": 0, "stablecoin_flows": {}},
         "transactions": formatted_txs,
         "evidence_context": "BTC Scan Context"
     }
+
+    if depth == "deep":
+        ai_prompt = f"Address: {address}\nType: Wallet\nRisk Score: {final_score}\nSignals: {signals}\nChain: BTC\n"
+        dual_ratings = await generate_dual_quick_ratings(ai_prompt, entity_type="wallet")
+        response_data["ai_analysis"] = dual_ratings
 
     # ── Server-Side Hash & Report Metadata (tamper-proof) ──
     import uuid, hashlib, json
