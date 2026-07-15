@@ -225,102 +225,8 @@ export async function downloadWalletPDF(result, forceHtml = true) {
   <!-- Classification Banner -->
   <div class="cls-banner">CONFIDENTIAL — AXON BLOCKCHAIN INTELLIGENCE — FOR AUTHORIZED RECIPIENTS ONLY</div>
 
-  <!-- ═══ COVER HEADER ═══ -->
-  <div style="background:#0f172a;color:#f8fafc;padding:32px;border-radius:12px;margin:24px 0;box-shadow:0 20px 25px -5px rgba(0,0,0,0.1),0 8px 10px -6px rgba(0,0,0,0.1);border:1px solid #1e293b">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px">
-      <div>
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
-          <div style="width:32px;height:32px;border-radius:6px;background:#38bdf8;display:flex;align-items:center;justify-content:center;color:#0f172a;font-size:14px;font-weight:900">A</div>
-          <span style="font-size:22px;font-weight:900;letter-spacing:0.25em;color:#fff">AXON</span>
-        </div>
-        <div class="mono" style="font-size:10px;color:#94a3b8;letter-spacing:0.2em">BLOCKCHAIN FORENSIC INTELLIGENCE PLATFORM</div>
-      </div>
-      <div style="text-align:right">
-        <span style="display:inline-block;padding:4px 16px;border-radius:4px;font-size:11px;font-weight:800;font-family:'JetBrains Mono',monospace;background:#dc2626;color:#fff;margin-bottom:8px;letter-spacing:0.1em;box-shadow:0 0 10px rgba(220,38,38,0.5);">CONFIDENTIAL / LEO</span>
-        <div class="mono" style="font-size:9px;color:#64748b;text-transform:uppercase;">SHA-256 INTEGRITY HASH</div>
-        <div class="mono" style="font-size:10px;color:#94a3b8;max-width:240px;word-break:break-all;">${docHash}</div>
-      </div>
-    </div>
-
-    <h1 style="color:#fff;font-size:24px;letter-spacing:-0.03em;margin-bottom:8px;">Wallet Forensic Intelligence Report</h1>
-    <p style="color:#cbd5e1;font-size:13px;max-width:640px;margin-bottom:24px;line-height:1.6">
-      Comprehensive blockchain forensic analysis encompassing behavioral risk assessment, transaction topology mapping,
-      open-source intelligence, exchange attribution, and mixer/laundering pattern detection. Generated for regulatory and law enforcement review.
-    </p>
-
-    <div class="grid4">
-      <div class="cell" style="background:#1e293b;border-color:#334155;"><div class="label" style="color:#94a3b8;">Case Reference</div><div class="val mono" style="color:#38bdf8;font-size:11px">${caseId}</div></div>
-      <div class="cell" style="background:#1e293b;border-color:#334155;"><div class="label" style="color:#94a3b8;">Report Date</div><div class="val" style="color:#f8fafc;">${dateStr}</div></div>
-      <div class="cell" style="background:#1e293b;border-color:#334155;"><div class="label" style="color:#94a3b8;">Time (UTC)</div><div class="val mono" style="color:#f8fafc;">${timeStr}</div></div>
-      <div class="cell" style="background:#1e293b;border-color:#334155;"><div class="label" style="color:#94a3b8;">Classification</div><div class="val" style="color:#ef4444;font-weight:800">CONFIDENTIAL</div></div>
-      <div class="cell" style="background:#1e293b;border-color:#334155;"><div class="label" style="color:#94a3b8;">Analyst Engine</div><div class="val" style="color:#f8fafc;">AXON v2.0 Auto</div></div>
-      <div class="cell" style="background:#1e293b;border-color:#334155;"><div class="label" style="color:#94a3b8;">Target Network</div><div class="val" style="color:#f8fafc;">Ethereum Mainnet</div></div>
-      <div class="cell" style="background:#1e293b;border-color:#334155;"><div class="label" style="color:#94a3b8;">Sanctions Match</div><div class="val" style="color:${score >= 80 ? '#ef4444' : '#10b981'}">${score >= 80 ? 'FLAGGED' : 'CLEAR'}</div></div>
-      <div class="cell" style="background:#1e293b;border-color:#334155;"><div class="label" style="color:#94a3b8;">Report Status</div><div class="val" style="color:#10b981;font-weight:800">FINAL VERIFIED</div></div>
-    </div>
-  </div>
-
-  <!-- ═══ 1. EXECUTIVE SUMMARY ═══ -->
-  <h2><span class="bar" style="background:#0284c7"></span>1. Executive Summary</h2>
-  <div style="display:flex;gap:20px">
-    <div class="risk-box" style="flex-shrink:0;width:150px">
-      <div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px">Threat Level</div>
-      <div class="mono" style="font-size:44px;font-weight:800;color:${riskColor};line-height:1">${score}</div>
-      <div style="font-size:10px;color:#64748b;margin-top:2px">/100</div>
-      <div style="width:100%;height:6px;background:#e2e8f0;border-radius:3px;margin-top:10px;overflow:hidden">
-        <div style="width:${score}%;height:100%;border-radius:3px;background:${riskColor}"></div>
-      </div>
-      <div class="mono" style="font-size:11px;font-weight:700;color:${riskColor};margin-top:6px;letter-spacing:0.15em">${label}</div>
-    </div>
-    <div style="flex:1">
-      <p style="margin-bottom:10px;line-height:1.7">
-        This report documents the forensic analysis of Ethereum wallet
-        <span class="mono" style="color:#0284c7;font-size:10px">${_esc(result.identity.address)}</span>,
-        identified as <strong>${_esc(result.identity.label || 'Unknown Entity')}</strong>.
-        ${result.identity.ens ? `ENS resolution: <span style="color:#7c3aed">${_esc(result.identity.ens)}</span>.` : ''}
-      </p>
-      <p style="margin-bottom:10px;line-height:1.7">
-        The automated analysis engine identified <strong>${factors.length} risk factors</strong> contributing
-        to a composite threat score of <strong style="color:${riskColor}">${score}/100 (${label})</strong>.
-        ML classification: <strong style="color:#7c3aed">${_esc(result.risk?.mlClassification || 'N/A')}</strong>,
-        anomaly confidence: <strong style="color:#7c3aed">${result.risk?.anomalyScore || 0}%</strong>.
-      </p>
-      <div class="grid3" style="margin-top:12px">
-        <div class="cell"><div class="label">Total Volume</div><div class="val">${_esc(result.identity.totalVolumeUSD || 'Data Not Available')}</div></div>
-        <div class="cell"><div class="label">Transaction Count</div><div class="val">${(result.identity.txCount || 0).toLocaleString()}</div></div>
-        <div class="cell"><div class="label">Active Period</div><div class="val">${_esc(result.identity.firstSeen || 'N/A')} → ${_esc(result.identity.lastSeen || 'N/A')}</div></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ═══ Analytical Engine FORENSIC VERDICT ═══ -->
-  <div class="verdict-box" style="margin-top:16px">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-      <span style="display:inline-block;padding:2px 8px;background:#0f172a;color:#fff;border-radius:3px;font-size:9px;font-weight:700;font-family:'JetBrains Mono',monospace;letter-spacing:0.1em">FORENSIC VERDICT</span>
-      <span class="mono" style="font-size:10px;color:#64748b">${_esc(mitreTag)}</span>
-    </div>
-    <div style="margin-bottom:8px">
-      <div style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px">Hypothesis</div>
-      <p style="font-size:11px;color:#334155;line-height:1.6">${_esc(hypothesis)}</p>
-    </div>
-    ${prosecution ? `
-    <div style="margin-bottom:8px;border-left:2px solid #dc2626;padding-left:8px">
-      <div style="font-size:9px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px">PROSECUTION PERSPECTIVE</div>
-      <p style="font-size:11px;color:#334155;line-height:1.6">${_esc(prosecution)}</p>
-    </div>` : ''}
-    ${defense ? `
-    <div style="margin-bottom:8px;border-left:2px solid #16a34a;padding-left:8px">
-      <div style="font-size:9px;font-weight:700;color:#16a34a;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px">DEFENSE PERSPECTIVE</div>
-      <p style="font-size:11px;color:#334155;line-height:1.6">${_esc(defense)}</p>
-    </div>` : ''}
-    <div>
-      <div style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px">Executive Verdict</div>
-      <p style="font-size:12px;color:#0f172a;font-weight:700;line-height:1.5">${_esc(verdict)}</p>
-    </div>
-  </div>
-
-  <!-- ═══ 2. SUBJECT IDENTIFICATION ═══ -->
-  <h2><span class="bar" style="background:#0284c7"></span>2. Subject Identification</h2>
+  <!-- ═══ 1. SUBJECT IDENTIFICATION (WHO) ═══ -->
+  <h2><span class="bar" style="background:#0284c7"></span>1. Subject Identification (WHO)</h2>
   <div class="grid4">
     ${[
       ['Address', result.identity.address, '#0284c7'],
@@ -366,6 +272,100 @@ export async function downloadWalletPDF(result, forceHtml = true) {
       </div>
     `).join('')}
   </div>` : ''}
+
+  <!-- ═══ 2. RISK VERDICT (WHAT) ═══ -->
+  <h2><span class="bar" style="background:#0284c7"></span>1. Executive Summary</h2>
+  <div style="display:flex;gap:20px">
+    <div class="risk-box" style="flex-shrink:0;width:150px">
+      <div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:6px">Threat Level</div>
+      <div class="mono" style="font-size:44px;font-weight:800;color:${riskColor};line-height:1">${score}</div>
+      <div style="font-size:10px;color:#64748b;margin-top:2px">/100</div>
+      <div style="width:100%;height:6px;background:#e2e8f0;border-radius:3px;margin-top:10px;overflow:hidden">
+        <div style="width:${score}%;height:100%;border-radius:3px;background:${riskColor}"></div>
+      </div>
+      <div class="mono" style="font-size:11px;font-weight:700;color:${riskColor};margin-top:6px;letter-spacing:0.15em">${label}</div>
+    </div>
+    <div style="flex:1">
+      <p style="margin-bottom:10px;line-height:1.7">
+        This report documents the forensic analysis of Ethereum wallet
+        <span class="mono" style="color:#0284c7;font-size:10px">${_esc(result.identity.address)}</span>,
+        identified as <strong>${_esc(result.identity.label || 'Unknown Entity')}</strong>.
+        ${result.identity.ens ? `ENS resolution: <span style="color:#7c3aed">${_esc(result.identity.ens)}</span>.` : ''}
+      </p>
+      <p style="margin-bottom:10px;line-height:1.7">
+        The automated analysis engine identified <strong>${factors.length} risk factors</strong> contributing
+        to a composite threat score of <strong style="color:${riskColor}">${score}/100 (${label})</strong>.
+        ML classification: <strong style="color:#7c3aed">${_esc(result.risk?.mlClassification || 'N/A')}</strong>,
+        anomaly confidence: <strong style="color:#7c3aed">${result.risk?.anomalyScore || 0}%</strong>.
+      </p>
+      <div class="grid3" style="margin-top:12px">
+        <div class="cell"><div class="label">Total Volume</div><div class="val">${_esc(result.identity.totalVolumeUSD || 'Data Not Available')}</div></div>
+        <div class="cell"><div class="label">Transaction Count</div><div class="val">${(result.identity.txCount || 0).toLocaleString()}</div></div>
+        <div class="cell"><div class="label">Active Period</div><div class="val">${_esc(result.identity.firstSeen || 'N/A')} → ${_esc(result.identity.lastSeen || 'N/A')}</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ COVER HEADER ═══ -->
+  <div style="background:#0f172a;color:#f8fafc;padding:32px;border-radius:12px;margin:24px 0;box-shadow:0 20px 25px -5px rgba(0,0,0,0.1),0 8px 10px -6px rgba(0,0,0,0.1);border:1px solid #1e293b">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px">
+      <div>
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
+          <div style="width:32px;height:32px;border-radius:6px;background:#38bdf8;display:flex;align-items:center;justify-content:center;color:#0f172a;font-size:14px;font-weight:900">A</div>
+          <span style="font-size:22px;font-weight:900;letter-spacing:0.25em;color:#fff">AXON</span>
+        </div>
+        <div class="mono" style="font-size:10px;color:#94a3b8;letter-spacing:0.2em">BLOCKCHAIN FORENSIC INTELLIGENCE PLATFORM</div>
+      </div>
+      <div style="text-align:right">
+        <span style="display:inline-block;padding:4px 16px;border-radius:4px;font-size:11px;font-weight:800;font-family:'JetBrains Mono',monospace;background:#dc2626;color:#fff;margin-bottom:8px;letter-spacing:0.1em;box-shadow:0 0 10px rgba(220,38,38,0.5);">CONFIDENTIAL / LEO</span>
+        <div class="mono" style="font-size:9px;color:#64748b;text-transform:uppercase;">SHA-256 INTEGRITY HASH</div>
+        <div class="mono" style="font-size:10px;color:#94a3b8;max-width:240px;word-break:break-all;">${docHash}</div>
+      </div>
+    </div>
+
+    <h1 style="color:#fff;font-size:24px;letter-spacing:-0.03em;margin-bottom:8px;">Wallet Forensic Intelligence Report</h1>
+    <p style="color:#cbd5e1;font-size:13px;max-width:640px;margin-bottom:24px;line-height:1.6">
+      Comprehensive blockchain forensic analysis encompassing behavioral risk assessment, transaction topology mapping,
+      open-source intelligence, exchange attribution, and mixer/laundering pattern detection. Generated for regulatory and law enforcement review.
+    </p>
+
+    <div class="grid4">
+      <div class="cell" style="background:#1e293b;border-color:#334155;"><div class="label" style="color:#94a3b8;">Case Reference</div><div class="val mono" style="color:#38bdf8;font-size:11px">${caseId}</div></div>
+      <div class="cell" style="background:#1e293b;border-color:#334155;"><div class="label" style="color:#94a3b8;">Report Date</div><div class="val" style="color:#f8fafc;">${dateStr}</div></div>
+      <div class="cell" style="background:#1e293b;border-color:#334155;"><div class="label" style="color:#94a3b8;">Time (UTC)</div><div class="val mono" style="color:#f8fafc;">${timeStr}</div></div>
+      <div class="cell" style="background:#1e293b;border-color:#334155;"><div class="label" style="color:#94a3b8;">Classification</div><div class="val" style="color:#ef4444;font-weight:800">CONFIDENTIAL</div></div>
+      <div class="cell" style="background:#1e293b;border-color:#334155;"><div class="label" style="color:#94a3b8;">Analyst Engine</div><div class="val" style="color:#f8fafc;">AXON v2.0 Auto</div></div>
+      <div class="cell" style="background:#1e293b;border-color:#334155;"><div class="label" style="color:#94a3b8;">Target Network</div><div class="val" style="color:#f8fafc;">Ethereum Mainnet</div></div>
+      <div class="cell" style="background:#1e293b;border-color:#334155;"><div class="label" style="color:#94a3b8;">Sanctions Match</div><div class="val" style="color:${score >= 80 ? '#ef4444' : '#10b981'}">${score >= 80 ? 'FLAGGED' : 'CLEAR'}</div></div>
+      <div class="cell" style="background:#1e293b;border-color:#334155;"><div class="label" style="color:#94a3b8;">Report Status</div><div class="val" style="color:#10b981;font-weight:800">FINAL VERIFIED</div></div>
+    </div>
+  </div>
+
+  <!-- ═══ Analytical Engine FORENSIC VERDICT ═══ -->
+  <div class="verdict-box" style="margin-top:16px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <span style="display:inline-block;padding:2px 8px;background:#0f172a;color:#fff;border-radius:3px;font-size:9px;font-weight:700;font-family:'JetBrains Mono',monospace;letter-spacing:0.1em">FORENSIC VERDICT</span>
+      <span class="mono" style="font-size:10px;color:#64748b">${_esc(mitreTag)}</span>
+    </div>
+    <div style="margin-bottom:8px">
+      <div style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px">Hypothesis</div>
+      <p style="font-size:11px;color:#334155;line-height:1.6">${_esc(hypothesis)}</p>
+    </div>
+    ${prosecution ? `
+    <div style="margin-bottom:8px;border-left:2px solid #dc2626;padding-left:8px">
+      <div style="font-size:9px;font-weight:700;color:#dc2626;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px">PROSECUTION PERSPECTIVE</div>
+      <p style="font-size:11px;color:#334155;line-height:1.6">${_esc(prosecution)}</p>
+    </div>` : ''}
+    ${defense ? `
+    <div style="margin-bottom:8px;border-left:2px solid #16a34a;padding-left:8px">
+      <div style="font-size:9px;font-weight:700;color:#16a34a;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px">DEFENSE PERSPECTIVE</div>
+      <p style="font-size:11px;color:#334155;line-height:1.6">${_esc(defense)}</p>
+    </div>` : ''}
+    <div>
+      <div style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px">Executive Verdict</div>
+      <p style="font-size:12px;color:#0f172a;font-weight:700;line-height:1.5">${_esc(verdict)}</p>
+    </div>
+  </div>
 
   <!-- ═══ 3. RISK ASSESSMENT ═══ -->
   <h2><span class="bar" style="background:#dc2626"></span>3. Risk Assessment — 5-Layer Behavioral Engine</h2>
