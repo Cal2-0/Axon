@@ -49,5 +49,17 @@ def init_db():
         AddressFormat
     )  # noqa: F401
     Base.metadata.create_all(bind=engine)
+    
+    # Safely alter tables to handle longer non-EVM addresses
+    try:
+        from sqlalchemy import text
+        with engine.begin() as conn:
+            if engine.dialect.name == 'postgresql':
+                conn.execute(text("ALTER TABLE investigation_log ALTER COLUMN entity_address TYPE VARCHAR(100)"))
+                conn.execute(text("ALTER TABLE verification_reports ALTER COLUMN entity_address TYPE VARCHAR(100)"))
+                conn.execute(text("ALTER TABLE malicious_wallets ALTER COLUMN address TYPE VARCHAR(100)"))
+                conn.execute(text("ALTER TABLE candidate_entities ALTER COLUMN address TYPE VARCHAR(100)"))
+    except Exception as e:
+        print(f"DB Migration warning: {e}")
     from modules.address_format_reference import seed_address_formats
     seed_address_formats()

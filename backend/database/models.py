@@ -12,7 +12,7 @@ class MaliciousWallet(Base):
     __tablename__ = "malicious_wallets"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    address = Column(String(42), unique=True, index=True, nullable=False)
+    address = Column(String(100), unique=True, index=True, nullable=False)
     label = Column(String(200), nullable=False)
     category = Column(String(50), index=True, nullable=False)
     chain = Column(String(30), default="ETH")
@@ -84,7 +84,7 @@ class InvestigationLog(Base):
     __tablename__ = "investigation_log"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    entity_address = Column(String(42), index=True, nullable=False)
+    entity_address = Column(String(100), index=True, nullable=False)
     entity_type = Column(String(20), default="wallet")  # wallet, contract
     chain = Column(String(30), default="ETH")
     scan_timestamp = Column(Float, nullable=False)
@@ -113,7 +113,7 @@ class VerificationReport(Base):
 
     report_id = Column(String(50), primary_key=True, index=True)
     report_hash = Column(String(64), nullable=False)
-    entity_address = Column(String(42), index=True, nullable=False)
+    entity_address = Column(String(100), index=True, nullable=False)
     entity_type = Column(String(20), default="wallet")
     risk_score = Column(Integer, default=0)
     scan_timestamp = Column(Float, nullable=False)
@@ -154,7 +154,7 @@ class CaseNote(Base):
 class CandidateEntity(Base):
     __tablename__ = "candidate_entities"
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    address = Column(String(42), index=True, nullable=False)
+    address = Column(String(100), index=True, nullable=False)
     label = Column(String(200), nullable=False)
     category = Column(String(50), nullable=False)
     source = Column(String(100), nullable=False)
