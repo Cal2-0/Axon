@@ -782,37 +782,6 @@ export default function WalletInvestigation({ caseId }) {
             </div>
           </div>
 
-                    {/* ── 0. Wallet Financial Snapshot ─────────────────────────────────────── */}
-          <div className="mb-6 bg-[#0a0f1a] rounded-xl border border-axon-cyan/30 overflow-hidden shadow-[0_0_15px_rgba(6,182,212,0.1)]">
-            <div className="bg-axon-cyan/10 px-4 py-3 border-b border-axon-cyan/20 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-axon-cyan text-lg">💰</span>
-                <h3 className="text-white font-bold font-mono tracking-widest uppercase text-sm">Wallet Financial Snapshot</h3>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-0 text-sm">
-              {[
-                { label: 'Native Balance', value: result.identity.nativeBalance ? `${result.identity.nativeBalance} ${result.identity.nativeSymbol}` : (result.identity.ethBalance || 'N/A') },
-                { label: 'Fiat Value', value: result.identity.totalVolumeUSD || 'N/A' },
-                { label: 'Portfolio Value', value: crossChain?.total_net_worth_usd ? `$${crossChain.total_net_worth_usd.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}` : 'N/A' },
-                { label: 'Total Received', value: result.identity.nativeTotalReceived ? `${result.identity.nativeTotalReceived} ${result.identity.nativeSymbol}` : (result.identity.totalReceived || 'N/A') },
-                { label: 'Total Sent', value: result.identity.nativeTotalSent ? `${result.identity.nativeTotalSent} ${result.identity.nativeSymbol}` : (result.identity.totalSent || 'N/A') },
-                { label: 'Net Flow', value: (result.identity.nativeTotalReceived && result.identity.nativeTotalSent) ? `${(parseFloat(result.identity.nativeTotalReceived) - parseFloat(result.identity.nativeTotalSent)).toFixed(4)} ${result.identity.nativeSymbol}` : 'N/A' },
-                { label: 'First Seen', value: result.identity.firstSeen || result.identity.first_tx_date || 'N/A' },
-                { label: 'Last Seen', value: result.identity.lastSeen || result.identity.last_tx_date || 'N/A' },
-                { label: 'Wallet Age', value: result.identity.walletAgeDays || 'N/A' },
-                { label: 'Transaction Count', value: result.identity.txCount || result.identity.txCountSample || '0' },
-                { label: 'Known Counterparties', value: result.identity.uniqueCounterparties || '0' },
-                { label: 'Entity Class', value: result.identity.entityClass || 'Unknown' }
-              ].map((item, i) => (
-                <div key={i} className="p-4 border-r border-b border-axon-border/50 bg-[#0c1322] hover:bg-[#131d33] transition-colors">
-                  <div className="text-[10px] text-axon-text-dim uppercase tracking-widest mb-1">{item.label}</div>
-                  <div className="text-white font-mono font-bold text-xs break-all">{item.value}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
           {/* ── 1. Identity Panel ─────────────────────────────────────── */}
           <CollapsibleSection color="cyan" icon="🔍" title="Wallet Identity">
             <div className="flex flex-col gap-3 mb-4">

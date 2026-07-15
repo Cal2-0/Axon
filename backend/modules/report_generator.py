@@ -626,7 +626,7 @@ def generate_case_pdf_report(case_id: int, db: Session) -> bytes:
     Story.append(Spacer(1, 12))
     
     timestamp_str = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(case.created_at))
-title_text = case.title if case.title and not case.title.startswith('[Placeholder') else f"Investigation Dossier - {case.id}"
+    title_text = case.title if case.title and not case.title.startswith('[Placeholder') else f"Investigation Dossier - {case.id}"
     code_text = case.case_number if case.case_number and not case.case_number.startswith('[Placeholder') else f"AXON-C-{case.id}"
     Story.append(Paragraph(f"<b>Case ID:</b> {code_text}", styles["Normal"]))
     Story.append(Paragraph(f"<b>Case Title:</b> {title_text}", styles["Normal"]))
